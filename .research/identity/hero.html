@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a12; --violet:#b18cff; --cyan:#34e6ff; --text:#ece8ff; --muted:#a99fce;
+    --faint:rgba(236,232,255,.5); --border:rgba(177,140,255,.20); --surface:rgba(20,16,32,.62);
+    --glowv:rgba(177,140,255,.45); --glowc:rgba(52,230,255,.40);
+    --ok:#57e6a8; --warn:#ffce6b; --grad:linear-gradient(90deg,var(--violet),var(--cyan));
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;color:var(--text);
+       background:radial-gradient(circle at 50% 0%,#15101f,#0a0a12 55%,#050409);
+       display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;
+       position:relative;overflow:hidden;padding:46px;}
+  /* ambient layers */
+  .grid{position:fixed;inset:0;background-image:radial-gradient(rgba(177,140,255,.10) 1px,transparent 1px);
+        background-size:30px 30px;mask:radial-gradient(circle at 50% 35%,#000 10%,transparent 72%);opacity:.5;}
+  .scan{position:fixed;inset:0;background:repeating-linear-gradient(rgba(255,255,255,.022) 0 1px,transparent 1px 3px);pointer-events:none;}
+  .orb{position:fixed;width:680px;height:680px;border-radius:50%;filter:blur(80px);opacity:.22;}
+  .orb.v{background:var(--violet);top:-260px;left:-160px;}
+  .orb.c{background:var(--cyan);bottom:-300px;right:-200px;opacity:.16;}
+
+  .console{position:relative;width:min(960px,100%);border-radius:20px;border:1px solid var(--border);
+           background:var(--surface);backdrop-filter:blur(14px);
+           box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(177,140,255,.10);overflow:hidden;}
+  .console::after{content:'';position:absolute;inset:0;pointer-events:none;
+                  background:radial-gradient(circle at 90% 6%,var(--glowv),transparent 46%);}
+  /* titlebar */
+  .bar{display:flex;align-items:center;gap:9px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);
+       background:rgba(8,7,16,.5);}
+  .d{width:11px;height:11px;border-radius:50%;}
+  .mk{width:26px;height:26px;margin-left:8px;}
+  .bar .t{font-size:13px;color:var(--muted);letter-spacing:.02em;}
+  .bar .right{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);}
+  .live{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px var(--ok);}
+  /* body */
+  .b{padding:34px 40px 38px;position:relative;z-index:1;}
+  .boot{font-size:13.5px;line-height:1.95;color:var(--muted);}
+  .boot b{color:var(--violet);font-weight:600;}
+  .boot .ok{color:var(--ok);}
+  .boot .cmd{color:var(--text);}
+  .cursor{display:inline-block;width:9px;height:17px;background:var(--cyan);vertical-align:-3px;margin-left:3px;box-shadow:0 0 10px var(--glowc);}
+  .name{font-size:76px;font-weight:700;letter-spacing:-.02em;line-height:1;margin:18px 0 0;
+        color:var(--text);text-shadow:0 0 34px var(--glowv);}
+  .tag{font-size:18px;color:var(--violet);margin-top:14px;font-weight:500;}
+  .sub{font-size:14px;color:var(--faint);margin-top:10px;max-width:60ch;line-height:1.6;}
+  /* command chips */
+  .cmds{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;}
+  .chip{font-size:12px;padding:7px 13px;border-radius:999px;border:1px solid var(--border);color:var(--muted);background:rgba(255,255,255,.025);}
+  .chip em{color:var(--cyan);font-style:normal;opacity:.8;margin-left:6px;}
+  /* status strip */
+  .strip{margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:11px 30px;
+         padding:18px 20px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.018);}
+  .row{display:flex;align-items:center;gap:12px;font-size:12.5px;color:var(--muted);}
+  .row .l{width:30px;color:var(--text);}
+  .track{flex:1;height:7px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;}
+  .track i{display:block;height:100%;border-radius:999px;background:var(--grad);box-shadow:0 0 10px var(--glowv);}
+  .row .v{color:var(--text);opacity:.7;min-width:62px;text-align:right;}
+  /* actions */
+  .act{display:flex;align-items:center;gap:14px;margin-top:26px;}
+  .primary{font-family:inherit;font-size:13.5px;font-weight:600;padding:12px 22px;border:none;border-radius:999px;
+           background:var(--grad);color:#06060d;cursor:pointer;box-shadow:0 0 24px var(--glowv);}
+  .ghost{font-family:inherit;font-size:13.5px;padding:12px 22px;border-radius:999px;border:1px solid var(--violet);
+         color:var(--violet);background:color-mix(in srgb,var(--violet) 10%,transparent);}
+  .kbd{margin-left:auto;font-size:12px;color:var(--faint);}
+  .kbd b{border:1px solid var(--border);border-radius:6px;padding:3px 7px;color:var(--muted);}
+  .cap{position:relative;z-index:1;font-size:12px;color:var(--faint);letter-spacing:.22em;text-transform:uppercase;}
+</style>
+</head>
+<body>
+  <div class="grid"></div><div class="orb v"></div><div class="orb c"></div><div class="scan"></div>
+
+  <main class="console">
+    <div class="bar">
+      <span class="d" style="background:#ff5f57"></span><span class="d" style="background:#febc2e"></span><span class="d" style="background:#28c840"></span>
+      <svg class="mk" viewBox="0 0 128 128"><defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b18cff"/><stop offset="1" stop-color="#34e6ff"/></linearGradient></defs><path d="M64 8l48.5 28v56L64 120 15.5 92V36z" fill="#0a0a12" stroke="url(#a)" stroke-width="4"/><path d="M45 50l17 14-17 14" fill="none" stroke="#34e6ff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><rect x="68" y="73" width="22" height="7" rx="3.5" fill="#b18cff"/></svg>
+      <span class="t">arcane@prod : ~/portfolio</span>
+      <span class="right"><span class="live"></span> online · p99 12ms · 142 rps</span>
+    </div>
+    <div class="b">
+      <div class="boot">
+        <div><b>arcane@prod</b>:~$ ./boot --portfolio</div>
+        <div class="ok">&#10003; services healthy &nbsp; &#10003; agent warm &nbsp; &#10003; tls valid &nbsp; &#10003; last deploy #482 &middot; 3h ago</div>
+        <div class="cmd"><b>arcane@prod</b>:~$ whoami<span class="cursor"></span></div>
+      </div>
+      <h1 class="name">arcane</h1>
+      <p class="tag">the operator — backend · cloud · AI arts</p>
+      <p class="sub">I build real systems. This site runs on infrastructure I operate — every metric, deploy, and agent you see here is live, not a mockup.</p>
+
+      <div class="cmds">
+        <span class="chip">scry<em>observe</em></span>
+        <span class="chip">summon<em>deploy</em></span>
+        <span class="chip">ward<em>security</em></span>
+        <span class="chip">oracle<em>ask AI</em></span>
+        <span class="chip">grimoire<em>work</em></span>
+      </div>
+
+      <div class="strip">
+        <div class="row"><span class="l">web</span><span class="track"><i style="width:97%"></i></span><span class="v">12 ms</span></div>
+        <div class="row"><span class="l">api</span><span class="track"><i style="width:80%"></i></span><span class="v">142 rps</span></div>
+        <div class="row"><span class="l">ai</span><span class="track"><i style="width:66%"></i></span><span class="v">agent up</span></div>
+        <div class="row"><span class="l">db</span><span class="track"><i style="width:88%"></i></span><span class="v">3.4 ms</span></div>
+      </div>
+
+      <div class="act">
+        <button class="primary">▸ ask the oracle</button>
+        <button class="ghost">trace my request</button>
+        <span class="kbd"><b>⌘ K</b> command palette</span>
+      </div>
+    </div>
+  </main>
+
+  <div class="cap">gipc.dev · arcane palette · IBM Plex Mono · hex-sigil mark</div>
+</body>
+</html>

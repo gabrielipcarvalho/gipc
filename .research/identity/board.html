@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700;800&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@500;700&family=Chakra+Petch:wght@600;700&family=Major+Mono+Display&family=Sora:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #050509; color: #e8e8f0; font-family: 'IBM Plex Mono', monospace; padding: 40px 44px 56px; }
+  h1 { font-size: 26px; letter-spacing: .04em; font-weight: 700; }
+  h1 .sub { color: #7c7a92; font-weight: 400; font-size: 15px; display:block; margin-top:6px; letter-spacing:.02em;}
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .28em; color: #6f6d86; margin: 40px 0 18px; font-weight: 600;}
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+
+  /* ---- palette hero card ---- */
+  .card { border-radius: 18px; padding: 26px 26px 22px; position: relative; overflow: hidden;
+          background: var(--grad); border: 1px solid var(--border); min-height: 300px; }
+  .card::after { content:''; position:absolute; inset:0; pointer-events:none;
+                 background: radial-gradient(circle at 88% 12%, var(--glow), transparent 52%); }
+  .winbar { display:flex; align-items:center; gap:8px; margin-bottom: 22px; }
+  .dot { width:11px; height:11px; border-radius:50%; opacity:.9;}
+  .winbar .t { margin-left:10px; font-size:12.5px; color: var(--muted); letter-spacing:.02em;}
+  .prompt { font-size:13px; color: var(--muted); margin-bottom: 6px; }
+  .prompt b { color: var(--accent); font-weight:600; }
+  .name { font-size: 46px; font-weight: 800; line-height:1; color: var(--text);
+          text-shadow: 0 0 26px var(--glow); letter-spacing: -.01em; }
+  .tag { font-size: 13.5px; color: var(--muted); margin-top: 12px; letter-spacing:.01em;}
+  .strip { margin-top: 20px; display:flex; flex-direction:column; gap:9px; }
+  .row { display:flex; align-items:center; gap:12px; font-size:12px; color: var(--muted); }
+  .row .lbl { width: 34px; color: var(--text); opacity:.85;}
+  .bar { flex:1; height:7px; border-radius:999px; background: rgba(255,255,255,.07); overflow:hidden; }
+  .bar i { display:block; height:100%; border-radius:999px; background: linear-gradient(90deg,var(--accent),var(--accent2)); box-shadow: 0 0 10px var(--glow);}
+  .pills { margin-top: 22px; display:flex; gap:10px; }
+  .pill { font-size:12px; padding:8px 15px; border-radius:999px; border:1px solid var(--accent); color: var(--accent);
+          background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .pill.solid { background: linear-gradient(90deg,var(--accent),var(--accent2)); color:#05060c; border:none; font-weight:600; box-shadow: 0 0 18px var(--glow);}
+  .pname { position:absolute; bottom:14px; right:18px; font-size:11px; letter-spacing:.24em; text-transform:uppercase; color: var(--muted); opacity:.8;}
+  .swatches { display:flex; gap:7px; margin-top:20px; }
+  .sw { display:flex; flex-direction:column; gap:5px; align-items:center; }
+  .chip { width:42px; height:24px; border-radius:7px; border:1px solid rgba(255,255,255,.12);}
+  .sw code { font-size:9.5px; color: var(--muted); }
+
+  /* palette tokens */
+  .p1 { --grad: radial-gradient(circle at top,#15101f,#0a0a12 55%,#050409); --border:#2a2342; --accent:#b18cff; --accent2:#34e6ff; --text:#ece8ff; --muted:#a99fce; --glow: rgba(177,140,255,.40);}
+  .p2 { --grad: radial-gradient(circle at top,#17120a,#0c0a06 55%,#060402); --border:#3a2c14; --accent:#ffb33b; --accent2:#ff7a45; --text:#ffe9c7; --muted:#c9a877; --glow: rgba(255,179,59,.36);}
+  .p3 { --grad: radial-gradient(circle at top,#0d1a15,#08100d 55%,#040806); --border:#173228; --accent:#3df5b0; --accent2:#38bdf8; --text:#d9ffee; --muted:#8fc7b0; --glow: rgba(61,245,176,.36);}
+  .p4 { --grad: radial-gradient(circle at top,#0c1326,#07080f 55%,#04040a); --border:#152244; --accent:#34e0ff; --accent2:#d96bff; --text:#dbe9ff; --muted:#8aa0c4; --glow: rgba(52,224,255,.38);}
+
+  /* ---- type specimens ---- */
+  .spec { border:1px solid #1c1b2a; border-radius:12px; padding:16px 20px; margin-bottom:12px; background:#0a0a12;}
+  .spec .meta { font-size:11px; color:#6f6d86; letter-spacing:.16em; text-transform:uppercase; margin-bottom:8px;}
+  .spec .big { font-size:30px; color:#ece8ff; }
+  .spec .small { font-size:13px; color:#a99fce; margin-top:6px;}
+  .f-jb { font-family:'JetBrains Mono', monospace;}
+  .f-plex { font-family:'IBM Plex Mono', monospace;}
+  .f-space { font-family:'Space Mono', monospace;}
+  .f-chakra { font-family:'Chakra Petch', sans-serif;}
+  .f-grotesk { font-family:'Space Grotesk', sans-serif;}
+  .f-major { font-family:'Major Mono Display', monospace;}
+  .accent-v { color:#b18cff; }
+
+  /* ---- marks ---- */
+  .marks { display:flex; gap:18px; flex-wrap:wrap; }
+  .mark { width:150px; border:1px solid #1c1b2a; border-radius:14px; padding:18px; text-align:center; background:#0a0a12;}
+  .mark svg { display:block; margin:0 auto 10px; }
+  .mark .cap { font-size:11px; color:#7c7a92; letter-spacing:.06em;}
+</style>
+</head>
+<body>
+  <h1>gipc.dev — visual identity board
+    <span class="sub">operator console · light arcane · pick a palette, a typeface, a mark</span>
+  </h1>
+
+  <h2>1 · Palette directions  (same hero mockup, swap the colors)</h2>
+  <div class="grid">
+    <!-- P1 ARCANE -->
+    <div class="card p1">
+      <div class="winbar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="t">arcane@prod:~/portfolio</span></div>
+      <div class="prompt"><b>arcane@prod</b>:~$ whoami</div>
+      <div class="name">arcane</div>
+      <div class="tag">operator of backend · cloud · AI arts</div>
+      <div class="strip">
+        <div class="row"><span class="lbl">web</span><span class="bar"><i style="width:96%"></i></span><span>12ms</span></div>
+        <div class="row"><span class="lbl">api</span><span class="bar"><i style="width:78%"></i></span><span>142 rps</span></div>
+        <div class="row"><span class="lbl">ai</span><span class="bar"><i style="width:64%"></i></span><span>agent up</span></div>
+      </div>
+      <div class="pills"><span class="pill solid">ask the oracle</span><span class="pill">trace me</span></div>
+      <div class="swatches">
+        <div class="sw"><span class="chip" style="background:#0a0a12"></span><code>#0a0a12</code></div>
+        <div class="sw"><span class="chip" style="background:#b18cff"></span><code>#b18cff</code></div>
+        <div class="sw"><span class="chip" style="background:#34e6ff"></span><code>#34e6ff</code></div>
+        <div class="sw"><span class="chip" style="background:#ece8ff"></span><code>#ece8ff</code></div>
+      </div>
+      <div class="pname">Arcane · violet + cyan</div>
+    </div>
+
+    <!-- P2 PHOSPHOR -->
+    <div class="card p2">
+      <div class="winbar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="t">arcane@prod:~/portfolio</span></div>
+      <div class="prompt"><b>arcane@prod</b>:~$ whoami</div>
+      <div class="name">arcane</div>
+      <div class="tag">operator of backend · cloud · AI arts</div>
+      <div class="strip">
+        <div class="row"><span class="lbl">web</span><span class="bar"><i style="width:96%"></i></span><span>12ms</span></div>
+        <div class="row"><span class="lbl">api</span><span class="bar"><i style="width:78%"></i></span><span>142 rps</span></div>
+        <div class="row"><span class="lbl">ai</span><span class="bar"><i style="width:64%"></i></span><span>agent up</span></div>
+      </div>
+      <div class="pills"><span class="pill solid">ask the oracle</span><span class="pill">trace me</span></div>
+      <div class="swatches">
+        <div class="sw"><span class="chip" style="background:#0c0a06"></span><code>#0c0a06</code></div>
+        <div class="sw"><span class="chip" style="background:#ffb33b"></span><code>#ffb33b</code></div>
+        <div class="sw"><span class="chip" style="background:#ff7a45"></span><code>#ff7a45</code></div>
+        <div class="sw"><span class="chip" style="background:#ffe9c7"></span><code>#ffe9c7</code></div>
+      </div>
+      <div class="pname">Phosphor · amber CRT</div>
+    </div>
+
+    <!-- P3 MINT -->
+    <div class="card p3">
+      <div class="winbar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="t">arcane@prod:~/portfolio</span></div>
+      <div class="prompt"><b>arcane@prod</b>:~$ whoami</div>
+      <div class="name">arcane</div>
+      <div class="tag">operator of backend · cloud · AI arts</div>
+      <div class="strip">
+        <div class="row"><span class="lbl">web</span><span class="bar"><i style="width:96%"></i></span><span>12ms</span></div>
+        <div class="row"><span class="lbl">api</span><span class="bar"><i style="width:78%"></i></span><span>142 rps</span></div>
+        <div class="row"><span class="lbl">ai</span><span class="bar"><i style="width:64%"></i></span><span>agent up</span></div>
+      </div>
+      <div class="pills"><span class="pill solid">ask the oracle</span><span class="pill">trace me</span></div>
+      <div class="swatches">
+        <div class="sw"><span class="chip" style="background:#08100d"></span><code>#08100d</code></div>
+        <div class="sw"><span class="chip" style="background:#3df5b0"></span><code>#3df5b0</code></div>
+        <div class="sw"><span class="chip" style="background:#38bdf8"></span><code>#38bdf8</code></div>
+        <div class="sw"><span class="chip" style="background:#d9ffee"></span><code>#d9ffee</code></div>
+      </div>
+      <div class="pname">Operator · tuned mint</div>
+    </div>
+
+    <!-- P4 PLASMA -->
+    <div class="card p4">
+      <div class="winbar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="t">arcane@prod:~/portfolio</span></div>
+      <div class="prompt"><b>arcane@prod</b>:~$ whoami</div>
+      <div class="name">arcane</div>
+      <div class="tag">operator of backend · cloud · AI arts</div>
+      <div class="strip">
+        <div class="row"><span class="lbl">web</span><span class="bar"><i style="width:96%"></i></span><span>12ms</span></div>
+        <div class="row"><span class="lbl">api</span><span class="bar"><i style="width:78%"></i></span><span>142 rps</span></div>
+        <div class="row"><span class="lbl">ai</span><span class="bar"><i style="width:64%"></i></span><span>agent up</span></div>
+      </div>
+      <div class="pills"><span class="pill solid">ask the oracle</span><span class="pill">trace me</span></div>
+      <div class="swatches">
+        <div class="sw"><span class="chip" style="background:#07080f"></span><code>#07080f</code></div>
+        <div class="sw"><span class="chip" style="background:#34e0ff"></span><code>#34e0ff</code></div>
+        <div class="sw"><span class="chip" style="background:#d96bff"></span><code>#d96bff</code></div>
+        <div class="sw"><span class="chip" style="background:#dbe9ff"></span><code>#dbe9ff</code></div>
+      </div>
+      <div class="pname">Plasma · cyan + magenta</div>
+    </div>
+  </div>
+
+  <h2>2 · Typeface candidates  (display name + a line of UI text)</h2>
+  <div class="spec"><div class="meta">JetBrains Mono — what kaveenk uses (familiar, safe)</div><div class="big f-jb">arcane@prod:~$ <span class="accent-v">whoami</span></div><div class="small f-jb">// the operator · backend, cloud & AI arts</div></div>
+  <div class="spec"><div class="meta">IBM Plex Mono — clean, corporate-credible, distinct from kaveenk</div><div class="big f-plex">arcane@prod:~$ <span class="accent-v">whoami</span></div><div class="small f-plex">// the operator · backend, cloud & AI arts</div></div>
+  <div class="spec"><div class="meta">Space Mono — characterful, retro-techy, lots of personality</div><div class="big f-space">arcane@prod:~$ <span class="accent-v">whoami</span></div><div class="small f-space">// the operator · backend, cloud & AI arts</div></div>
+  <div class="spec"><div class="meta">Chakra Petch — angular display for BIG headings (pair w/ a mono body)</div><div class="big f-chakra">arcane@prod:~$ <span class="accent-v">whoami</span></div><div class="small f-plex">// body stays mono · IBM Plex Mono</div></div>
+  <div class="spec"><div class="meta">Major Mono Display — pure "arcane sigil" vibe for the wordmark only</div><div class="big f-major">arcane</div><div class="small f-plex">// use sparingly — wordmark / logo only</div></div>
+
+  <h2>3 · Logo mark concepts</h2>
+  <div class="marks">
+    <div class="mark">
+      <svg width="70" height="70" viewBox="0 0 70 70"><rect x="3" y="3" width="64" height="64" rx="16" fill="#0a0a12" stroke="#b18cff" stroke-width="1.5"/><path d="M20 26l10 9-10 9" fill="none" stroke="#34e6ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="34" y="42" width="16" height="3.5" rx="1.75" fill="#b18cff"/></svg>
+      <div class="cap">prompt <code>&gt;_</code></div>
+    </div>
+    <div class="mark">
+      <svg width="70" height="70" viewBox="0 0 70 70"><path d="M35 5l26 15v30L35 65 9 50V20z" fill="#0a0a12" stroke="#b18cff" stroke-width="1.5"/><path d="M27 28l9 7-9 7" fill="none" stroke="#34e6ff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="38" y="40" width="11" height="3" rx="1.5" fill="#b18cff"/></svg>
+      <div class="cap">hex sigil + prompt</div>
+    </div>
+    <div class="mark">
+      <svg width="70" height="70" viewBox="0 0 70 70"><circle cx="35" cy="35" r="29" fill="#0a0a12" stroke="#b18cff" stroke-width="1.5"/><circle cx="35" cy="35" r="20" fill="none" stroke="#34e6ff" stroke-width="1" opacity="".5"/><path d="M35 16l16 28H19z" fill="none" stroke="#b18cff" stroke-width="2"/><circle cx="35" cy="38" r="3.5" fill="#34e6ff"/></svg>
+      <div class="cap">arcane rune</div>
+    </div>
+    <div class="mark">
+      <svg width="70" height="70" viewBox="0 0 70 70"><rect x="3" y="3" width="64" height="64" rx="16" fill="url(#g)" /><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b18cff"/><stop offset="1" stop-color="#34e6ff"/></linearGradient></defs><text x="35" y="48" font-family="JetBrains Mono, monospace" font-size="40" font-weight="800" fill="#0a0a12" text-anchor="middle">a</text></svg>
+      <div class="cap">monogram "a"</div>
+    </div>
+  </div>
+</body>
+</html>
