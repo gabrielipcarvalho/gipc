@@ -132,6 +132,34 @@
   Gabriel contractor (matches ACS self-name assessment); AWS partner contacts Gabriel
   directly.
 
+### Gemini + server-shell evidence, Jun → Nov 2025 (full-coverage mined 2026-07-11)
+> Gemini export: 2,160 prompts, every title classified (983 work + ~138 work-like
+> continuations ≈ 63% work); intensity 21.6 prompts/active-day, peak 97/day (2025-07-30).
+> Plus `history_zsh`: **2,367 timestamped commands on the production cPanel box,
+> Jun 2025→Jan 2026** [ZSH-01] — imunify360 ×92, exim ×97, backup ×183, cpanel ×204, aws ×32.
+- [GEM-01/02] Voice-AI v1 build: **Twilio + AWS Bedrock Nova Sonic, Lambda + WebSocket
+  streaming** (Jun 24→Aug 8) + Python outbound-dialer prototype — the "custom stack" phase.
+- [GEM-03] **Retell pivot dated:** `retell_call_events.php` created **Sep 15, 2025**; FWC =
+  **Financial Wealth Check** agent ("Preliminary_FWC"); **the voice agent is named "Sandra
+  AI"**, matured Dec 25→Feb 26 into a Python app (state_machine.py etc.) where git resumes.
+- [GEM-05] Exim/SES mail engineering: custom SES transport w/ hardcoded envelope sender,
+  `jdl_aws_forwarder_router`, DKIM/SPF/DMARC work (Jul→Nov).
+- [GEM-06] AWS IAM/root hygiene + **Identity Center** on account 891377206841
+  (ap-southeast-2).
+- [GEM-07] cPanel/WHM/CloudLinux ops + **Imunify360 security configuration** (347 security-
+  keyword prompts) — corroborates the "security expert" rep.
+- [GEM-08/11] PHP + GPT-4o-mini extraction pipeline + `_inc/tools/api_tests.php` key-based
+  test harness covering **docusign / corelogic / stripe** endpoints (his DocuSign role =
+  testing/integration-support, consistent with the conservative wording).
+- [GEM-09/12] Git branch-per-server across prod (`jdluser`@jdl.software, CloudLinux) + new
+  **AlmaLinux dev box** (`gabriel@`); EC2/EBS volume resize ops.
+- [GEM-04] Archon agent-OS + EmbeddingGemma local-RAG experimentation (Sep→Nov) — genuine
+  RAG *experimentation* evidence (still not prod RAG; keyword rules stand).
+- [GEM-13] Personal stream (**NOT resume material**): V2Ray/Xray proxy on syd.gipc.dev
+  (Nginx+Certbot, Sydney VPS) — personal infra during the China trip; keep off all documents.
+- Workload signal: full-time delivery + PhD SLR (48 prompts) + **graded Java OOP course**
+  (85 prompts) ran concurrently through the window — interview color for time-management.
+
 ### Git-evidenced workstreams, Nov 2025 → Feb 2026 (mined 2026-07-11)
 - [GIT-01] **FWC Retell voice-agent (flagship):** ~35 commits (2025-12-11→2026-01-06) — Retell
   AI phone integration, dynamic-variable mapping, agent-selector UI, calendar-booking
