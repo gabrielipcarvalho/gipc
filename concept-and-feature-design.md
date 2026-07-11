@@ -159,6 +159,12 @@ touchable demos. DevOps-real spine + arcane flavor + hands-on content = all thre
 3. **Real ambition:** **Maximal real** — real status/metrics/deploys + real AI operator agent +
    real public sandbox shell + real load tests + real chaos on live replicas. Highest wow;
    commits us to real infra + serious security hardening (see Guardrails).
+4. **e-Résumé "Construct" (locked 2026-07-11):** the two references unified. kaveenk-style
+   console stays the site-wide language; the résumé at `/resume` is an immersive sub-app
+   borrowing Active Theory's scroll-descend spatial card mechanic, re-skinned **heavily
+   Matrix** (glyph rain incl. hex-sigil runes, decode reveals, true-green world-shift while
+   chrome stays arcane). Static/print/SEO fallback is non-negotiable. Full blueprint:
+   `activetheory-design-analysis.md` §10.
 
 ### The identity (light arcane "operator")
 - **Persona:** *the operator* — a systems-mage who practices the "arcane arts" of infra/backend/AI.
