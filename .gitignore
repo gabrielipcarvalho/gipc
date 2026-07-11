@@ -46,3 +46,16 @@ Thumbs.db
 *.env
 **/gipc.json
 /etc/cloudflared/
+
+# --- syncthing (Mac↔box sync artifacts) ---
+.syncthing.*
+.stversions/
+.stfolder
+
+# --- python (services/ai) ---
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
