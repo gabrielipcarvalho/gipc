@@ -1,0 +1,10 @@
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/build
+**/.git
+**/.env*
+**/npm-debug.log*
+Dockerfile
+.dockerignore
