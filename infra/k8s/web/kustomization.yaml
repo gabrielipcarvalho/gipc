@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gipc
+resources:
+  - deployment.yaml
+  - service.yaml
+images:
+  - name: ghcr.io/gabrielipcarvalho/gipc-web
+    newTag: latest   # CI bumps this to the git sha on every push (GitOps)
