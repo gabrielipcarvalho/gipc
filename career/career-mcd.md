@@ -102,6 +102,36 @@
   Postgres RPCs (opt-out, concurrency claim), Twilio HMAC + idempotency, PII-safe logging;
   ~50% latency cut via single-call ack+question architecture. 2026-02→03.
 
+### Chat-evidenced workstreams, ~May → Oct 2025 (un-versioned era; WhatsApp mined 2026-07-11)
+> Exports can't show Dec 2024→mid-Aug 2025 directly (device lost pre-re-add group history);
+> earliest demonstrable work via retrospective references ≈ May/Jun 2025. Dec 2024→Apr 2025
+> remains testimony/ACS-only pending the ChatGPT/Gemini export mining.
+- [CHAT-01] Built the in-house **voice-AI alpha on a custom LLM + own training + custom
+  server** (~May/Jun 2025, the CV's "5-week alpha") — then [CHAT-02] migrated the stack
+  custom-LLM → **AWS Nova Sonic (Bedrock, Tokyo)** → **Retell** by Aug 2025.
+- [CHAT-04] Demo **FWC voice-agent call already impressing the team pre-21/8/2025** (Oliver:
+  "fucking crazy good!").
+- [CHAT-08] **Replaced Retell's flaky native variable-extraction with own PHP endpoints
+  calling GPT-4o-mini + confidence scoring — in production Sep 2025.** [CHAT-06/07/09/12]
+  Retell function contracts, PHP↔OpenAI mini-server, FWC prompt, web services.
+- [CHAT-05/14/15/16] **Mail/DNS backbone:** Twilio + SendGrid SMTP + event-webhook
+  bounce-tracking; SES/Exim system filter (solved blind-forward rejections); IMAP wiring;
+  DocuSign MX/DNS.
+- [CHAT-10/11/13] **AWS account hygiene:** migrated root account off personal emails, created
+  system email, IAM role for the AWS-partner team, EC2 bastion to private-subnet RDS.
+- [CHAT-17] **Live production firefight** (Oct 2025): /tmp full on the box running
+  MySQL/Elastic/cPanel/mail/NFS/WireGuard — bind-mount fix, zero reboot.
+- [CHAT-18] Instituted **GitHub branch-per-server** workflow + own dev server (Oct 2025) —
+  ended the "edit live on prod" era; precursor to [GIT-04/05].
+- [CHAT-20] Delivered the FWC agent while travelling in **China (Oct–Dec 2025)** — the Xidian
+  fellowship window; kept shipping remotely.
+- Third-party validation: Oliver — *"Gabriel is a pretty good **security expert** when it
+  comes to server and webserver."* Also evidenced: Gabriel **teaches penetration-testing /
+  ethical hacking at university** (→ §6 casual academic).
+- Structure confirmed: dev team = **two freelancers (Oliver = head dev/CTO-role, Gabriel)**;
+  Gabriel contractor (matches ACS self-name assessment); AWS partner contacts Gabriel
+  directly.
+
 ### Git-evidenced workstreams, Nov 2025 → Feb 2026 (mined 2026-07-11)
 - [GIT-01] **FWC Retell voice-agent (flagship):** ~35 commits (2025-12-11→2026-01-06) — Retell
   AI phone integration, dynamic-variable mapping, agent-selector UI, calendar-booking
@@ -230,7 +260,8 @@
 - XAI comparative study (SHAP/LIME/Grad-CAM) — active (GitHub profile). 
 - RA to Dr Larry Wen, Feb–Nov 2024 (WIL: ML, cloud, data projects; supported PhD researchers).
 - **Casual Academic, Griffith University — ongoing**: teaching across Object-Oriented Software
-  Development (OOSD), Mobile App Development (MAD), and other courses (confirmed 2026-07-11).
+  Development (OOSD), Mobile App Development (MAD), and other courses (confirmed 2026-07-11);
+  WhatsApp evidence adds **penetration-testing / ethical-hacking teaching** to the set.
 
 ## 7. Publications
 
@@ -288,10 +319,14 @@
 *(2026-07-11 answers folded in above. Remaining:)*
 1. IEEE paper author list/order — pull from the DOI landing page at rewrite time.
 2. [JDL-48] "new era" seismic-modelling WG feature — what is it (public-safe)?
-3. **DocuSign/Synthesia attribution tension:** Gabriel says "mine" (2026-07-11); git shows
-   those keywords only in Oliver-authored pre-Nov-2025 commits and absent from Gabriel's.
-   Likely explanation: built server-side during Gabriel's un-versioned period (Dec24–Oct25)
-   and later committed by Oliver's sync. **Ask Gabriel to reconcile before these claims go on
-   the resume** — they must be interview-defensible.
-4. What did Dec 2024 – Oct 2025 look like concretely? (un-versioned period: the Voice AI
-   alpha build [CV] + what else? A few themes suffice — infra/maintenance/security cadence.)
+3. **DocuSign/Synthesia — EVIDENCE-BASED RESOLUTION (2026-07-11, supersedes "co-built"):**
+   two independent sources (git + WhatsApp) show the core integration code is **Oliver's**
+   ("he's done this flow many times"; Synthesia TEMPLATE_ID commit = Oliver 2026-01).
+   Gabriel's demonstrable DocuSign work = **DNS/MX (Oct 2025), the `dochook.php` webhook, and
+   full production-account provisioning + handover doc (2026)**; Synthesia = operational
+   ownership of video production (later delegated). **Resume wording locked:** "supported the
+   DocuSign rollout (DNS, webhooks, production provisioning)" — never "built the DocuSign/
+   Synthesia integrations". Gabriel's recollection differs; the conservative wording is what
+   survives an interview with Oliver as a possible reference.
+4. [CHAT-##] mining DONE. Remaining dark window: **Dec 2024 → Apr 2025** (testimony/ACS only)
+   — awaiting ChatGPT + Gemini history exports for mining.
