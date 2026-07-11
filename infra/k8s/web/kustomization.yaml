@@ -6,4 +6,4 @@ resources:
   - service.yaml
 images:
   - name: ghcr.io/gabrielipcarvalho/gipc-web
-    newTag: latest   # CI bumps this to the git sha on every push (GitOps)
+    newTag: "c1664384d70a1c9cd2b4142448628d109b8fc332"
