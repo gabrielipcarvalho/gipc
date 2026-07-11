@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en-AU"><head><meta charset="utf-8"><title>Gabriel Isaias Padua Carvalho — Resume</title>
+<style>
+:root{
+  --ink:#161a20; --muted:#454c57; --faint:#69707b;
+  --accent:#1f2a44; --accent2:#33405c; --rule:#b7bdc7; --rule-soft:#e0e3e8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+@page{ size:A4; margin:13mm 15mm 12mm 15mm; }
+html{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+body{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  color:var(--ink); font-size:10pt; line-height:1.34;
+  font-weight:400; -webkit-font-smoothing:antialiased;
+}
+a{ color:var(--accent2); text-decoration:none; }
+.small{ font-size:8.6pt; } .muted{ color:var(--muted); }
+
+/* ---------- header ---------- */
+.head{ border-bottom:1.4pt solid var(--accent); padding-bottom:2.2mm; }
+.name{ font-size:21pt; font-weight:700; letter-spacing:.2px; color:var(--accent); line-height:1.05; white-space:nowrap; }
+.head-row{ display:flex; justify-content:space-between; align-items:baseline; gap:9mm; margin-top:1.6mm; }
+.title{ font-size:10.4pt; font-weight:600; letter-spacing:.2px; text-transform:uppercase; color:var(--accent2); white-space:nowrap; }
+.contact{ text-align:right; font-size:8.5pt; line-height:1.55; color:var(--muted); }
+.contact b{ color:var(--ink); font-weight:600; }
+
+/* ---------- sections ---------- */
+section{ margin-top:3.0mm; }
+section.sp{ margin-top:4.6mm; }               /* page-2 sections: more air */
+h2{ font-size:9.6pt; font-weight:700; letter-spacing:.25px; text-transform:uppercase;
+  color:var(--accent); border-bottom:.7pt solid var(--rule); padding-bottom:1mm; margin-bottom:2mm; }
+p.profile{ font-size:10.1pt; line-height:1.38; color:var(--muted); }
+p.profile b{ color:var(--ink); font-weight:600; }
+
+/* ---------- skills ---------- */
+.skill{ display:flex; gap:3mm; margin-bottom:1.0mm; break-inside:avoid; }
+.skill .k{ flex:0 0 37mm; font-weight:700; color:var(--accent2); font-size:9.5pt; }
+.skill .v{ flex:1; font-size:9.6pt; color:var(--muted); }
+
+/* ---------- experience ---------- */
+.job{ margin-bottom:2.4mm; break-inside:avoid; }
+.job-h{ display:flex; justify-content:space-between; align-items:baseline; gap:8mm; }
+.job-h .role{ font-size:10.6pt; font-weight:700; color:var(--ink); }
+.job-h .role .org{ font-weight:700; }
+.job-h .role .rolesub{ font-weight:400; color:var(--faint); font-size:9.4pt; }
+.job-h .when{ font-size:8.8pt; font-weight:600; color:var(--faint); white-space:nowrap; }
+ul{ list-style:none; }
+li{ position:relative; padding-left:3.6mm; margin-bottom:1.05mm; font-size:10pt; line-height:1.34; }
+li::before{ content:""; position:absolute; left:0; top:1.6mm; width:1.5mm; height:1.5mm;
+  background:var(--accent); border-radius:50%; }
+li b{ font-weight:600; }
+.job ul{ margin-top:1.1mm; }
+
+/* ---------- projects (page 2 — airier) ---------- */
+.proj{ margin-bottom:2.7mm; font-size:9.9pt; line-height:1.42; break-inside:avoid; }
+.proj .pn{ font-weight:700; color:var(--ink); }
+.proj .py{ color:var(--faint); font-size:8.8pt; font-weight:600; }
+
+/* ---------- rows (edu) ---------- */
+.row{ margin-bottom:2.9mm; break-inside:avoid; }
+.row .rh{ display:flex; justify-content:space-between; align-items:baseline; gap:8mm; }
+.row .d{ font-weight:700; color:var(--ink); font-size:10pt; }
+.row .d .sub{ font-weight:400; color:var(--muted); }
+.row .w{ font-size:8.8pt; font-weight:600; color:var(--faint); white-space:nowrap; }
+.row .x{ font-size:9.5pt; color:var(--muted); margin-top:.4mm; line-height:1.4; }
+.pub{ font-size:9.6pt; color:var(--muted); line-height:1.5; }
+.pub b{ color:var(--ink); font-weight:600; }
+.list li{ font-size:9.6pt; margin-bottom:2.0mm; line-height:1.4; }
+.list li b{ color:var(--ink); }
+</style></head>
+<body>
+
+<div class="head">
+  <div class="name">Gabriel Isaias Padua Carvalho</div>
+  <div class="head-row">
+    <div class="title">Software &middot; DevOps &middot; AI Engineer</div>
+    <div class="contact">
+      <b>Gold Coast, QLD</b> &nbsp;&middot;&nbsp; +61 *** *** *** &nbsp;&middot;&nbsp; <b>gabriel@gipc.dev</b> &nbsp;&middot;&nbsp; gipc.dev<br>
+      linkedin.com/in/gabriel-ipcarvalho &nbsp;&middot;&nbsp; github.com/gabrielipcarvalho
+    </div>
+  </div>
+</div>
+
+<section>
+  <h2>Profile</h2>
+  <p class="profile">Software, DevOps and AI Engineer who ships production systems end to end — from AWS infrastructure and CI/CD to LLM-powered products. Sole engineer on a multi-server financial-services CRM estate: two production server migrations, estate-wide security hardening and incident response, and multiple production AI systems (voice, WhatsApp, ticket triage). <b>PhD candidate in adaptive, agentic multi-agent AI and first-author IEEE&nbsp;Access publication</b>, ACS-assessed for Software Engineer, Developer Programmer and DevOps Engineer. Full Australian working rights (HDR student visa to 2029); open to Melbourne relocation.</p>
+</section>
+
+<section>
+  <h2>Skills</h2>
+  <div class="skill"><div class="k">Languages</div><div class="v">Python &middot; PHP &middot; TypeScript / JavaScript &middot; SQL &middot; Bash &middot; C / C++</div></div>
+  <div class="skill"><div class="k">Cloud &amp; Infrastructure</div><div class="v">AWS (EC2, S3, Lambda, DynamoDB, API Gateway, CloudFront, WAF, ACM, Route&nbsp;53, IAM, SES, Bedrock, EBS/DLM, GuardDuty) &middot; Azure (AKS, Bicep) &middot; Cloudflare (Tunnel, WAF, DNS) &middot; Linux (Ubuntu, AlmaLinux, cPanel/WHM)</div></div>
+  <div class="skill"><div class="k">DevOps &amp; Platform</div><div class="v">Docker &middot; Kubernetes (k3s, AKS) &middot; Terraform &middot; Bicep &middot; CI/CD &amp; git-driven deploys &middot; observability &amp; monitoring (CloudWatch, UptimeRobot) &middot; WireGuard &middot; Tailscale &middot; systemd</div></div>
+  <div class="skill"><div class="k">AI &amp; ML</div><div class="v">LLM production systems (Bedrock/Claude, GPT-4o-mini, Deepgram, Retell) &middot; prompt &amp; conversation-flow engineering &middot; agentic &amp; multi-agent systems &middot; RAG &middot; MLOps &middot; model evaluation, guardrails &amp; XAI &middot; PyTorch &middot; TensorFlow &middot; Hugging Face &middot; CNN / U-Net &middot; Transformers</div></div>
+  <div class="skill"><div class="k">Data</div><div class="v">PostgreSQL / Supabase &middot; MySQL &middot; DynamoDB &middot; REST APIs &middot; ETL pipelines &middot; pandas&nbsp;/&nbsp;NumPy</div></div>
+  <div class="skill"><div class="k">Practices</div><div class="v">TDD (pytest, Vitest, Playwright, axe) &middot; IaC &middot; DevSecOps &amp; security hardening &middot; incident response &amp; RCA &middot; functional-core architecture &middot; technical writing</div></div>
+</section>
+
+<section>
+  <h2>Experience</h2>
+  <div class="job">
+    <div class="job-h">
+      <div class="role"><span class="org">WealthGoal Software</span> <span class="rolesub">(formerly part of JDL Strategies)</span> — Software &amp; DevOps Engineer</div>
+      <div class="when">Dec 2024 – Present</div>
+    </div>
+    <ul>
+      <li>Shipped a production <b>voice-AI qualification agent</b> — from a self-built AWS Bedrock (Nova&nbsp;Sonic) + Twilio prototype to a managed Retell platform — replacing the vendor's extraction with a <b>PHP + GPT-4o-mini pipeline, live September 2025</b>.</li>
+      <li>Built and deployed a standalone multi-tenant <b>Django support portal</b> (Python 3.12, Supabase, AI-assisted ticket triage) as sole engineer — <b>604 automated tests</b> and live client workspaces on a functional-core architecture.</li>
+      <li>Delivered a production <b>WhatsApp financial-qualification chatbot</b> (FastAPI + GPT-4o-mini, 25-step conversation engine) in <b>three days</b>, with idempotent HMAC-validated webhooks, atomic opt-out compliance and a single-call prompt design that <b>cut response latency ~50%</b>.</li>
+      <li>Migrated two production servers to new AWS accounts with row-parity-verified database cutovers, and executed the corporate infrastructure separation of the two companies — vhosts, three Cloudflare zones and registrar EPP domain transfers.</li>
+      <li>Owned the AWS environment — WAF, three CloudFront distributions, ACM, GuardDuty and IAM — <b>decommissioned a legacy stack saving ~US$18k/year</b>, and rebuilt backups on EBS/DLM snapshots after finding the prior policy silently capturing none.</li>
+      <li>Led estate-wide security hardening and incident response — a CSRF/SSRF/security-headers sprint across three servers (five adversarial QA rounds), a same-day SQL-injection scanner response, and an authorisation-gate content leak fixed across <b>163 files / 422 sites</b> — alongside cPanel/WHM/Imunify360 and Exim/SES mail operations.</li>
+    </ul>
+  </div>
+  <div class="job">
+    <div class="job-h">
+      <div class="role"><span class="org">Griffith University</span> — Casual Academic</div>
+      <div class="when">2024 – Present</div>
+    </div>
+    <ul>
+      <li>Teach across Object-Oriented Software Development, Mobile App Development and penetration-testing / ethical-hacking courses; lead tutorials and lab sessions.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="sp">
+  <h2>Selected Projects</h2>
+  <div class="proj"><span class="pn">gipc.dev — self-hosted operator platform</span> <span class="py">2026</span> &nbsp;— Live-demo platform on bare-metal <b>k3s</b> behind a <b>Cloudflare Tunnel</b> (zero inbound ports), infrastructure-as-code in-repo; migrated the full domain + mail estate solo.</div>
+  <div class="proj"><span class="pn">Nina Nails — booking platform (client)</span> <span class="py">2026</span> &nbsp;— Full-stack <b>Next.js&nbsp;15 / React&nbsp;19 / Supabase</b> product on Vercel (~15k LOC) with a three-tier test suite (Vitest, Playwright e2e, axe) and Google Calendar + email integration.</div>
+  <div class="proj"><span class="pn">Seismic inversion (PyTorch U-Net)</span> <span class="py">2026</span> &nbsp;— Reproducible <b>U-Net (12.5M parameters)</b> inverting 2,000 synthetic seismograms via a differentiable wave simulation; functional-core design, 27 deterministic tests.</div>
+  <div class="proj"><span class="pn">Transformer financial-prediction platform</span> <span class="py">2023–2024</span> &nbsp;— Node.js + Python on Azure Kubernetes; ETL of <b>3M+ records/day, sub-200&nbsp;ms per query</b>, <b>~12% MAE reduction</b>, IaC (Bicep/Terraform), &gt;90% coverage.</div>
+  <div class="proj"><span class="pn">Real-time drowning detection (Griffith &times; Huizhou)</span> <span class="py">2024–2026</span> &nbsp;— Edge computer-vision on Raspberry&nbsp;Pi/ARM at <b>&ge;20&nbsp;fps and 95%+ accuracy</b>, with sub-100&nbsp;ms multi-sensor fusion; published in <b>IEEE&nbsp;Access</b>.</div>
+</section>
+
+<section class="sp">
+  <h2>Publications</h2>
+  <p class="pub"><b>G. I. P. Carvalho et al.</b>, &ldquo;Artificial Intelligence for Drowning Detection: Technical Feasibility Established, Operational Viability Unproven,&rdquo; <i>IEEE Access</i>, vol.&nbsp;14, pp.&nbsp;97,604–97,628, Jan.&nbsp;2026. DOI: 10.1109/ACCESS.2026.3701060.</p>
+</section>
+
+<section class="sp">
+  <h2>Education</h2>
+  <div class="row">
+    <div class="rh"><div class="d">PhD, Computer Science <span class="sub">— Griffith University</span></div><div class="w">2025 – 2028 (expected)</div></div>
+    <div class="x">Adaptive, self-reconfiguring multi-agent AI for real-time decision-making; confirmation milestone passed April 2026. Supervisors: Dr Larry Wen, Dr Qinyi Li.</div>
+  </div>
+  <div class="row">
+    <div class="rh"><div class="d">Master of Information Technology <span class="sub">— Griffith University</span></div><div class="w">2024</div></div>
+    <div class="x">High Distinction, GPA 6.63 / 7.0; Griffith Award for Academic Excellence (2023 &amp; 2024).</div>
+  </div>
+  <div class="row">
+    <div class="rh"><div class="d">Bachelor of Laws (LLB) <span class="sub">— Universidade Federal do Paraná, Brazil</span></div><div class="w">2018</div></div>
+    <div class="x">High Distinction.</div>
+  </div>
+</section>
+
+<section class="sp">
+  <h2>Certifications &amp; Recognition</h2>
+  <ul class="list">
+    <li><b>ACS Skills Assessment (2026)</b> — assessed suitable for Software Engineer (261313), Developer Programmer (261312) and DevOps Engineer (261316).</li>
+    <li><b>IELTS Academic — Overall 8.0</b> (Listening 9.0), CEFR C1 (2025).</li>
+    <li><b>ICPC 2024</b> — 3rd place, South Pacific regional, Level&nbsp;B division.</li>
+    <li><b>Research fellowship</b>, Xidian University (Guangzhou), 2025 — AI, Big Data &amp; Embedded Systems.</li>
+  </ul>
+</section>
+
+<section class="sp">
+  <h2>Leadership &amp; Community</h2>
+  <ul class="list">
+    <li><b>Griffith Coding Club</b> — led weekly data-structures &amp; algorithms workshops and ICPC team labs.</li>
+    <li><b>Griffith AI Research Colloquium (2026)</b> — presented early PhD findings on adaptive multi-agent systems.</li>
+    <li><b>Research seed-funding</b> — contributed the partner-engagement workstream to a 2026 Griffith research-funding bid.</li>
+  </ul>
+</section>
+
+</body></html>
