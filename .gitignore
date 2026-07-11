@@ -40,3 +40,8 @@ Thumbs.db
 .research/kaveenk/
 
 # (kept on purpose: .research/identity/ — our own brand assets/renders)
+
+# secrets — never commit
+*.env
+**/gipc.json
+/etc/cloudflared/

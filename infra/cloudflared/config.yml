@@ -1,0 +1,10 @@
+tunnel: a7fe831c-d2b3-4d6f-b607-10e2b58ce934
+credentials-file: /etc/cloudflared/gipc.json
+originRequest:
+  connectTimeout: 30s
+ingress:
+  - hostname: gipc.dev
+    service: http://localhost:30080
+  - hostname: www.gipc.dev
+    service: http://localhost:30080
+  - service: http_status:404

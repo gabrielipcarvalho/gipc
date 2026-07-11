@@ -1,0 +1,11 @@
+[Unit]
+Description=cloudflared tunnel (gipc)
+After=network-online.target
+Wants=network-online.target
+[Service]
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /etc/cloudflared/config.yml tunnel run
+Restart=on-failure
+RestartSec=5
+User=root
+[Install]
+WantedBy=multi-user.target
