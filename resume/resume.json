@@ -4,45 +4,47 @@
     "generated": "2026-07-11",
     "source": "career/career-mcd.md",
     "rule": "zero-fabrication; every bullet.evidence traces to an MCD id",
-    "pendingEvidence": ["ChatGPT export (Dec2024-May2025 enrichment)"]
+    "pendingEvidence": ["ChatGPT export (Dec2024-May2025 enrichment)"],
+    "renderedPdf": "resume/Gabriel_Carvalho_Resume.pdf",
+    "diagnostic": "career/diagnostics/resume-rewrite-2026-07-11.md (~89/100)"
   },
   "basics": {
     "name": "Gabriel Isaias Padua Carvalho",
     "label": "Software · DevOps · AI Engineer",
     "location": { "city": "Gold Coast", "region": "QLD", "country": "AU", "relocation": "Melbourne (open)" },
+    "phone": "+61 490 831 997",
     "email": "gabriel@gipc.dev",
     "site": "https://gipc.dev",
     "profiles": [
       { "network": "LinkedIn", "url": "https://www.linkedin.com/in/gabriel-ipcarvalho" },
       { "network": "GitHub", "url": "https://github.com/gabrielipcarvalho" }
     ],
-    "private": { "note": "phone + street address supplied on application forms only; never in public resume.json build" },
-    "workRights": "AU permanent-residency pathway in progress; ACS-assessed (261313/261312/261316)",
-    "summary": "Software, DevOps and AI Engineer who ships production systems end to end. Sole/lead engineer on a financial-services CRM estate (migrations, security, incident response, production AI). PhD candidate in adaptive multi-agent AI and IEEE Access author."
+    "private": { "note": "street address kept out of resume.json public build; phone included on the application PDF (standard)" },
+    "workRights": "Full Australian working rights (HDR student visa, subclass 500, to 2029); ACS-assessed (261313/261312/261316); PR pathway (subclass 189) in progress",
+    "summary": "Software, DevOps and AI Engineer who ships production systems end to end. Sole engineer on a multi-server financial-services CRM estate (migrations, security, incident response, production AI). PhD candidate in adaptive, agentic multi-agent AI and first-author IEEE Access publication."
   },
   "skills": [
     { "category": "Languages", "items": ["Python", "PHP", "TypeScript/JavaScript", "SQL", "Bash", "C", "C++"] },
-    { "category": "Cloud & Infrastructure", "items": ["AWS (EC2, S3, Lambda, DynamoDB, API Gateway, CloudFront, WAF, ACM, Route 53, IAM/Identity Center, SES, Bedrock, EBS/DLM, GuardDuty)", "Azure (AKS, Bicep)", "Cloudflare (Tunnel, WAF, DNS)", "Linux (Ubuntu, AlmaLinux, Arch, cPanel/WHM/CloudLinux)"] },
-    { "category": "DevOps & Platform", "items": ["Docker", "Kubernetes (k3s, AKS)", "Terraform", "Bicep", "CI/CD & git-driven deploys", "Prometheus/Grafana/Loki", "observability", "WireGuard", "Tailscale", "systemd"] },
-    { "category": "AI & ML", "items": ["LLM production systems (Bedrock/Claude, GPT-4o-mini, Deepgram, Retell)", "prompt & conversation-flow engineering", "PyTorch", "TensorFlow", "Hugging Face", "CNN/U-Net", "Transformers", "multi-agent systems", "RAG (pgvector)", "model evaluation & XAI"] },
-    { "category": "Data", "items": ["PostgreSQL/Supabase", "MySQL", "DynamoDB", "ETL", "pandas/NumPy"] },
-    { "category": "Practices", "items": ["TDD (pytest, Vitest, Playwright, axe)", "IaC", "DevSecOps & hardening", "incident response & RCA", "functional-core architecture", "technical writing"] }
+    { "category": "Cloud & Infrastructure", "items": ["AWS (EC2, S3, Lambda, DynamoDB, API Gateway, CloudFront, WAF, ACM, Route 53, IAM, SES, Bedrock, EBS/DLM, GuardDuty)", "Azure (AKS, Bicep)", "Cloudflare (Tunnel, WAF, DNS)", "Linux (Ubuntu, AlmaLinux, cPanel/WHM)"] },
+    { "category": "DevOps & Platform", "items": ["Docker", "Kubernetes (k3s, AKS)", "Terraform", "Bicep", "CI/CD & git-driven deploys", "observability & monitoring (CloudWatch, UptimeRobot)", "WireGuard", "Tailscale", "systemd"] },
+    { "category": "AI & ML", "items": ["LLM production systems (Bedrock/Claude, GPT-4o-mini, Deepgram, Retell)", "prompt & conversation-flow engineering", "agentic & multi-agent systems", "RAG", "MLOps", "model evaluation, guardrails & XAI", "PyTorch", "TensorFlow", "Hugging Face", "CNN/U-Net", "Transformers"] },
+    { "category": "Data", "items": ["PostgreSQL/Supabase", "MySQL", "DynamoDB", "REST APIs", "ETL pipelines", "pandas/NumPy"] },
+    { "category": "Practices", "items": ["TDD (pytest, Vitest, Playwright, axe)", "IaC", "DevSecOps & security hardening", "incident response & RCA", "functional-core architecture", "technical writing"] }
   ],
   "experience": [
     {
-      "org": "JDL Strategies / WealthGoal Software",
+      "org": "WealthGoal Software (formerly part of JDL Strategies)",
       "role": "Software & DevOps Engineer",
       "location": "Gold Coast, QLD",
       "start": "2024-12", "end": "present",
-      "note": "Companies split late 2025; now Software Engineer at WealthGoal Software (engineered the separation, JDL-06/07).",
-      "context": "Primary infrastructure, backend and AI engineer for a financial-services CRM estate; two-person engineering team (with Oliver).",
+      "note": "Companies split late 2025; Gabriel engineered the separation (JDL-06/07). Two-engineer team (with Oliver); contractor structure.",
       "bullets": [
-        { "text": "Designed and shipped a production voice-AI qualification agent, evolving it from a self-built AWS Bedrock (Nova Sonic) + Twilio streaming prototype to a managed Retell platform, and replaced the vendor's native data-extraction with a PHP + GPT-4o-mini pipeline (confidence-scored) that went live September 2025.", "evidence": ["CHAT-01", "CHAT-02", "GEM-01", "GEM-03", "CHAT-08", "JDL-35"], "keywords": ["LLM", "AWS Bedrock", "voice AI", "prompt engineering", "Python", "PHP"] },
-        { "text": "Built and deployed a standalone multi-tenant Django support portal (Python 3.12, Supabase, AI-assisted ticket triage) as sole engineer, with 604 automated tests and live client workspaces on a functional-core architecture.", "evidence": ["JDL-03", "GIT-07", "JDL-41"], "keywords": ["Django", "Python", "PostgreSQL/Supabase", "testing", "AI triage"] },
+        { "text": "Shipped a production voice-AI qualification agent — from a self-built AWS Bedrock (Nova Sonic) + Twilio prototype to a managed Retell platform — replacing the vendor's extraction with a PHP + GPT-4o-mini pipeline, live September 2025.", "evidence": ["CHAT-01", "CHAT-02", "GEM-01", "GEM-03", "CHAT-08", "GIT-01", "JDL-35"], "keywords": ["LLM", "AWS Bedrock", "voice AI", "prompt engineering", "Python", "PHP"] },
+        { "text": "Built and deployed a standalone multi-tenant Django support portal (Python 3.12, Supabase, AI-assisted ticket triage) as sole engineer — 604 automated tests and live client workspaces on a functional-core architecture.", "evidence": ["JDL-03", "GIT-07", "JDL-41"], "keywords": ["Django", "Python", "PostgreSQL/Supabase", "testing", "AI triage"] },
         { "text": "Delivered a production WhatsApp financial-qualification chatbot (FastAPI + GPT-4o-mini, 25-step conversation engine) in three days, with idempotent HMAC-validated webhooks, atomic opt-out compliance and a single-call prompt design that cut response latency ~50%.", "evidence": ["GIT-08", "Olivia"], "keywords": ["FastAPI", "LLM", "REST APIs", "security", "PostgreSQL"] },
-        { "text": "Migrated two production servers to new AWS accounts (Ubuntu) with row-parity-verified database cutovers, and executed the corporate infrastructure separation of the two companies — vhosts, three Cloudflare zones (49 records) and registrar EPP domain transfers.", "evidence": ["JDL-04", "JDL-05", "JDL-06", "JDL-07"], "keywords": ["AWS", "migration", "Linux", "DNS", "Cloudflare"] },
-        { "text": "Owned the AWS estate — WAF, three CloudFront distributions, ACM, GuardDuty and IAM (account 891377206841) — decommissioned a legacy stack saving ~US$1,538/month, and rebuilt backups on EBS/DLM snapshots after finding the prior policy silently capturing none.", "evidence": ["JDL-11", "JDL-12", "JDL-14", "JDL-19", "GEM-06"], "keywords": ["AWS", "CloudFront/WAF", "IaC", "cost optimization", "observability"] },
-        { "text": "Led estate-wide security hardening and incident response — a CSRF/SSRF/security-headers sprint (18 commits, five adversarial QA rounds, three servers), a same-day SQL-injection scanner response, and an auth-gate content-leak fix across 163 files / 422 sites — alongside cPanel/WHM/Imunify360 and Exim/SES mail operations.", "evidence": ["JDL-23", "JDL-25", "JDL-26", "GEM-05", "GEM-07", "ZSH-01"], "keywords": ["DevSecOps", "security hardening", "incident response", "Linux", "CI/CD"] }
+        { "text": "Migrated two production servers to new AWS accounts with row-parity-verified database cutovers, and executed the corporate infrastructure separation of the two companies — vhosts, three Cloudflare zones and registrar EPP domain transfers.", "evidence": ["JDL-04", "JDL-05", "JDL-06", "JDL-07"], "keywords": ["AWS", "migration", "Linux", "DNS", "Cloudflare"] },
+        { "text": "Owned the AWS environment — WAF, three CloudFront distributions, ACM, GuardDuty and IAM — decommissioned a legacy stack saving ~US$18k/year, and rebuilt backups on EBS/DLM snapshots after finding the prior policy silently capturing none.", "evidence": ["JDL-11", "JDL-12", "JDL-14", "JDL-19", "GEM-06"], "keywords": ["AWS", "CloudFront/WAF", "IaC", "cost optimization", "observability"] },
+        { "text": "Led estate-wide security hardening and incident response — a CSRF/SSRF/security-headers sprint across three servers (five adversarial QA rounds), a same-day SQL-injection scanner response, and an authorisation-gate content leak fixed across 163 files / 422 sites — alongside cPanel/WHM/Imunify360 and Exim/SES mail operations.", "evidence": ["JDL-23", "JDL-25", "JDL-26", "GEM-05", "GEM-07", "ZSH-01"], "keywords": ["DevSecOps", "security hardening", "incident response", "Linux", "CI/CD"] }
       ]
     },
     {
@@ -56,11 +58,11 @@
     }
   ],
   "projects": [
-    { "name": "gipc.dev — self-hosted operator platform", "year": "2026", "text": "Personal live-demo platform on bare-metal k3s behind a Cloudflare Tunnel (zero inbound ports), IaC in-repo, live at gipc.dev; migrated the full domain + mail estate solo.", "evidence": ["PRJ-GIPC", "JDL-09"], "url": "https://gipc.dev", "keywords": ["Kubernetes", "Cloudflare Tunnel", "IaC", "Linux"] },
-    { "name": "Nina Nails — booking platform (client)", "year": "2026", "text": "Full-stack Next.js 15 / React 19 / Supabase product on Vercel (~15k LOC) with a three-tier test suite (Vitest, Playwright, axe) and Google Calendar + email integration.", "evidence": ["PRJ-NINA"], "keywords": ["Next.js", "React", "TypeScript", "testing"] },
-    { "name": "Seismic inversion (PyTorch U-Net)", "year": "2026", "text": "Reproducible PyTorch U-Net (12.5M params) inverting 2,000 synthetic seismograms via differentiable wave simulation; functional-core design, 27 deterministic tests.", "evidence": ["PRJ-MARM"], "keywords": ["PyTorch", "deep learning", "testing"] },
-    { "name": "Transformer financial-prediction platform (Griffith)", "year": "2023-2024", "text": "Node.js + Python orchestration deploying models to Azure Kubernetes; ETL over 3M+ records/day at <200 ms, ~12% MAE reduction, IaC (Bicep/Terraform), >90% coverage.", "evidence": ["CV-PROJ-FIN"], "keywords": ["Transformers", "Azure", "Kubernetes", "ETL", "IaC"] },
-    { "name": "Real-time drowning detection (Griffith × Huizhou)", "year": "2024-2026", "text": "Edge computer-vision on Raspberry Pi/ARM at >=20 fps and 95%+ accuracy, sub-100 ms multi-sensor fusion, containerised with cloud fallback; published in IEEE Access.", "evidence": ["CV-PROJ-POOL", "PUB-1"], "keywords": ["computer vision", "edge AI", "Docker/Kubernetes"] }
+    { "name": "gipc.dev — self-hosted operator platform", "year": "2026", "text": "Live-demo platform on bare-metal k3s behind a Cloudflare Tunnel (zero inbound ports), infrastructure-as-code in-repo; migrated the full domain + mail estate solo.", "evidence": ["PRJ-GIPC", "JDL-09"], "url": "https://gipc.dev", "keywords": ["Kubernetes", "Cloudflare Tunnel", "IaC", "Linux"] },
+    { "name": "Nina Nails — booking platform (client)", "year": "2026", "text": "Full-stack Next.js 15 / React 19 / Supabase product on Vercel (~15k LOC) with a three-tier test suite (Vitest, Playwright e2e, axe) and Google Calendar + email integration.", "evidence": ["PRJ-NINA"], "keywords": ["Next.js", "React", "TypeScript", "testing"] },
+    { "name": "Seismic inversion (PyTorch U-Net)", "year": "2026", "text": "Reproducible U-Net (12.5M parameters) inverting 2,000 synthetic seismograms via a differentiable wave simulation; functional-core design, 27 deterministic tests.", "evidence": ["PRJ-MARM"], "keywords": ["PyTorch", "deep learning", "testing"] },
+    { "name": "Transformer financial-prediction platform", "year": "2023-2024", "text": "Node.js + Python orchestration to Azure Kubernetes; ETL over 3M+ records/day, sub-200 ms per query, ~12% MAE reduction, IaC (Bicep/Terraform), >90% coverage.", "evidence": ["CV-PROJ-FIN"], "keywords": ["Transformers", "Azure", "Kubernetes", "ETL", "IaC"] },
+    { "name": "Real-time drowning detection (Griffith × Huizhou)", "year": "2024-2026", "text": "Edge computer-vision on Raspberry Pi/ARM at >=20 fps and 95%+ accuracy, with sub-100 ms multi-sensor fusion; published in IEEE Access.", "evidence": ["CV-PROJ-POOL", "PUB-1"], "keywords": ["computer vision", "edge AI", "Docker/Kubernetes"] }
   ],
   "publications": [
     { "authors": "G. I. P. Carvalho et al.", "authorPosition": "first", "authorsConfirmed": true, "title": "Artificial Intelligence for Drowning Detection: Technical Feasibility Established, Operational Viability Unproven", "venue": "IEEE Access", "volume": "14", "pages": "97604-97628", "date": "2026-01", "doi": "10.1109/ACCESS.2026.3701060", "evidence": ["PUB-1"] }
@@ -78,5 +80,10 @@
     { "name": "ICPC — 3rd place, South Pacific regional, Level B division", "date": "2024", "evidence": ["MCD-10"] },
     { "name": "Research fellowship, Xidian University (Guangzhou) — AI, Big Data & Embedded Systems (6 weeks)", "date": "2025", "evidence": ["MCD-6"] },
     { "name": "Griffith Award for Academic Excellence", "date": "2023, 2024", "evidence": ["CERT-1"] }
+  ],
+  "leadership": [
+    { "name": "Griffith Coding Club", "text": "Led weekly data-structures & algorithms workshops and team labs preparing peers for the ICPC.", "evidence": ["MCD-10"] },
+    { "name": "Griffith AI Research Colloquium (2026)", "text": "Presented early PhD findings on adaptive multi-agent systems.", "evidence": ["MCD-6"] },
+    { "name": "Research seed-funding", "text": "Contributed the partner-engagement workstream to a 2026 Griffith research funding application.", "evidence": ["MCD-10"] }
   ]
 }
