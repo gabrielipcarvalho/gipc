@@ -1,0 +1,19 @@
+{
+  "name": "gipc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "gipc.dev — the arcane operator console",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace apps/web",
+    "build": "npm run build --workspace apps/web",
+    "start": "npm run start --workspace apps/web",
+    "lint": "npm run lint --workspace apps/web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

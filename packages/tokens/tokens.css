@@ -1,0 +1,62 @@
+/* ==========================================================================
+   @gipc/tokens — Arcane operator-console design system
+   Source of truth: design-system.md (locked 2026-06-16). Edit there + here together.
+   ========================================================================== */
+:root{
+  /* ---- surfaces ---- */
+  --bg:#0a0a12;
+  --bg-radial:radial-gradient(circle at 50% 0%,#15101f,#0a0a12 55%,#050409);
+  --bg-elev:#100d1a;
+  --surface:rgba(20,16,32,.62);
+  --surface-2:rgba(16,13,26,.86);
+  --hairline:rgba(255,255,255,.06);
+  --border:rgba(177,140,255,.20);
+  --border-cyan:rgba(52,230,255,.22);
+
+  /* ---- accents ---- */
+  --violet:#b18cff;  --violet-bright:#c9b3ff;  --violet-deep:#8b5cf6;
+  --cyan:#34e6ff;    --cyan-bright:#6ef0ff;
+
+  /* ---- text (one base + opacity ramp) ---- */
+  --text:#ece8ff;
+  --text-muted:#a99fce;
+  --text-faint:rgba(236,232,255,.50);
+
+  /* ---- signal / semantic ---- */
+  --ok:#57e6a8;  --warn:#ffce6b;  --err:#ff6f93;  --info:#34e6ff;
+
+  /* ---- gradients + glow ---- */
+  --grad-accent:linear-gradient(90deg,#b18cff,#34e6ff);
+  --glow-violet:rgba(177,140,255,.45);
+  --glow-cyan:rgba(52,230,255,.40);
+
+  /* ---- typography ---- */
+  --font:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --fs-display:clamp(2.6rem,7vw,4.8rem);
+  --fs-h1:clamp(1.5rem,3.5vw,2.2rem);
+  --fs-h2:clamp(1.1rem,2vw,1.4rem);
+  --fs-section:.78rem;
+  --fs-body:1rem;
+  --fs-sm:.8125rem;
+  --fs-xs:.72rem;
+
+  /* ---- spacing / radius / layout ---- */
+  --sp-1:.25rem; --sp-2:.5rem; --sp-3:.75rem; --sp-4:1rem;
+  --sp-6:1.5rem; --sp-8:2rem; --sp-12:3rem; --sp-16:4rem; --sp-24:6rem;
+  --pad-section:clamp(2.5rem,4vw,3.5rem);
+  --maxw:1100px;
+  --r-pill:999px; --r-card:16px; --r-input:10px; --r-sm:8px;
+
+  /* ---- elevation & effects ---- */
+  --shadow-card:0 24px 60px rgba(0,0,0,.5);
+  --shadow-pop:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(177,140,255,.10);
+  --glow-soft:0 0 24px var(--glow-violet);
+  --ring:0 0 0 2px rgba(52,230,255,.40);
+  --text-glow:0 0 34px var(--glow-violet);
+  --glass:blur(14px);
+
+  /* ---- motion ---- */
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --dur-fast:140ms; --dur:200ms; --dur-slow:340ms;
+}

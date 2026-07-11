@@ -1,0 +1,8 @@
+{
+  "name": "@gipc/tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Arcane design-system tokens (from design-system.md)",
+  "main": "tokens.css",
+  "files": ["tokens.css"]
+}
