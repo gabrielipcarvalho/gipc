@@ -52,11 +52,26 @@
   core/imperative shell, IaC, adversarial QA rounds, incident response, systematic review
   methodology (82-paper SLR), technical writing (IEEE-published)
 
-## 4. Experience — JDL Strategies / WealthGoal Software (Gold Coast) — Software & DevOps Engineer — Dec 2024 → present
+## 4. Experience — JDL Strategies → WealthGoal Software (Gold Coast) — Software & DevOps Engineer — Dec 2024 → present
 
-> Coverage note: session evidence spans Mar–Jul 2026. Dec 2024–Feb 2026 evidenced by the CV
-> (Voice AI system) + GitHub timestamps. **[NEEDS-EVIDENCE: Gabriel to list months 1–14 wins.]**
-> Attribution: second developer **Oliver** co-commits on the CRM; items flagged (?) unconfirmed.
+> **Corporate split (end of 2025):** JDL Strategies and WealthGoal split into separate
+> companies; Gabriel is now **Software Engineer at WealthGoal Software** (confirmed
+> 2026-07-11). Resume presents one continuous engagement: "JDL Strategies / WealthGoal
+> Software" with the split noted — he engineered the infrastructure separation itself
+> [JDL-06/07/47].
+> **Evidence model per period (important):**
+> - **Dec 2024 → Oct 2025:** NO Gabriel-authored git commits exist anywhere (mined 2026-07-11).
+>   Work in this period was done directly on servers, un-versioned (confirmed by the
+>   2025-11-10 "server snapshot import" commit bringing +8,919 LOC of pre-existing ai-agent/
+>   Retell/webhook work into git). Evidence = documentary: the ACS assessment validated
+>   employment 02-Dec-2024→09-May-2025 + 12-May-2025→22-Feb-2026 [CERT-1], the CV's Voice AI
+>   narrative, the voice-ai-client GitHub repo, and Gabriel's testimony (scope: development,
+>   maintenance, security, infra & network engineering incl. VPN tunneling, AWS, backups,
+>   DevOps, front/back-end, scripting, Linux, AI).
+> - **Nov 2025 → Feb 2026:** git-evidenced ([GIT-##] below; 145+ commits).
+> - **Mar → Jul 2026:** session-log evidenced ([JDL-##] above).
+> Attribution: **Oliver** (owner-dev, ~2,100 commits since 2020) co-develops the CRM; items
+> flagged (?) unconfirmed.
 
 ### Systems built & migrated
 - [JDL-01] Multi-provider OAuth email system in the CRM — MS 365/Graph sync+send (~1.5k-line
@@ -79,11 +94,35 @@
 - [CV/GH: voice-ai-client] **Voice AI Client Qualification System** (first-year flagship):
   serverless AWS (Lambda/S3/DynamoDB/API GW), Twilio + Deepgram STT + PlayHT TTS + Claude 3
   Haiku (Bedrock), WebSocket orchestration, CloudWatch; validated alpha in 5 weeks (CV claim).
-  **[NEEDS-EVIDENCE: post-alpha fate — superseded by Retell-based caller [JDL-35]?]**
+  **Post-alpha: superseded by the managed Retell-based production callers [JDL-35], which
+  Gabriel now operates/migrates** (confirmed 2026-07-11). Resume framing: designed + shipped
+  the in-house alpha; production moved to a managed platform he owns.
 - [GH/PRJ: Olivia] **"Olivia AI"** production WhatsApp Financial-Wealth-Check chatbot
   (whatsapp.jdl.software): FastAPI + GPT-4o-mini structured extraction, 25-step FSM, atomic
   Postgres RPCs (opt-out, concurrency claim), Twilio HMAC + idempotency, PII-safe logging;
   ~50% latency cut via single-call ack+question architecture. 2026-02→03.
+
+### Git-evidenced workstreams, Nov 2025 → Feb 2026 (mined 2026-07-11)
+- [GIT-01] **FWC Retell voice-agent (flagship):** ~35 commits (2025-12-11→2026-01-06) — Retell
+  AI phone integration, dynamic-variable mapping, agent-selector UI, calendar-booking
+  endpoints, brand-specific managers, automation toggles; "ready for internal testing"
+  2025-12-18. NOTE: Retell first added by Oliver 2025-08 — Gabriel **inherited and evolved**
+  it (resume wording must reflect this; his in-house Voice AI alpha [CV] preceded it).
+- [GIT-02] Property-qualification calc backend (~10 commits) feeding the voice agent.
+- [GIT-03] Email Module: milestone-gated build — schema+indexes+verification (M1.1), PHP
+  backend (GM1.2), **React scaffold, 11k LOC (M1.3)** in-window; Graph sync/tracking/snooze
+  landed Mar 2026 → continuous with [JDL-01/02].
+- [GIT-04] Deploy tooling: custom Node git-ftp deployer — progress, gitignore-aware deletion
+  protection, safe-push (~20 commits).
+- [GIT-05] Repo security hygiene: secrets untracked, config templating (2025-11-26).
+- [GIT-06] 2025-11-10 first commit: **imported un-versioned server work into git** (+8,919
+  LOC, 40 files) + server_setup.sh — evidence that pre-git server work existed.
+- [GIT-07] Ticket_System: solo-architected from 2025-11-15 — hexagonal/functional-core domain
+  model, Gunicorn+Apache infra, SendGrid, AI-triage proposal (→ [JDL-03]).
+- [GIT-08] **WhatsApp "Olivia" chatbot MVP in 3 days** (2026-02-25→27, 29 commits): FastAPI
+  FSM, STOP-compliance/blocklist/concurrency guards, typing indicator, Olivia persona (→ Olivia entry above).
+- Working style evidenced: milestone/QA-gated commits, doc-first, AI-paired (11 Claude
+  co-commits) — [JDL-51] pattern visible in git.
 
 ### Infrastructure owned
 - [JDL-10] 3 production CRM servers + legacy cPanel box (~50 vhosts, t3.2xlarge, ~11 TiB EBS).
@@ -130,11 +169,16 @@
 - [JDL-33/34] Live Twilio/SendGrid estate audit (reference doc); Connect SMS/WhatsApp
   delivery-status pipeline fix shipped to all 3.
 - [JDL-35] Production Voice-AI phone callers (Retell): migrating to company-owned workspaces
-  incl. agent + SIP number export/import. (?) CRM Retell integration build attribution.
+  incl. agent + SIP number export/import. Attribution resolved via git: integration
+  scaffolding originated with Oliver (2025-08); **Gabriel evolved it to production
+  ([GIT-01]) and owns its operation/migration.**
 - [JDL-36..38, 40..42] Config-driven white-labelling (videos, support link), /apidocs client-key
   onboarding portal, Ticket System client workspaces + triage alerts shipped to prod.
-- [JDL-39] (?) DocuSign signature-impersonation JWT + Synthesia AI-video status integration —
-  confirm attribution/date.
+- [JDL-39] **CONFIRMED Gabriel's** (2026-07-11): DocuSign signature-impersonation JWT
+  integration + Synthesia AI-video status integration. He also confirms sole/lead ownership of
+  the **entire Email sub-app** (Gmail + MS 365 integrations, flagged addresses, email history
+  & threads) [JDL-01/02], the entire support/ticket system [JDL-03], plus the security-fix,
+  infra-management and server-management workstreams.
 
 ### Org & leadership signals
 - [JDL-46/47] Drove JDL cost-review + access handover; owns WG/JDL account-separation
@@ -146,7 +190,8 @@
 
 ## 5. Projects (personal / freelance / research-adjacent)
 
-- [PRJ-NINA] **Nina Nails booking platform** (client product, 2026-05→07): Next.js 15 /
+- [PRJ-NINA] **Nina Nails booking platform** (client product — public reference approved
+  2026-07-11, 2026-05→07): Next.js 15 /
   React 19 / TS / Supabase / Vercel; ~15.1k LOC, 86 commits; Google Calendar + transactional
   email (Resend); 3-tier tests (Vitest + Playwright e2e + axe a11y). Live for a real salon.
 - [PRJ-GIPC] **gipc.dev platform** (2026-06→): self-hosted portfolio/ops platform — bare-metal
@@ -174,7 +219,7 @@
 - Thesis: **"Generalisation and Operational Readiness of AI-Based Drowning Detection Systems:
   Characterisation, Mitigation, and Low-Cost Deployment"** — 5-chapter, 36-month program;
   cross-environment benchmark + domain adaptation + edge deployment. **Confirmation seminar
-  2026-04-29** (panel of 4). [NEEDS-EVIDENCE: confirmed outcome — passed?]
+  2026-04-29 — PASSED** (confirmed 2026-07-11; panel of 4).
 - SLR (Chapter 1): 82 papers screened, original evaluation framework → basis of PUB-1;
   IEEE Access revision workflow evidenced.
 - Research themes on CV: hierarchical self-reconfiguring agents (<300ms reconfig, >94% accuracy
@@ -184,7 +229,8 @@
   2025; AI/Big Data/Embedded). Confirmed by Gabriel 2026-07-11.
 - XAI comparative study (SHAP/LIME/Grad-CAM) — active (GitHub profile). 
 - RA to Dr Larry Wen, Feb–Nov 2024 (WIL: ML, cloud, data projects; supported PhD researchers).
-- Griffith casual academic role (Visa-189 dossier). [NEEDS-EVIDENCE: role details — tutoring?]
+- **Casual Academic, Griffith University — ongoing**: teaching across Object-Oriented Software
+  Development (OOSD), Mobile App Development (MAD), and other courses (confirmed 2026-07-11).
 
 ## 7. Publications
 
@@ -208,7 +254,8 @@
   suitable for ANZSCO **261312 Developer Programmer**, **261313 Software Engineer**,
   **261316 DevOps Engineer** (skilled date 16-Dec-2024). Work experience assessed under own
   name (contractor structure).
-- IELTS 8.0 (Visa-189 dossier). [NEEDS-EVIDENCE: test date for validity window]
+- **IELTS Academic — Overall 8.0** (L 9.0 / R 8.0 / W 7.5 / S 8.0), CEFR C1 — 28-Dec-2025,
+  TRF 25AU535481PADG900A (2-year recommended validity → Dec-2027).
 
 ## 10. Awards & extras
 
@@ -238,10 +285,13 @@
 
 ## 13. Open questions for Gabriel ([NEEDS-EVIDENCE] queue)
 
-1. JDL months 1–14 (Dec 2024→Feb 2026): main shipped work beyond the Voice AI alpha?
-2. Voice AI system post-alpha: evolved, shelved, or superseded by Retell callers?
-3. [JDL-39] DocuSign + Synthesia integrations — yours? when?
-4. [JDL-48] "new era" seismic-modelling WG feature — what is it (public-safe)?
-5. PhD confirmation outcome (passed?) + IEEE paper author order.
-6. IELTS test date; Griffith casual-academic role details.
-7. Nina Nails: paid client? public reference OK?
+*(2026-07-11 answers folded in above. Remaining:)*
+1. IEEE paper author list/order — pull from the DOI landing page at rewrite time.
+2. [JDL-48] "new era" seismic-modelling WG feature — what is it (public-safe)?
+3. **DocuSign/Synthesia attribution tension:** Gabriel says "mine" (2026-07-11); git shows
+   those keywords only in Oliver-authored pre-Nov-2025 commits and absent from Gabriel's.
+   Likely explanation: built server-side during Gabriel's un-versioned period (Dec24–Oct25)
+   and later committed by Oliver's sync. **Ask Gabriel to reconcile before these claims go on
+   the resume** — they must be interview-defensible.
+4. What did Dec 2024 – Oct 2025 look like concretely? (un-versioned period: the Voice AI
+   alpha build [CV] + what else? A few themes suffice — infra/maintenance/security cadence.)
