@@ -4,7 +4,7 @@
     "generated": "2026-07-11",
     "source": "career/career-mcd.md",
     "rule": "zero-fabrication; every bullet.evidence traces to an MCD id",
-    "pendingEvidence": ["ChatGPT export (Dec2024-May2025 enrichment)", "IEEE author order/list"]
+    "pendingEvidence": ["ChatGPT export (Dec2024-May2025 enrichment)"]
   },
   "basics": {
     "name": "Gabriel Isaias Padua Carvalho",
@@ -63,7 +63,7 @@
     { "name": "Real-time drowning detection (Griffith × Huizhou)", "year": "2024-2026", "text": "Edge computer-vision on Raspberry Pi/ARM at >=20 fps and 95%+ accuracy, sub-100 ms multi-sensor fusion, containerised with cloud fallback; published in IEEE Access.", "evidence": ["CV-PROJ-POOL", "PUB-1"], "keywords": ["computer vision", "edge AI", "Docker/Kubernetes"] }
   ],
   "publications": [
-    { "authors": "G. I. P. Carvalho et al.", "authorsConfirmed": false, "title": "Artificial Intelligence for Drowning Detection: Technical Feasibility Established, Operational Viability Unproven", "venue": "IEEE Access", "volume": "14", "pages": "97604-97628", "date": "2026-01", "doi": "10.1109/ACCESS.2026.3701060", "evidence": ["PUB-1"] }
+    { "authors": "G. I. P. Carvalho et al.", "authorPosition": "first", "authorsConfirmed": true, "title": "Artificial Intelligence for Drowning Detection: Technical Feasibility Established, Operational Viability Unproven", "venue": "IEEE Access", "volume": "14", "pages": "97604-97628", "date": "2026-01", "doi": "10.1109/ACCESS.2026.3701060", "evidence": ["PUB-1"] }
   ],
   "education": [
     { "degree": "PhD, Computer Science", "org": "Griffith University", "start": "2025", "end": "2028 (expected)", "detail": "Adaptive, self-reconfiguring multi-agent AI for real-time decision-making; confirmation passed April 2026. Supervisors: Dr Larry Wen, Dr Qinyi Li.", "evidence": ["MCD-6"] },
