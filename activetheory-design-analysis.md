@@ -1,221 +1,291 @@
 # Tech & Design Teardown — activetheory.net (v6) → replication guide
 
-> Reverse-engineered 2026-07-11 from the **live running site**: probe of the `window` object
-> (engine internals), full network capture, DOM/meta inspection, and console output — combined
-> with Active Theory's own engineering write-ups where they explain the internals. The entire
-> UI renders inside a single WebGL canvas, so there is no CSS bundle to rip (unlike the kaveenk
-> teardown); the design lives in shaders and a scene graph. This document therefore focuses on
-> **architecture, techniques, and how to replicate the concepts** for gipc.dev.
+> Reverse-engineered 2026-07-11 from the **live site and its actual source assets**: the full
+> JS bundle (`app.js`, 1.8 MB), the worker kernel (`hydra-thread.js`), the compiled shader
+> bundle (`compiled.vs`, 267 KB of readable GLSL), the scene/camera data (`uil.json`, 223 KB),
+> the CMS payloads, boot `index.html`, plus a live engine probe (`window` globals), network
+> capture, DOM inspection, interactive session, and their public GitHub org. **All raw assets
+> archived in `.research/activetheory/`** (same convention as `.research/kaveenk/`; both are
+> **gitignored by repo policy** — ripped third-party code never enters git history — and live
+> as local copies on the Mac and the box).
 >
 > **Role as a reference:** second reference alongside `kaveenk-design-analysis.md`. kaveenk
 > defines the site-wide language (terminal console). Active Theory is the **architecture donor
-> for the e-Résumé "Construct" sub-app** — see §10.
+> for the e-Résumé "Construct" sub-app** (§12) and a **toolbox source** (§10).
 
 ---
 
 ## 1. The concept in one line
 
-The site is not a page — it is a **real-time 3D place** (worlds modelled on their LA/Amsterdam
-offices) that you move through, with project cards floating in space, an AI concierge that
-navigates for you, live multiplayer rooms, and sound design as a first-class layer. Everything
-— text, buttons, layout — is drawn by the GPU.
+Not a page — a **real-time 3D place** (worlds modelled on their LA/Amsterdam offices) you move
+through: project cards float in space, an AI concierge with voice navigates for you, visitors
+share live multiplayer rooms, sound is a first-class layer, and **everything visible is drawn
+by the GPU** in a single canvas.
 
----
+## 2. Boot sequence (`index.html` — 5.9 KB total)
 
-## 2. Architecture overview (as observed live)
+Their entire HTML is a bootloader; worth copying almost verbatim as a *pattern*:
 
-**The DOM is empty.** `document.body.innerText` is essentially just "Toggle Audio · Work ·
-Contact". One `<canvas>` (2880×1359 at DPR 1.5 on a 1920×906 viewport), WebGL2 context
-(WebGL1 fallback; `navigator.gpu` present for WebGPU-capable clients). Viewport is locked
-(`user-scalable=no, minimal-ui`) — it behaves like an installed app, and ships a PWA
-`manifest.json`.
+1. **Inline critical CSS only**: `#Stage,body,html{margin:0;height:100%;overflow:hidden;background:#000}`,
+   the three `@font-face` declarations (woff2→woff→otf), `touch-action:none`, `user-select:none`
+   on the stage (inputs re-enabled), custom scrollbar with an opacity CSS var (`--baropacity`),
+   iOS-specific overflow classes, and `.feature-detects` reading `env(safe-area-inset-*)` into
+   CSS vars.
+2. **Hard capability gate**: `try{eval("let obj={}; obj?.prop")}catch(e){location.replace("unsupported.html")}`
+   — one cheap ES2020 syntax probe decides modern-or-redirect. No polyfill soup.
+3. **Build stamp**: `window._CACHE_="1780406240914"` versions every asset
+   (`app.<stamp>.js`, `uil.<stamp>.json`) — cache-bust by filename, CDN-friendly.
+4. `<link rel=preload as=script>` + async script injection; `window._ENV_`, `window._CMS_="%CMS%"`
+   (build-time template var); GA4 the only third-party tag.
+5. `.GLA11y` class: an **absolutely-positioned, clipped, hidden DOM layer** — they mirror
+   content into real DOM for screen readers even though pixels come from WebGL.
 
-**Two versioned bundles + a worker pool:**
+## 3. Runtime architecture (from `app.js`, 1.8 MB / 4 lines, readable identifiers)
 
-| Asset | Purpose |
-|---|---|
-| `assets/js/app.<build>.js` | Engine + application boot |
-| `assets/js/modules.<build>.js` | Feature modules (loaded after boot) |
-| `assets/js/hydra/hydra-thread.js` — requested **8×** | Web-Worker pool (one script, eight workers) |
-| `assets/shaders/compiled.vs` | **Precompiled shader bundle** — GLSL built at compile time, not runtime |
-| `assets/data/uil.<build>.json` | **Declarative UI layout** consumed by the GL UI system |
-| `assets/meta/manifest.json` | PWA install manifest |
+- **A complete in-house engine ("Hydra")** — the bundle declares ~71 top-level classes: full 3D
+  math (`Matrix3/4, Quaternion, Euler, Ray, Frustum, Box2/3, Spherical/Cylindrical`), geometry
+  suite (`Plane/Box/Sphere/Cylinder/Cone/Ring/Circle/Icosahedron/Octahedron/PolyhedronGeometry`,
+  `InterleavedBuffer`), scene graph (`Base3D, Group, Mesh, Points, Line, Scene`), cameras
+  (`PerspectiveCamera, OrthographicCamera, CubeCamera`), rendering (`RenderTarget,
+  MultiRenderTarget, CubeRenderTarget, MirrorRenderer, Shadow, ShadowDepth`), animation
+  (`Skin, SkinAnimation`), color science (`Color, ColorHSL, ColorLAB`). Three.js-shaped API,
+  zero Three.js dependency.
+- **Custom OOP kernel, pre-ESM**: global `Class(fn, 'static'|'singleton')`, `Inherit(child,parent)`
+  (with method-override chaining `_method`), `Namespace`, and their own module registry
+  (`window.Module`, `require→req()`). The whole app is function-classes composed with
+  `Inherit(this, Component)`.
+- **`AppState`** — a reactive global store (`AppState.set/get`, `AppState.createLocal({...})`),
+  used for everything from AI "isThinking" flags to multiplayer session config.
+- **DOM template layer exists too**: `TemplateHTML, TemplateCSS, TemplateRoot, DOMAttribute,
+  StateBinding` + `HydraCSS` — used for the 5 DOM chrome elements, the a11y mirror, and dev UI.
+- **`modules.js` is a 24-byte stub** (`window._MODULES_=true`) — a load-order flag, not code.
+- **Dev tooling ships in prod**: KTX2 compression helpers (`compressKtx2`, cubemap support),
+  editor warnings with a Notion "upgrade instructions" link — their Hydra GUI editor runs
+  against the live site behind query flags.
 
-**Content is CMS-hydrated JSON, decoupled from the build.** Runtime fetches from Google Cloud
-Storage with cache-busting:
-`storage.googleapis.com/activetheory-v6.appspot.com/cms/{metadata,projects,contact}-dev.json?v=CMS_DATA_<ts>`.
-Geolocation comes from a GCP Cloud Function (`us-central1-at-services.cloudfunctions.net/geo`).
-Analytics: GA4 (`page_view` + scroll-depth events). Fonts: **NB Architekt** 300/400/700 — the
-"alien" grotesk — rasterised as GL text, not DOM text.
+## 4. The worker kernel (`hydra-thread.js` — read in full, 13 KB)
 
-**The engine is global.** Probing `window` exposes the whole in-house engine ("Hydra") and its
-subsystems:
+One generic worker script, spawned **8×** as a pool. It is an **eval server**:
 
-```
-Hydra, HydraObject, HydraCSS, Stage, World, App, Global, Utils, Device,
-Render, Renderer, RenderCount, RenderMonitor, RenderStats, RenderTimeQuery, RenderTimer,
-Shader, ShaderVariants, PBRShader, FBORendererWebGL, ShaderRendererWebGL,
-FXScene, FXSceneCompositor, HydraBloom, FluidScene, ScrollRenderManager,
-Thread/THREAD, DracoThread, GeomThread, GLTextThread,
-GLUI, iGLUI, GLUIElement, GLUIUtils, GLUIBatch, GLUIBatchText, GLUITexture,
-GLUICornerPin, GLUIStage, GLUIStage3D
-```
+- Main thread posts `{es6|es5, name, proto[]}` — *class source code as strings* — and the worker
+  `eval`s them into its own scope. Code is **injected at runtime**, so one worker file serves
+  every specialized thread (`DracoThread`, `GeomThread`, `GLTextThread`, particles/physics).
+- RPC protocol: `{fn, id, ...args}` → worker runs `self[fn]`, replies `resolve(data, id, transferables)`
+  (zero-copy `ArrayBuffer` transfer); events via `emit(evt,msg)`; `console.log` proxied back.
+- The worker re-creates the same OOP kernel (`Class/Inherit/Namespace/Module`) + shims
+  (`requestAnimationFrame`, `performance`, `requestIdleCallback`) so **engine code runs
+  identically on main thread or worker**.
 
-Console also logged the session URL carrying **multiplayer state**:
-`?roomqr=atv6qr…&workids=27,10,18,48,52,57,…` — a room id (QR-joinable) plus an ordered deck of
-project ids. Their build was reportedly ~2 months total with ~80% of the time on polish.
+*Replication note:* the pattern (pool + RPC + transferables + same-code-both-sides) is the
+lesson. The `eval` mechanism itself is a CSP nightmare by modern standards — today you'd use
+module workers. See §11.
 
----
+## 5. Rendering pipeline (from the live probe + `compiled.vs`)
 
-## 3. Rendering pipeline
+- **WebGL2** (WebGL1 fallback), `navigator.gpu` detected. Observed via ANGLE→Metal.
+- **Shader bundle format** — GLSL compiled AOT into one file with directives:
+  `#!SHADER: Name.vs / Name.fs`, `#!ATTRIBUTES`, `#!UNIFORMS`, `#!VARYINGS`. Shaders reference
+  shared chunks by module name (`require('range.glsl')`-style).
+- **Post stack (all readable in the archive):** `UnrealBloom` (+`getHydraBloom`,
+  `lerpBloomFactor`), `FXAA`, **three-pass lens flare** (`LensFlarePrefilter/Up/Down`),
+  `LightVolume` (volumetric light), `ShadowDepth`, `radialBlur`, `gaussianblur/blur5/9/13`,
+  `rgbshift` (chromatic aberration), `luma`, `contrast`, `vignette-style` grading via
+  `blendmodes` (22 refs).
+- **Materials:** `PBRShader` (+`pbr`/`fbr` chunks, `normalmap`, `fresnel`, `matcap`,
+  `lighting`, `shadows`, `refl`), `ColorMaterial`, `BasicMirror`, `DefaultText` (MSDF),
+  `GLUIColor/GLUIObject`, `ScreenQuad`, `DebugCamera`.
+- **Procedural library (215 GLSL functions):** `cnoise/snoiseVec3/scnoise/splinenoise`
+  (simplex/curl family), `curlNoise`, `fbm`, `getWaterNoise`, `getFluidVelocityMask` (the fluid
+  sim), `rainbowColor`, easing functions in GLSL (`eases`), `transformUV`, `rgb2hsv`,
+  `conditionals` (branchless helpers), `range` (map/remap — 51 uses, their workhorse).
+- **`ShaderVariants`** — compile-time permutations instead of runtime branching.
+- **Self-telemetry:** `RenderCount/RenderStats/RenderMonitor/RenderTimeQuery/RenderTimer`
+  (GPU timer queries) feed adaptive quality.
+- **Device tier system:** `Device.TIER` (desktop `T0–T3`) and `Device.M_TIER` (mobile `MT0–…`)
+  booleans resolved once at boot; helpers `tierEq/LT/GT`; **`?gpu=` query override** (e.g.
+  `?gpu=m2` forces mobile tier 2) for testing. Features/effects gate on tier.
 
-- **WebGL2-first** with WebGL1 fallback; WebGPU detection in place. (Observed running via ANGLE
-  → Metal on Apple Silicon, `MAX_TEXTURE_SIZE` 16384.)
-- **Post-processing chain**: `FXScene`/`FXSceneCompositor` composite render passes;
-  `HydraBloom` (bloom/glow), FBO render targets (`FBORendererWebGL`), and a real-time **fluid
-  simulation** (`FluidScene`) used as an ambient/interactive layer.
-- **Materials**: `PBRShader` (physically-based) + `ShaderVariants` (compile-time permutations
-  of one shader for different feature sets — a classic engine trick to avoid runtime branching).
-- **Shaders precompiled** into one bundle (`compiled.vs`) — no runtime GLSL assembly cost.
-- **Self-telemetry**: `RenderStats`, `RenderMonitor`, `RenderTimeQuery`, `RenderTimer` — the
-  engine measures its own GPU/frame cost and (per their write-ups) adapts quality tiers
-  per-device. Performance is treated as a *feature*.
-- Per their engineering posts: they left Three.js because most of it was dead weight for them;
-  Hydra minimises CPU with **dirty-flagged matrix updates** (only recompute transforms that
-  changed) and a modular per-project feature system.
+## 6. Text & asset pipeline
 
-## 4. UI drawn by the GPU (GLUI) — and why we will NOT copy it
+- **GL text is MSDF**: font atlas JSONs fetched at runtime (`NBArchitektStd-{Light,Regular,Bold}.json`)
+  + `msdf` shader chunks + `GLUIBatchText` batching. Their open-source **`svg2msdf`** tool
+  generates MSDF from arbitrary SVG — i.e. *any vector shape can become a crisp GL glyph*.
+- **Geometry**: GLB/GLTF (24 refs) + **Draco** compression (150 refs) decoded in a worker via
+  `draco_decoder.wasm`.
+- **Textures**: **KTX2/Basis** universal GPU compression (175/36 refs), transcoded via
+  `basis_transcoder.wasm`.
+- **Video**: their open-source **`activeframe`** format (.af) — WebCodecs-based frame-accurate
+  video, replacing `<video>` where scrub-sync matters.
+- **Audio**: WebAudio throughout (`AudioContext` ×30); DOM music player (`MusicPlayerDOM`,
+  prev/next song controls); open-source `ios-silent-bypass` to play audio despite the iPhone
+  mute switch.
 
-`GLUI*` renders every button/label/panel as batched GL geometry (`GLUIBatch`,
-`GLUIBatchText` — near-certainly SDF/MSDF glyph atlases; `GLUIStage3D` places UI in world
-space; `GLUICornerPin` warps quads). Layout is data-driven from `uil.json`. Benefits: UI and
-3D world composite in one pipeline, animate on the GPU, never desync. Costs: **no DOM = no
-SEO, degraded accessibility, no text selection, no native scrolling** — acceptable for an
-awards-bait studio site, wrong for a résumé that recruiters and ATS parsers must read.
-**gipc.dev rule: text lives in the DOM; the GPU draws atmosphere only.**
+## 7. Scene & camera authoring (`uil.json` — the Hydra GUI editor's output)
 
-## 5. Threading model
+`uil.json` (223 KB) is **serialized designer tuning** from their visual editor. Keys are
+per-scene, per-element parameter blobs, e.g.
+`CAMERA_Element_1_Home{position, lookAt, fov, lerpSpeed, moveXY, wobbleStrength, deltaRotate, groupPos}`.
 
-One worker script, eight instances: mesh **Draco decompression** (`DracoThread`), geometry
-processing (`GeomThread`), glyph rasterisation (`GLTextThread`), and (per their posts)
-particles/physics — all message-passing off the main thread so the render loop never blocks.
-The lesson is the *pattern*, not the count: anything that can stutter a frame gets a worker.
+- **Scene inventory (their actual worlds):** `Home/home_scene`, `About`, `Work`, `WorkDetail`,
+  `WorkDetailParticles`, `Contact/ContactUs`, `Footer`, `CleanRoom`, `TreeScene`,
+  `JellyfishDemo`, `ParticleTest`.
+- The camera rig per scene is *data*: position/lookAt stations, fov, lerp speed, mouse-parallax
+  strength (`moveXY`), idle wobble (`wobbleStrength`). Designers tune in-editor; the site loads
+  the JSON. **Code defines behaviors; JSON defines feel.**
+- This is the exact architecture to miniaturize for the Construct: hand-authored
+  `camera-stations.json` instead of a GUI editor.
 
-## 6. Content pipeline
+## 8. Interaction systems (from bundle source)
 
-Code and content are fully decoupled: the site is a static shell + engine; all portfolio
-content (projects, metadata, contact) hydrates at runtime from versioned CMS JSON on GCS, with
-media on the same bucket. Deploying content ≠ deploying code. (Our equivalent: `resume.json` /
-`projects.json` in the repo — same decoupling, git as the CMS.)
+**Scroll = camera.** `ScrollRenderManager(object, transitionShader, {container, keyboard,
+smoothScroll, pingPong, virtualScroll})` wraps a `ScrollController` with:
+- lerped virtual scroll — `ScrollController.LERP = 0.1` desktop / `0.5` mobile (less smoothing
+  on touch);
+- `VIEW_CHANGE` events as you cross view boundaries;
+- **keyboard nav built in**: `ArrowUp/ArrowDown` move scroll by ±25% of viewport height;
+- a `scrollTo` API (this is what the AI concierge calls);
+- **views are composited through a transition *shader*** — moving between sections is a GPU
+  crossfade/warp, not a DOM transition.
 
-## 7. Interaction model
+**Multiplayer (Dreamwave — their platform).** `AppState.createLocal({server:
+"wss://s.dreamwave.network/ws", roomKey:"atv6", playerClass:"ScrollPlayer"|"TubePlayer",
+maxInRoom:2–3, data:{camera, proton particles}})`. Presence is scroll-position-synced
+(`ScrollPlayer`). Rooms are shareable via QR (bundled `qrious.js`); joining with
+`?roomqr=<id>&workids=27,10,18,…` filters the work deck to an ordered list
+(`workids → _workData[index] → _workPages.refresh(newList)`) — i.e. **a curated deck can be
+encoded in a URL**. WebRTC present for peer media.
 
-- **Scroll = camera.** `ScrollRenderManager` maps scroll input to camera movement through the
-  world (GA still logs scroll-depth %, so progression is normalised). There is no document to
-  scroll — scroll is an *input device*.
-- **Spatial navigation** through office-modelled worlds; work is presented as **card decks
-  floating in space** (the `workids` deck), approached/focused as you travel.
-- **AI concierge that drives the UI**: ask it "show me a fun project" and it *navigates the
-  camera* to matching work — the chat is an interface to motion, not just answers.
-- **Live multiplayer**: shareable rooms (`roomqr`), QR to pull a phone into the same session.
-- **Audio-first**: a single "Toggle Audio" control; sound design (ambience, interaction SFX) is
-  a core layer, on by default.
-- **App-like chrome**: custom cursor, locked zoom, PWA install, black `theme-color`.
+**AI concierge.** Thread-based assistant against **their own backend**
+(`backend-dot-activetheory-v6.uc.r.appspot.com/api/assistant`, `createThread → thread_id`,
+`sendMessage`), OpenAI-style; UI state via `AppState("InteractAIAssistant/isThinking")`;
+**context injection** — if you're viewing a project it prepends *"I'm looking at <project>…"*
+to your message. Voice out: **ElevenLabs streaming TTS** (voice id + latency param — and
+notably an `xi-api-key` sits client-side: an anti-pattern, see §11). Voice in: **Vosk
+in-browser offline STT** (16 kHz `getUserMedia`, WASM model tarball from GCS, `MessageChannel`
+to a recognizer worker). The assistant *navigates* (calls `scrollTo`/scene jumps), which is the
+validated pattern for our oracle.
 
-## 8. Visual language
+**DOM chrome is exactly five elements**: `Toggle Audio`, `Work`, `Contact` links + music
+player prev/next. Everything else is canvas.
 
-Near-black base (`#000000` theme), neon accents, bloom/glow, PBR reflections, volumetric
-atmosphere, particles + fluid sim, cinematic depth-of-field camera moves, NB Architekt
-alien-grotesk type. Motion is heavy but *engineered* — 60fps is part of the aesthetic. Exact
-colors/keyframes are not extractable (no stylesheet); the look is authored in shaders and the
-scene graph.
+## 9. Content pipeline (CMS)
 
----
+Payload-CMS-shaped JSON on GCS, fetched at runtime with cache-bust
+(`cms/{projects,metadata,contact}-<env>.json?v=CMS_DATA_<ts>` → `window.CMS_DATA[key]` after a
+cleanup pass):
+- `projects` — **65 entries**: `id, name, slug, description, clientName, completionDate`,
+  media objects with a **responsive size ladder** (`i200px/i400px/i600px/i1024px` pre-rendered
+  variants, absolute GCS URLs).
+- `metadata` — site title/description/OG image (same size-ladder object).
+- `contact` — links list (email, newsletter, socials, Notion-hosted privacy page).
+Content deploys never touch code; code deploys never touch content.
 
-## 9. Replication map — AT concept → gipc.dev implementation
+## 10. Their open-source toolbox (github.com/activetheory) — directly usable by us
 
-| # | AT concept | Their implementation | Our cheap, correct equivalent |
+| Repo | ★ | What it is | Use for gipc.dev |
 |---|---|---|---|
-| 1 | Site as a place | Full GL world, GLUI everything | Console metaphor (kaveenk-style DOM) + **one** GPU set-piece per moment that matters |
-| 2 | Scroll = camera | `ScrollRenderManager` → 3D camera | Scroll-driven descent on the résumé route: rAF-lerped `scrollY` → CSS 3D transforms (or a minimal Three.js scene). Native CSS scroll-driven animations where enough |
-| 3 | Work as card decks in space | GL planes in world space (`workids` deck) | Résumé entries as DOM cards positioned at depth "stations"; camera descends past them (§10) |
-| 4 | GPU atmosphere | `FluidScene`, particles, `HydraBloom` | **Matrix glyph rain** on a 2D canvas (glyph atlas, ~1–2 ms/frame budget); CSS glow for DOM, bloom only inside the canvas |
-| 5 | AI drives navigation | In-world concierge moves the camera | The **oracle** agent gets UI-navigation tools: "show me his k8s work" → scroll/jump to that card. Same pattern as its planned console powers |
-| 6 | Workers for anything heavy | 8-worker pool (Draco/geom/text/physics) | Rain sim is cheap enough for main thread; if a sim ever spikes, move it to **one** worker. Pattern, not scale |
-| 7 | Precompiled shaders | `compiled.vs` bundle | Inline GLSL strings / `vite-plugin-glsl`; trivial at our scope |
-| 8 | CMS-hydrated content | GCS JSON + cache-bust | `resume.json` in the repo = single source for cards, print PDF, and JSON-LD |
-| 9 | Self-telemetry | `RenderStats`/`RenderTimer`, quality tiers | `requestAnimationFrame` frame budget check → auto-degrade rain density; fits our "real telemetry" brand |
-| 10 | Audio layer | Spatial sound, on by default | Subtle loop + interaction SFX, **off by default**, one toggle (recruiter-safe) |
-| 11 | Multiplayer rooms | `roomqr` + QR join | Skip v1. (Fun future easter egg, zero priority) |
-| 12 | PWA / app feel | manifest + locked viewport | Manifest yes; **never** lock zoom (a11y) |
+| `activeframe` | 381 | Custom `.af` WebCodecs video format, frame-accurate | Only if we need scrub-synced video |
+| `Paper-Planes-Android-Experiment` | 277 | Their famous multi-device paper-plane experiment | Reference reading |
+| `split-text` | 68 | Split HTML text into lines/words/chars | **Console + Construct text FX** (decode reveal staggering) |
+| `Finding-Love-Shaders` | 51 | Production GLSL from a real project | **GLSL learning corpus** next to `compiled.vs` |
+| `fit-text` | 36 | Fit text to container | Terminal hero sizing |
+| `svg2msdf` | 28 | SVG → MSDF atlas | **Hex-sigil runes as crisp GL glyphs for the Matrix rain** |
+| `ios-silent-bypass` | 26 | Audio despite iOS mute switch | Audio toggle robustness |
+| `balance-text` | 19 | Even line distribution | Typography polish |
+| `GaussianSplats3D` (fork) | 3 | 3D gaussian splatting in Three.js | Future lab toy |
+| `modern-screenshot` / `at-html2canvas` | 5/2 | DOM→canvas screenshots | OG-image generation |
 
-**Deliberately NOT copied:** GLUI text-in-GPU (kills SEO/a11y — fatal for a résumé), the
-full engine + 8-worker pool, Draco pipelines, native wrappers, fluid sim, multiplayer.
+## 11. Anti-patterns — what we deliberately do NOT copy
 
----
+1. **UI text drawn in GL** (`GLUIBatchText`) — kills SEO/a11y/selection; they compensate with a
+   hidden `.GLA11y` mirror. A résumé must be DOM-first; we only draw *atmosphere* in canvas.
+2. **Third-party API key in the client bundle** (ElevenLabs `xi-api-key`). Even they proxy
+   OpenAI through their GAE backend — that's the correct pattern: **all AI keys live server-side**
+   (our Go/FastAPI services), never in JS.
+3. **`eval`-based worker kernel** — brilliant for 2015, incompatible with a strict CSP. Use
+   ES module workers.
+4. **1.8 MB blocking JS before first pixel** + `user-scalable=no` — acceptable for an
+   awards-jury audience, wrong for recruiters on hotel Wi-Fi. We ship a fast DOM console and
+   lazy-load any canvas experience per-route.
+5. Full engine scope: 8-worker pool, Draco/KTX2 pipelines, fluid sim, multiplayer platform —
+   architecture lessons, not v1 features.
 
-## 10. The e-Résumé **"Construct"** — unification blueprint (LOCKED concept)
+## 12. The e-Résumé **"Construct"** — unification blueprint (LOCKED)
 
-**The unification:** the whole site speaks kaveenk (terminal console, DOM-first, arcane
-violet/cyan). The résumé is a **sub-app** at `/resume` that borrows Active Theory's
-**scroll-descend spatial card mechanic** and re-skins it **heavily Matrix** — glyph rain
-instead of their sparks/fluid, decode-reveals instead of fades. Entering it is a *deliberate
-world-shift*: the operator jacks into the construct to read the record.
+**The unification:** kaveenk console is the site-wide language (DOM terminal, arcane
+violet/cyan). `/resume` is a sub-app borrowing Active Theory's **scroll-descend spatial card
+mechanic**, re-skinned **heavily Matrix** — glyph rain instead of sparks/fluid, decode reveals
+instead of fades. Entering it is a deliberate world-shift: the operator jacks into the
+construct to read the record.
 
-### Palette decision
-Default: **true Matrix green** (`#00ff41`-family) inside the construct — the shift from arcane
-violet/cyan to green *is the feature* (you left the console, you're in the construct). Site
-chrome (nav, exit, footer) stays arcane. Alternative if brand purity ever wins: violet-tinted
-rain, same mechanics. Recorded; green is the working default.
+**Palette:** construct defaults to **true Matrix green** (`#00ff41` family) as the
+world-shift signal; site chrome (nav/exit) stays arcane. Violet-tinted rain recorded as the
+brand-purity alternative.
 
-### Mechanics spec
-1. **Glyph rain (the atmosphere).** 2D canvas behind the cards. Column streams from a glyph
-   atlas: half-width katakana + digits + latin + **our hex-sigil runes** mixed in (the
-   arcane×Matrix fusion detail). Bright head glyph, trailing fade (draw with
-   `destination-out` translucent black each frame — the classic technique), random glyph
-   mutation in-place, variable column speeds, subtle depth layers (2–3 densities/parallax).
-   Budget: ≤2 ms/frame; density auto-degrades if the frame budget check trips (§9.9).
-2. **Scroll-descend camera.** The route is one tall scroll region; `scrollY` (rAF-lerped for
-   inertia) drives a virtual camera descending a vertical shaft. Résumé cards sit at depth
-   stations (CSS `translateZ`/scale/blur or a minimal Three.js scene if we want real DoF).
-   Optional soft snap per station. Rain parallax follows the camera.
-3. **Card materialise.** As a card approaches focus: border condenses out of the rain
-   (nearby columns bend/attract for ~300 ms), content **decodes** — text starts as scrambled
-   glyphs and settles character-by-character (per-char scramble→settle, staggered). Leaving
-   focus, it re-dissolves upward.
-4. **Content = cards.** One card per résumé unit: role, education, skill cluster, project,
-   certification. Card face: title, org, dates, 2–4 evidence bullets, tech chips — DOM text,
-   selectable, screen-reader-visible.
-5. **Oracle hooks.** The site-wide agent can drive the construct: "show me the k8s experience"
-   → camera descends to that card and decodes it. Same tool-calling pattern as the console.
-6. **Audio (opt-in).** Low rain hiss + soft glyph ticks on decode; single toggle shared with
-   the site; off by default.
-7. **Exit.** `exit` command / ESC / top-of-shaft "wake up" link returns to the console —
-   world-shifts back to arcane.
+### Mechanics spec (now grounded in AT's actual architecture)
+1. **Glyph rain.** 2D canvas layer. Column streams from a glyph atlas: half-width katakana +
+   digits + latin + **hex-sigil runes generated with AT's own `svg2msdf`** (or plain
+   sprite-sheet at 2D-canvas scale). Bright head glyph, trailing fade (translucent-black
+   `destination-out` each frame), in-place glyph mutation, 2–3 parallax densities.
+   Budget ≤2 ms/frame; density auto-degrades via a frame-budget monitor (AT's RenderStats
+   lesson, miniaturized).
+2. **Scroll-descend camera.** One tall route; rAF-**lerped** virtual scroll
+   (`LERP ≈ 0.1` desktop / `0.5` touch — AT's exact constants), camera descends a vertical
+   shaft; cards at depth stations. **Keyboard nav: ArrowUp/Down = ±25% viewport** (their
+   convention). Stations defined in a hand-authored `camera-stations.json` — the uil.json
+   pattern without the GUI editor.
+3. **Card materialise.** Approaching focus: border condenses from the rain (~300 ms), text
+   **decodes** per-char (scramble→settle, staggered via `split-text`-style splitting). Leaving:
+   re-dissolve upward.
+4. **Content = cards** (role, education, skill cluster, project, certification): title, org,
+   dates, 2–4 evidence bullets, tech chips — real DOM, selectable, screen-readable (AT's
+   `.GLA11y` proves even they concede this; we make DOM primary, not a mirror).
+5. **Oracle hooks.** The agent calls the construct's `scrollTo(station)` — literally AT's
+   concierge pattern. "Show me the k8s experience" → descend + decode that card.
+6. **Optional flourish (post-v1):** view-transition as a *shader* moment — a green
+   rain-wipe when entering the construct (AT's transition-shader idea, one-shot scale).
+7. **Audio (opt-in, off by default):** rain hiss + decode ticks; one toggle shared with the
+   console; `ios-silent-bypass` if iOS matters.
+8. **Exit:** `exit` command / ESC / "wake up" link → back to console, world-shifts to arcane.
 
 ### Non-negotiables (a11y / SEO / recruiters)
-- `prefers-reduced-motion` → **static mode**: no rain, no camera, cards stacked as a clean
-  document. The same static mode serves as the `noscript` fallback, the print stylesheet, and
-  the crawler view.
-- All résumé text is real DOM. JSON-LD `Person`/`WorkExperience` from the same data.
-- `resume.json` is the single source of truth → renders the construct, the static/print view,
-  the signed PDF, and feeds the JD-tailoring feature (per concept doc).
-- Perf: route-split chunk (construct JS + glyph atlas) target ≤ ~200 KB gz; 60fps on a
-  mid-tier laptop; no layout thrash (transforms/opacity only).
+- `prefers-reduced-motion` → **static mode**: no rain, no camera; clean stacked document. Same
+  static mode = `noscript` fallback = print stylesheet = crawler view.
+- All résumé text in the DOM; JSON-LD `Person`/`WorkExperience` emitted from the same data.
+- **`resume.json` is the single source** → construct cards + static/print view + signed PDF +
+  JD-tailoring input (concept doc feature).
+- Perf: route-split chunk ≤ ~200 KB gz incl. glyph assets; 60 fps mid-tier laptop; transforms/
+  opacity only (no layout thrash).
 
 ### Build phases (post console-MVP)
-1. `resume.json` schema + static/print/JSON-LD résumé page (recruiter-safe baseline ships first).
-2. Rain canvas layer (atlas, streams, budget check, reduced-motion gate).
-3. Scroll-camera descent + card stations.
-4. Decode/materialise effects + polish (AT lesson: polish is 80% of the time).
-5. Oracle navigation hooks + audio toggle.
+1. `resume.json` schema + static/print/JSON-LD page (recruiter-safe baseline ships first).
+2. Rain canvas layer (atlas, streams, frame-budget check, reduced-motion gate).
+3. Scroll-camera descent + card stations (`camera-stations.json`).
+4. Decode/materialise effects + polish (AT lesson: polish was ~80% of their two-month build).
+5. Oracle navigation hooks + audio toggle (+ optional shader rain-wipe).
 
----
+## 13. Archive manifest (`.research/activetheory/` — local-only, gitignored by policy)
 
-## 11. Reference URLs
+| File | Size | What |
+|---|---|---|
+| `index.html` | 5.9 KB | Boot loader (read §2) |
+| `app.js` | 1.82 MB | Full engine + app bundle (readable identifiers) |
+| `modules.js` | 24 B | Load-order stub |
+| `hydra-thread.js` | 13 KB | Worker kernel (read §4) |
+| `compiled.vs` | 267 KB | **Entire shader library, readable GLSL** |
+| `uil.json` | 223 KB | Designer camera/scene tuning (read §7) |
+| `cms-projects.json` | 216 KB | 65-project content payload |
+| `cms-metadata.json` / `cms-contact.json` | 4.3 KB / 0.8 KB | Site meta / links |
+| `manifest.json` | 465 B | PWA manifest |
+| `social.jpg` | 210 KB | OG image |
 
-- Live site: https://activetheory.net (v6; also v6.activetheory.net)
-- Engine history & internals: [The Story of Technology Built at Active Theory (Medium)](https://medium.com/active-theory/the-story-of-technology-built-at-active-theory-5d17ae0e3fb4)
+(kaveenk archive gap-filled the same day: `sitemap.xml`, `robots.txt`, `resume.pdf` added to
+`.research/kaveenk/`.)
+
+## 14. Reference URLs
+
+- Live: https://activetheory.net · GitHub org: https://github.com/activetheory
+- Engine history: [The Story of Technology Built at Active Theory (Medium)](https://medium.com/active-theory/the-story-of-technology-built-at-active-theory-5d17ae0e3fb4)
 - v6 write-ups: [webgpu.com showcase](https://www.webgpu.com/showcase/active-theory-portfolio/) · [Awwwards v6](https://www.awwwards.com/sites/active-theory-v6) · [FWA v6](https://thefwa.com/cases/active-theory-v6)
-- Technique case studies: [Neon — a WebGL installation](https://medium.com/active-theory/neon-a-webgl-installation-fdf540c42152) · [Mira](https://medium.com/active-theory/mira-exploring-the-potential-of-the-future-web-e1f7f326d58e) · [AR Experiments](https://medium.com/active-theory/ar-experiments-66ba1b4ed931)
+- Technique case studies: [Neon](https://medium.com/active-theory/neon-a-webgl-installation-fdf540c42152) · [Mira](https://medium.com/active-theory/mira-exploring-the-potential-of-the-future-web-e1f7f326d58e) · [AR Experiments](https://medium.com/active-theory/ar-experiments-66ba1b4ed931)
 - Awards context: [Awwwards profile](https://www.awwwards.com/active_theory/) · [Webby "Crafted with Code"](https://www.webbyawards.com/crafted-with-code/active-theory/)
