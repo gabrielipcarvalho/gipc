@@ -10,4 +10,4 @@ spec:
   ports:
     - port: 80
       targetPort: 3000
-      nodePort: 30080   # cloudflared tunnel already points at localhost:30080
+      nodePort: 30081   # parallel to holding (30080); tunnel repointed to 30081 after web verified
