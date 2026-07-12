@@ -322,6 +322,36 @@ a{ color:inherit; text-decoration:none; }
 .nf-actions{ margin-top:1.6rem; display:flex; flex-wrap:wrap; gap:1rem; align-items:center; }
 .nf-actions .btn{ text-decoration:none; display:inline-block; }
 
+/* ---- /timeline: experience rail ---- */
+.tl{ list-style:none; position:relative; margin-top:1.4rem; padding-left:1.5rem; }
+.tl::before{ /* the rail */
+  content:""; position:absolute; left:.3rem; top:.4rem; bottom:.4rem; width:1.5px;
+  background:linear-gradient(var(--violet), var(--cyan)); opacity:.5;
+  animation:tlPulse 3.2s var(--ease) infinite;
+}
+.tl-node{
+  position:relative; padding:0 0 1.6rem 0;
+  transform:perspective(800px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));
+  transition:transform var(--dur) var(--ease);
+}
+.tl-node:last-child{ padding-bottom:0; }
+.tl-dot{ /* node marker on the rail */
+  position:absolute; left:-1.45rem; top:.35rem; width:.6rem; height:.6rem; border-radius:50%;
+  background:var(--violet); box-shadow:0 0 10px var(--glow-violet);
+  animation:tlFlicker 4s var(--ease) infinite;
+}
+.tl-period{ color:var(--cyan); font-size:var(--fs-xs); letter-spacing:.08em; }
+.tl-title{ font-size:var(--fs-h2); font-weight:600; color:var(--text); margin-top:.15rem; overflow-wrap:anywhere; }
+.tl-org{ color:var(--text-muted); font-size:var(--fs-sm); margin-top:.2rem; }
+.tl-note{ color:var(--text-faint); font-size:var(--fs-sm); font-style:italic; margin-top:.3rem; }
+.tl-bullets{ margin:.6rem 0 0 1.1rem; display:flex; flex-direction:column; gap:.4rem; }
+.tl-bullets li{ font-size:var(--fs-sm); line-height:1.55; overflow-wrap:anywhere; }
+.tl-detail{ margin-top:.5rem; color:var(--text-muted); font-size:var(--fs-sm); line-height:1.55; }
+.tl-tags{ margin-top:.7rem; display:flex; flex-wrap:wrap; gap:.35rem; }
+.tl-tags span{ padding:.12rem .5rem; border-radius:var(--r-pill); border:1px solid var(--hairline); color:var(--text-faint); font-size:var(--fs-xs); }
+@keyframes tlPulse{ 0%,100%{ opacity:.38; } 50%{ opacity:.7; } }
+@keyframes tlFlicker{ 0%,100%{ opacity:1; box-shadow:0 0 10px var(--glow-violet); } 50%{ opacity:.6; box-shadow:0 0 4px var(--glow-violet); } }
+
 /* ---- /system: telemetry dashboard ---- */
 .sys{ margin-top:1.2rem; display:grid; grid-template-columns:1fr; gap:1.4rem; }
 @media (min-width:768px){ .sys{ grid-template-columns:1fr 1fr; } .sys-status{ grid-column:1 / -1; } }
