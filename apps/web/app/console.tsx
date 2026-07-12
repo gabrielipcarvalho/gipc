@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Sigil } from "./sigil";
 
 /* M1 Console — interactive arcane operator console.
@@ -30,15 +31,15 @@ const bootLines = [
 
 type OutLine = { id: number; kind: "cmd" | "out"; text: React.ReactNode };
 
-// command handlers → return output lines (strings/JSX)
-function runCommand(raw: string): { out: React.ReactNode[]; clear?: boolean } {
+// command handlers → return output lines (strings/JSX); `nav` navigates via the router
+function runCommand(raw: string): { out: React.ReactNode[]; clear?: boolean; nav?: string } {
   const cmd = raw.trim().toLowerCase();
   if (!cmd) return { out: [] };
   const first = cmd.split(/\s+/)[0];
   switch (first) {
     case "help":
       return { out: [
-        "commands: whoami · ls · about · work · resume · lab · operator · connect · social · clear",
+        "commands: whoami · ls · about · system · work · resume · lab · operator · connect · social · clear",
         "arcane aliases: scry (observe) · summon (deploy) · ward (security) · oracle (ask AI) · grimoire (work)",
       ] };
     case "whoami":
@@ -48,23 +49,25 @@ function runCommand(raw: string): { out: React.ReactNode[]; clear?: boolean } {
     case "about":
     case "scry":
       return { out: ["I build real systems. This console runs on a box I operate — live telemetry, real deploys, a tool-using agent. Proof, not claims."] };
+    case "system":
+      return { out: [<>the operator surface → <b>/system</b>: topology, live metrics, deploy feed.</>], nav: "/system" };
     case "work":
     case "grimoire":
-      return { out: ["selected work: gipc.dev (this) · Nina Nails · seismic U-Net · transformer market platform · drowning-detection (IEEE Access). full grimoire → /work (soon)."] };
+      return { out: [<>selected work → <b>/work</b>: gipc.dev (this) · Nina Nails · seismic U-Net · transformer market platform · drowning-detection (IEEE Access).</>], nav: "/work" };
     case "resume":
-      return { out: [<>living résumé → the Construct at <b>/resume</b> (soon) · signed PDF available on request.</>] };
+      return { out: [<>living résumé → the Construct at <b>/resume</b> · signed PDF available on request.</>], nav: "/resume" };
     case "lab":
       return { out: ["the lab: sandbox shell · load tests · chaos demos — hardened, coming in a later drop."] };
     case "operator":
     case "oracle":
-      return { out: ["the oracle — a tool-using AI operator over my real infra. wiring up (M4). it'll read live metrics + my repos and answer with citations."] };
+      return { out: ["the oracle — a tool-using AI operator over my real infra. wiring up (M4). find it on /system.", <>opening <b>/system</b>…</>], nav: "/system" };
     case "ward":
       return { out: ["ward: ufw deny-in · fail2ban · Cloudflare WAF · zero inbound ports (tunnel) · CIS-minded hardening."] };
     case "summon":
       return { out: ["summon: GitOps — push → GitHub Actions → GHCR → ArgoCD → k3s. deploy feed lands on /system."] };
     case "connect":
     case "contact":
-      return { out: [<>arcan.e@gipc.dev · <a href="https://github.com/gabrielipcarvalho">github</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin</a></>] };
+      return { out: [<>arcan.e@gipc.dev · <a href="https://github.com/gabrielipcarvalho">github</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin</a> → <b>/connect</b></>], nav: "/connect" };
     case "social":
       return { out: [<><a href="https://github.com/gabrielipcarvalho">github.com/gabrielipcarvalho</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin.com/in/gabriel-ipcarvalho</a></>] };
     case "theme":
@@ -89,6 +92,10 @@ export function Console() {
   const idRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  // (Focusing this input after the palette's "open console" is owned by CommandPalette's
+  // close-cleanup + RouteFocus, which target #console-input — see those components.)
 
   // boot sequence (client only, once per session, reduced-motion aware)
   useEffect(() => {
@@ -139,7 +146,7 @@ export function Console() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const raw = input;
-    const { out, clear } = runCommand(raw);
+    const { out, clear, nav } = runCommand(raw);
     setHistory((h) => (raw.trim() ? [...h, raw] : h));
     setHIdx(-1);
     setInput("");
@@ -147,6 +154,7 @@ export function Console() {
     const next: OutLine[] = [{ id: idRef.current++, kind: "cmd", text: raw }];
     for (const o of out) next.push({ id: idRef.current++, kind: "out", text: o });
     setLog((l) => [...l, ...next]);
+    if (nav) router.push(nav);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -240,6 +248,7 @@ export function Console() {
             <span className="prompt">arcane@prod:~$</span>
             <input
               ref={inputRef}
+              id="console-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}

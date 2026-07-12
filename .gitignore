@@ -25,6 +25,8 @@ out/
 .next/
 .turbo/
 target/            # Rust/Go build artifacts where applicable
+# TypeScript incremental build cache
+*.tsbuildinfo
 
 # --- logs / temp / caches ---
 *.log

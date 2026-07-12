@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono } from "next/font/google";
 import "@gipc/tokens/tokens.css";
 import "./globals.css";
+import { Nav } from "./components/Nav";
+import { CommandPalette } from "./components/CommandPalette";
+import { RouteFocus } from "./components/RouteFocus";
 
 const plex = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -34,7 +37,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={plex.variable}>
       <body suppressHydrationWarning>
         <div className="ambient" aria-hidden />
-        {children}
+        {/* app-shell is the palette's inert target when the dialog is open */}
+        <div id="app-shell">
+          <Nav />
+          {children}
+        </div>
+        <CommandPalette />
+        <RouteFocus />
       </body>
     </html>
   );
