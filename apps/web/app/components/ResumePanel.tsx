@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { castRipple } from "./motion";
 
 /* Résumé surface — inline native preview (lazy), download, and a live signature status +
    drop-a-file Ed25519 verify (client WebCrypto against the PUBLIC key). When no signature is
@@ -87,9 +88,11 @@ export function ResumePanel() {
           type="button"
           aria-expanded={open}
           aria-controls="resume-preview"
+          onPointerDown={castRipple}
           onClick={() => setOpen((o) => !o)}
         >
           {open ? "hide preview" : "preview inline"}
+          <span className="ripple-host" aria-hidden />
         </button>
       </div>
 

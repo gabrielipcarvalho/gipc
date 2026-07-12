@@ -15,7 +15,7 @@ export default function TimelinePage() {
     <main className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/timeline">
         <SectionHeader marker="timeline" title="Experience" />
-        <p className="line">
+        <p className="line type-line">
           <span className="prompt">arcane@prod:~$</span> history --career
         </p>
         <p className="page-lead">

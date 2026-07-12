@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sigil } from "./sigil";
 import { MetricPanel } from "./components/MetricPanel";
-import { castRipple, tiltHandlers } from "./components/motion";
+import { castRipple, fitText, tiltHandlers } from "./components/motion";
 
 const tilt = tiltHandlers();
 
@@ -131,7 +131,8 @@ function runCommand(
 
 export function Console() {
   const [phase, setPhase] = useState<"idle" | "booting" | "done">("idle");
-  const [bootShown, setBootShown] = useState(0); // how many boot lines revealed
+  const [bootShown, setBootShown] = useState(0); // completed boot lines
+  const [bootChars, setBootChars] = useState(0); // chars typed of the current boot line
   const [revealed, setRevealed] = useState(false); // metric bars + content in
   const [justRevealed, setJustRevealed] = useState(false); // one-shot sweep+glint window
   const [input, setInput] = useState("");
@@ -141,8 +142,14 @@ export function Console() {
   const idRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const wordmarkRef = useRef<HTMLHeadingElement>(null);
   const bootTimers = useRef<number[]>([]); // pending boot timeouts — skip must cancel them
   const router = useRouter();
+
+  // fit the hero wordmark to its container (scales DOWN only if it would overflow — no CLS)
+  useEffect(() => {
+    if (wordmarkRef.current) return fitText(wordmarkRef.current);
+  }, []);
 
   // (Focusing this input after the palette's "open console" is owned by CommandPalette's
   // close-cleanup + RouteFocus, which target #console-input — see those components.)
@@ -157,22 +164,35 @@ export function Console() {
       return;
     }
     setPhase("booting");
-    let i = 0;
-    const step = () => {
-      i += 1;
-      setBootShown(i);
-      if (i < bootLines.length) {
-        bootTimers.current.push(window.setTimeout(step, 170));
+    let done = 0; // completed lines
+    let ch = 0; // chars typed of line[done]
+    const finale = () => {
+      sessionStorage.setItem("gipc-booted", "1");
+      setPhase("done");
+      setJustRevealed(true);
+      requestAnimationFrame(() => setRevealed(true));
+    };
+    // type the current line char-by-char, then advance — every timer joins bootTimers so
+    // skipBoot() and the unmount cleanup cancel pending char-timers (no stale setState)
+    const type = () => {
+      const text = bootLines[done];
+      if (ch < text.length) {
+        ch += 1;
+        setBootChars(ch);
+        bootTimers.current.push(window.setTimeout(type, 6));
       } else {
-        bootTimers.current.push(window.setTimeout(() => {
-          sessionStorage.setItem("gipc-booted", "1");
-          setPhase("done");
-          setJustRevealed(true);
-          requestAnimationFrame(() => setRevealed(true));
-        }, 320));
+        done += 1;
+        setBootShown(done);
+        if (done < bootLines.length) {
+          ch = 0;
+          setBootChars(0);
+          bootTimers.current.push(window.setTimeout(type, 40));
+        } else {
+          bootTimers.current.push(window.setTimeout(finale, 220));
+        }
       }
     };
-    bootTimers.current.push(window.setTimeout(step, 160));
+    bootTimers.current.push(window.setTimeout(type, 120));
     const timers = bootTimers.current;
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -285,6 +305,10 @@ export function Console() {
             {bootLines.slice(0, bootShown).map((l, i) => (
               <div className="boot-line" key={i}>{l}</div>
             ))}
+            {bootShown < bootLines.length && (
+              /* key by index so the node is REUSED as it completes (no fade-in replay) */
+              <div className="boot-line" key={bootShown}>{bootLines[bootShown].slice(0, bootChars)}</div>
+            )}
             <div className="boot-skip">press any key to skip</div>
           </button>
         )}
@@ -298,7 +322,7 @@ export function Console() {
         </div>
         <p className="line whoami"><span className="prompt">arcane@prod:~$</span> whoami</p>
 
-        <h1 className="wordmark">arcane</h1>
+        <h1 className="wordmark" ref={wordmarkRef}>arcane</h1>
         <p className="tagline">the operator — backend · cloud · <span className="c">AI arts</span></p>
         <p className="bio">I build real systems. This site runs on infrastructure I operate — every metric, deploy and agent you see here is live, not a mockup.</p>
 
@@ -315,7 +339,7 @@ export function Console() {
           ))}
         </div>
 
-        <MetricPanel metrics={metrics} revealed={revealed} />
+        <MetricPanel metrics={metrics} revealed={revealed} countUp />
 
         <div className="actions">
           <button
@@ -327,7 +351,10 @@ export function Console() {
             ▸ ask the oracle
             <span className="ripple-host" aria-hidden />
           </button>
-          <button className="btn btn-ghost" type="button" onClick={() => { setInput("scry"); inputRef.current?.focus(); }}>trace my request</button>
+          <button className="btn btn-ghost" type="button" onPointerDown={castRipple} onClick={() => { setInput("scry"); inputRef.current?.focus(); }}>
+            trace my request
+            <span className="ripple-host" aria-hidden />
+          </button>
           <span className="kbd"><b>type</b> a command · try <b>help</b></span>
         </div>
 
