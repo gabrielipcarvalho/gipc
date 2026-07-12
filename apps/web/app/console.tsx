@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sigil } from "./sigil";
+import { MetricPanel } from "./components/MetricPanel";
+import { castRipple, tiltHandlers } from "./components/motion";
+
+const tilt = tiltHandlers();
 
 /* M1 Console — interactive arcane operator console.
    Metric values are placeholders until M3 wires real telemetry. */
@@ -31,17 +35,49 @@ const bootLines = [
 
 type OutLine = { id: number; kind: "cmd" | "out"; text: React.ReactNode };
 
+// every command + alias the switch below understands — drives tab-completion + did-you-mean
+export const KNOWN_COMMANDS = [
+  "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "resume",
+  "lab", "operator", "oracle", "ward", "summon", "connect", "contact", "social",
+  "theme", "history", "clear", "exit",
+];
+
+// bounded Levenshtein (early-out above 2) for the did-you-mean hint
+function editDistance(a: string, b: string): number {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => i);
+  for (let j = 1; j <= b.length; j++) {
+    let prev = dp[0];
+    dp[0] = j;
+    for (let i = 1; i <= a.length; i++) {
+      const tmp = dp[i];
+      dp[i] = Math.min(dp[i] + 1, dp[i - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return dp[a.length];
+}
+
 // command handlers → return output lines (strings/JSX); `nav` navigates via the router
-function runCommand(raw: string): { out: React.ReactNode[]; clear?: boolean; nav?: string } {
+function runCommand(
+  raw: string,
+  ctx: { history: string[] },
+): { out: React.ReactNode[]; clear?: boolean; nav?: string } {
   const cmd = raw.trim().toLowerCase();
   if (!cmd) return { out: [] };
   const first = cmd.split(/\s+/)[0];
   switch (first) {
     case "help":
       return { out: [
-        "commands: whoami · ls · about · system · work · resume · lab · operator · connect · social · clear",
-        "arcane aliases: scry (observe) · summon (deploy) · ward (security) · oracle (ask AI) · grimoire (work)",
+        "navigate:  system · work · resume · connect",
+        "inspect:   whoami · about · ls · theme · history",
+        "arcane:    scry (observe) · summon (deploy) · ward (security) · oracle (ask AI) · grimoire (work)",
+        "utility:   help · clear · Tab completes · ↑/↓ history",
       ] };
+    case "history":
+      return { out: ctx.history.length
+        ? ctx.history.map((h, i) => `${String(i + 1).padStart(3, " ")}  ${h}`)
+        : ["(history empty)"] };
     case "whoami":
       return { out: ["arcane — Gabriel Isaias Padua Carvalho · Software · DevOps · AI engineer · Gold Coast, AU"] };
     case "ls":
@@ -76,8 +112,17 @@ function runCommand(raw: string): { out: React.ReactNode[]; clear?: boolean; nav
       return { out: [], clear: true };
     case "exit":
       return { out: ["you can check out any time you like, but you can never leave. (try 'help')"] };
-    default:
-      return { out: [<>command not found: <b>{raw.trim()}</b> — try <b>help</b>.</>] };
+    default: {
+      let best: string | null = null;
+      let bestD = 3;
+      for (const c of KNOWN_COMMANDS) {
+        const d = editDistance(first, c);
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      return { out: [best && bestD <= 2
+        ? <>command not found: <b>{raw.trim()}</b> — did you mean <b>{best}</b>?</>
+        : <>command not found: <b>{raw.trim()}</b> — try <b>help</b>.</>] };
+    }
   }
 }
 
@@ -85,6 +130,7 @@ export function Console() {
   const [phase, setPhase] = useState<"idle" | "booting" | "done">("idle");
   const [bootShown, setBootShown] = useState(0); // how many boot lines revealed
   const [revealed, setRevealed] = useState(false); // metric bars + content in
+  const [justRevealed, setJustRevealed] = useState(false); // one-shot sweep+glint window
   const [input, setInput] = useState("");
   const [log, setLog] = useState<OutLine[]>([]);
   const [history, setHistory] = useState<string[]>([]);
@@ -92,6 +138,7 @@ export function Console() {
   const idRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const bootTimers = useRef<number[]>([]); // pending boot timeouts — skip must cancel them
   const router = useRouter();
 
   // (Focusing this input after the palette's "open console" is owned by CommandPalette's
@@ -108,29 +155,33 @@ export function Console() {
     }
     setPhase("booting");
     let i = 0;
-    const timers: number[] = [];
     const step = () => {
       i += 1;
       setBootShown(i);
       if (i < bootLines.length) {
-        timers.push(window.setTimeout(step, 240));
+        bootTimers.current.push(window.setTimeout(step, 170));
       } else {
-        timers.push(window.setTimeout(() => {
+        bootTimers.current.push(window.setTimeout(() => {
           sessionStorage.setItem("gipc-booted", "1");
           setPhase("done");
+          setJustRevealed(true);
           requestAnimationFrame(() => setRevealed(true));
-        }, 420));
+        }, 320));
       }
     };
-    timers.push(window.setTimeout(step, 220));
+    bootTimers.current.push(window.setTimeout(step, 160));
+    const timers = bootTimers.current;
     return () => timers.forEach(clearTimeout);
   }, []);
 
   const skipBoot = useCallback(() => {
     if (phase !== "booting") return;
+    bootTimers.current.forEach(clearTimeout); // kill the chain — no stale finale re-fire
+    bootTimers.current = [];
     sessionStorage.setItem("gipc-booted", "1");
     setPhase("done");
     setRevealed(true);
+    setJustRevealed(true);
   }, [phase]);
 
   useEffect(() => {
@@ -143,11 +194,22 @@ export function Console() {
 
   useEffect(() => { logEndRef.current?.scrollIntoView({ block: "nearest" }); }, [log]);
 
+  // fallback clear for the one-shot sweep/glint: if animationend never fires (e.g. the
+  // user flips reduced-motion ON mid-sweep, cancelling the animation), clear anyway so
+  // the invisible surfaces can't ghost-replay if motion is re-enabled later
+  useEffect(() => {
+    if (!justRevealed) return;
+    const t = window.setTimeout(() => setJustRevealed(false), 1000);
+    return () => clearTimeout(t);
+  }, [justRevealed]);
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const raw = input;
-    const { out, clear, nav } = runCommand(raw);
-    setHistory((h) => (raw.trim() ? [...h, raw] : h));
+    const trimmed = raw.trim();
+    const nextHistory = trimmed ? [...history, trimmed] : history;
+    const { out, clear, nav } = runCommand(raw, { history: nextHistory });
+    setHistory(nextHistory);
     setHIdx(-1);
     setInput("");
     if (clear) { setLog([]); return; }
@@ -158,7 +220,20 @@ export function Console() {
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "ArrowUp") {
+    if (e.key === "Tab" && !e.shiftKey) {
+      if (!input.trim()) return; // empty input: Tab keeps moving focus (a11y escape hatch)
+      e.preventDefault();
+      const parts = input.split(/\s+/).filter(Boolean);
+      if (parts.length !== 1) return; // only the first token completes
+      const tok = parts[0].toLowerCase();
+      const matches = KNOWN_COMMANDS.filter((c) => c.startsWith(tok));
+      if (matches.length === 1) {
+        setInput(matches[0] + " ");
+      } else if (matches.length > 1) {
+        const entry: OutLine = { id: idRef.current++, kind: "out", text: matches.join("   ") };
+        setLog((l) => [...l, entry]);
+      }
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHIdx((i) => {
         const ni = i < 0 ? history.length - 1 : Math.max(0, i - 1);
@@ -177,7 +252,19 @@ export function Console() {
   };
 
   return (
-    <section className={`term ${revealed ? "revealed" : ""}`} aria-label="Operator console">
+    <section
+      className={`term ${revealed ? "revealed" : ""}${justRevealed ? " glint" : ""}`}
+      aria-label="Operator console"
+    >
+      {justRevealed && (
+        <span
+          className="sweep"
+          aria-hidden
+          onAnimationEnd={(e) => {
+            if (e.animationName === "sweepDown") setJustRevealed(false);
+          }}
+        />
+      )}
       <header className="term-bar">
         <div className="dots" aria-hidden><span className="dot r" /><span className="dot y" /><span className="dot g" /></div>
         <Sigil className="sigil" />
@@ -214,35 +301,42 @@ export function Console() {
 
         <div className="chips">
           {chips.map(([cmd, desc]) => (
-            <button className="chip" key={cmd} onClick={() => { setInput(cmd); inputRef.current?.focus(); }}>
+            <button
+              className="chip"
+              key={cmd}
+              {...tilt}
+              onClick={() => { setInput(cmd); inputRef.current?.focus(); }}
+            >
               {cmd} <span className="c">{desc}</span>
             </button>
           ))}
         </div>
 
-        <div className="panel" role="group" aria-label="Live service metrics (placeholder)">
-          {metrics.map((m) => (
-            <div className="metric" key={m.k}>
-              <span className="k">{m.k}</span>
-              <span className="track"><span className="fill" style={{ width: revealed ? `${m.pct}%` : "0%" }} /></span>
-              <span className="v">{m.v}</span>
-            </div>
-          ))}
-        </div>
+        <MetricPanel metrics={metrics} revealed={revealed} />
 
         <div className="actions">
-          <button className="btn btn-primary" type="button" onClick={() => { setInput("oracle"); inputRef.current?.focus(); }}>▸ ask the oracle</button>
+          <button
+            className="btn btn-primary"
+            type="button"
+            onPointerDown={castRipple}
+            onClick={() => { setInput("oracle"); inputRef.current?.focus(); }}
+          >
+            ▸ ask the oracle
+            <span className="ripple-host" aria-hidden />
+          </button>
           <button className="btn btn-ghost" type="button" onClick={() => { setInput("scry"); inputRef.current?.focus(); }}>trace my request</button>
           <span className="kbd"><b>type</b> a command · try <b>help</b></span>
         </div>
 
-        {/* interactive command line */}
+        {/* interactive command line — role=log announces appended output politely */}
         <div className="term-io">
-          {log.map((l) => (
-            l.kind === "cmd"
-              ? <div className="io-cmd" key={l.id}><span className="prompt">arcane@prod:~$</span> {l.text}</div>
-              : <div className="io-out" key={l.id}>{l.text}</div>
-          ))}
+          <div role="log">
+            {log.map((l) => (
+              l.kind === "cmd"
+                ? <div className="io-cmd" key={l.id}><span className="prompt">arcane@prod:~$</span> {l.text}</div>
+                : <div className="io-out" key={l.id}>{l.text}</div>
+            ))}
+          </div>
           <div ref={logEndRef} />
           <form className="io-input" onSubmit={submit}>
             <span className="prompt">arcane@prod:~$</span>

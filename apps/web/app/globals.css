@@ -136,6 +136,7 @@ a{ color:inherit; text-decoration:none; }
 
 /* ---- terminal window ---- */
 .term{
+  position:relative;
   width:100%;
   background:var(--surface-2);
   backdrop-filter:var(--glass); -webkit-backdrop-filter:var(--glass);
@@ -143,6 +144,31 @@ a{ color:inherit; text-decoration:none; }
   border-radius:var(--r-card);
   box-shadow:var(--shadow-pop);
   overflow:hidden;
+}
+
+/* one-shot reveal motifs — scanline sweep + glint sheen (base opacity 0: statically invisible) */
+.sweep{
+  position:absolute; left:0; right:0; top:-8%; height:18%; z-index:2;
+  pointer-events:none; opacity:0;
+  background:linear-gradient(180deg, transparent, var(--glow-cyan) 50%, transparent);
+  animation:sweepDown 800ms var(--ease-out);
+}
+@keyframes sweepDown{
+  0%{ transform:translateY(0); opacity:0; }
+  18%{ opacity:.5; }
+  82%{ opacity:.32; }
+  100%{ transform:translateY(560%); opacity:0; }
+}
+.term.glint::after{
+  content:""; position:absolute; inset:0; z-index:2; pointer-events:none; opacity:0;
+  background:linear-gradient(115deg, transparent 42%, rgba(255,255,255,.12) 50%, transparent 58%);
+  animation:glintSweep 800ms var(--ease);
+}
+@keyframes glintSweep{
+  0%{ transform:translateX(-120%); opacity:0; }
+  25%{ opacity:1; }
+  75%{ opacity:1; }
+  100%{ transform:translateX(120%); opacity:0; }
 }
 .term-bar{
   display:flex; align-items:center; gap:.9rem;
@@ -184,9 +210,11 @@ a{ color:inherit; text-decoration:none; }
   border:1px solid var(--border); background:rgba(177,140,255,.06);
   color:var(--text-muted); font:inherit; font-size:var(--fs-sm); white-space:nowrap; cursor:pointer;
   transition:border-color var(--dur) var(--ease), background var(--dur) var(--ease), transform var(--dur) var(--ease);
+  /* pointer tilt (±6°) composes with the hover lift via custom props */
+  transform:perspective(800px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) translateY(var(--chip-lift,0px));
 }
 .chip .c{ color:var(--cyan); }
-.chip:hover{ border-color:var(--border-cyan); background:rgba(52,230,255,.08); transform:translateY(-1px); }
+.chip:hover{ border-color:var(--border-cyan); background:rgba(52,230,255,.08); --chip-lift:-1px; }
 
 /* ---- metric panel ---- */
 .panel{
@@ -204,7 +232,21 @@ a{ color:inherit; text-decoration:none; }
 /* ---- actions ---- */
 .actions{ margin-top:1.9rem; display:flex; flex-wrap:wrap; align-items:center; gap:1rem; }
 .btn{ font:inherit; cursor:pointer; border-radius:var(--r-pill); padding:.8rem 1.4rem; font-size:var(--fs-sm); font-weight:600; transition:transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
-.btn-primary{ border:none; background:var(--grad-accent); color:#0a0a12; box-shadow:var(--glow-soft); }
+.btn-primary{ position:relative; border:none; background:var(--grad-accent); color:#0a0a12; box-shadow:var(--glow-soft); }
+
+/* cast-ripple — imperative spans appended into the host (see components/motion.ts) */
+.ripple-host{
+  position:absolute; inset:0; overflow:hidden; border-radius:inherit; pointer-events:none;
+}
+.ripple{
+  position:absolute; border-radius:50%; pointer-events:none; opacity:0;
+  background:radial-gradient(circle, var(--glow-violet) 0%, transparent 70%);
+  animation:rippleCast 480ms var(--ease-out);
+}
+@keyframes rippleCast{
+  0%{ transform:scale(0); opacity:.45; }
+  100%{ transform:scale(2.6); opacity:0; }
+}
 .btn-primary:hover{ transform:translateY(-1px); box-shadow:0 0 34px var(--glow-violet); }
 .btn-ghost{ border:1px solid var(--border); background:transparent; color:var(--violet-bright); }
 .btn-ghost:hover{ border-color:var(--border-cyan); color:#fff; }
@@ -233,7 +275,7 @@ a{ color:inherit; text-decoration:none; }
 /* ---- interactive command line ---- */
 .term-io{ margin-top:1.6rem; border-top:1px solid var(--hairline); padding-top:1rem; }
 .io-cmd{ font-size:var(--fs-sm); color:var(--text); margin-top:.35rem; }
-.io-out{ font-size:var(--fs-sm); color:var(--text-muted); margin:.1rem 0; padding-left:1.15rem; line-height:1.5; }
+.io-out{ font-size:var(--fs-sm); color:var(--text-muted); margin:.1rem 0; padding-left:1.15rem; line-height:1.5; white-space:pre-wrap; }
 .io-out a{ color:var(--cyan); text-decoration:underline; text-underline-offset:2px; }
 .io-out b{ color:var(--violet-bright); font-weight:600; }
 .io-input{ display:flex; align-items:center; gap:.5rem; margin-top:.45rem; }
