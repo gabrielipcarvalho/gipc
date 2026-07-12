@@ -40,8 +40,8 @@ type OutLine = { id: number; kind: "cmd" | "out"; text: React.ReactNode };
 export const KNOWN_COMMANDS = [
   "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "timeline",
   "experience", "resume", "lab", "operator", "oracle", "ward", "summon", "connect",
-  "contact", "social", "theme", "history", "clear", "exit",
-];
+  "contact", "social", "theme", "history", "restore", "clear", "exit",
+]; // .hidden / cat kept OUT — the CTF trailhead stays off tab-complete + did-you-mean
 
 // bounded Levenshtein (early-out above 2) for the did-you-mean hint
 function editDistance(a: string, b: string): number {
@@ -63,7 +63,7 @@ function editDistance(a: string, b: string): number {
 function runCommand(
   raw: string,
   ctx: { history: string[] },
-): { out: React.ReactNode[]; clear?: boolean; nav?: string; theme?: string } {
+): { out: React.ReactNode[]; clear?: boolean; nav?: string; theme?: string; restore?: boolean; ctf?: boolean } {
   const cmd = raw.trim().toLowerCase();
   if (!cmd) return { out: [] };
   const first = cmd.split(/\s+/)[0];
@@ -81,8 +81,28 @@ function runCommand(
         : ["(history empty)"] };
     case "whoami":
       return { out: ["arcane — Gabriel Isaias Padua Carvalho · Software · DevOps · AI engineer · Gold Coast, AU"] };
-    case "ls":
-      return { out: ["system   work   timeline   lab   operator   resume   connect   .hidden"] };
+    case "ls": {
+      const all = /(^|\s)-a(\s|$)/.test(cmd);
+      return { out: [
+        all
+          ? "system   work   timeline   lab   operator   resume   connect   .hidden ← the trailhead"
+          : "system   work   timeline   lab   operator   resume   connect   .hidden",
+      ] };
+    }
+    case ".hidden":
+      return { out: [
+        "decrypting .hidden …",
+        <>flag: <b>{"gipc{arcane_operator_reads_the_grimoire}"}</b> — access granted.</>,
+      ], ctf: true };
+    case "cat": {
+      const arg = cmd.split(/\s+/)[1] ?? "";
+      if (arg === ".hidden") {
+        return { out: [<>flag: <b>{"gipc{arcane_operator_reads_the_grimoire}"}</b> — access granted.</>], ctf: true };
+      }
+      return { out: ["usage: cat <file> — try `ls -a` first."] };
+    }
+    case "restore":
+      return { out: ["telemetry pane restored."], restore: true };
     case "about":
     case "scry":
       return { out: ["I build real systems. This console runs on a box I operate — live telemetry, real deploys, a tool-using agent. Proof, not claims."] };
@@ -144,6 +164,7 @@ export function Console() {
   const [bootChars, setBootChars] = useState(0); // chars typed of the current boot line
   const [revealed, setRevealed] = useState(false); // metric bars + content in
   const [justRevealed, setJustRevealed] = useState(false); // one-shot sweep+glint window
+  const [panelClosed, setPanelClosed] = useState(false); // closable telemetry pane (egg)
   const [input, setInput] = useState("");
   const [log, setLog] = useState<OutLine[]>([]);
   const [history, setHistory] = useState<string[]>([]);
@@ -240,7 +261,7 @@ export function Console() {
     const raw = input;
     const trimmed = raw.trim();
     const nextHistory = trimmed ? [...history, trimmed] : history;
-    const { out, clear, nav, theme } = runCommand(raw, { history: nextHistory });
+    const { out, clear, nav, theme, restore, ctf } = runCommand(raw, { history: nextHistory });
     setHistory(nextHistory);
     setHIdx(-1);
     setInput("");
@@ -249,6 +270,8 @@ export function Console() {
     for (const o of out) next.push({ id: idRef.current++, kind: "out", text: o });
     setLog((l) => [...l, ...next]);
     if (theme) applyTheme(theme);
+    if (restore) setPanelClosed(false);
+    if (ctf) { try { localStorage.setItem("gipc-ctf", "found"); } catch { /* private mode */ } }
     if (nav) router.push(nav);
   };
 
@@ -349,7 +372,24 @@ export function Console() {
           ))}
         </div>
 
-        <MetricPanel metrics={metrics} revealed={revealed} countUp />
+        {panelClosed ? (
+          <p className="panel-scold" role="status">
+            Aw — you closed the telemetry pane. type <b>restore</b> or{" "}
+            <button type="button" className="link-btn" onClick={() => setPanelClosed(false)}>bring it back</button>.
+          </p>
+        ) : (
+          <div className="panel-wrap">
+            <button
+              type="button"
+              className="panel-close"
+              aria-label="Close telemetry panel"
+              onClick={() => setPanelClosed(true)}
+            >
+              ×
+            </button>
+            <MetricPanel metrics={metrics} revealed={revealed} countUp />
+          </div>
+        )}
 
         <div className="actions">
           <button
