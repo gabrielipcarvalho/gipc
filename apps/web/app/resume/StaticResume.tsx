@@ -48,7 +48,8 @@ export function StaticResume() {
             <h3 className="cst-title">{pair.title}</h3>
             {pair.groups.map((g) => (
               <p className="cst-body" key={g.category}>
-                <strong className="cst-strong">{g.category}:</strong> {g.items.join(" · ")}
+                <strong className="cst-strong">{g.category}:</strong>{" "}
+                <span className="cst-dc">{g.items.join(" · ")}</span>
               </p>
             ))}
           </article>

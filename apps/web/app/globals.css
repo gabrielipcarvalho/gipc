@@ -524,17 +524,40 @@ a{ color:inherit; text-decoration:none; }
   opacity:1; border-color:var(--mx-green-dim);
   box-shadow:0 0 40px var(--mx-green-faint), inset 0 0 24px rgba(0,255,65,.05); /* construct glow */
 }
+/* jack-in rain-wipe: a green top-down clip reveal that reaches FULL coverage by ~20%
+   (~140ms, before the 200ms mode flip) and holds across it, then fades. Rests hidden
+   (opacity:0 + clipped); no forwards-fill → reduced-motion (animation:none) = no veil. */
 .cst-veil{
   position:fixed; inset:0; z-index:15; pointer-events:none;
-  background:var(--mx-bg); opacity:0;
-  animation:cstVeil 650ms var(--ease);
+  background:linear-gradient(180deg, var(--mx-green-faint), var(--mx-bg) 42%);
+  opacity:0; clip-path:inset(0 0 100% 0);
+  animation:cstWipe 700ms var(--ease);
 }
-@keyframes cstVeil{ 0%{ opacity:0; } 25%{ opacity:1; } 75%{ opacity:1; } 100%{ opacity:0; } }
+@keyframes cstWipe{
+  0%{ opacity:1; clip-path:inset(0 0 100% 0); }
+  20%{ opacity:1; clip-path:inset(0 0 0 0); }
+  70%{ opacity:1; clip-path:inset(0 0 0 0); }
+  100%{ opacity:0; clip-path:inset(0 0 0 0); }
+}
+
+/* HUD: audio + tint toggles, stacked BELOW the wake pill (no overlap) */
+.cst-hud{ position:fixed; top:calc(var(--nav-h) + 3.2rem); right:1rem; z-index:2; display:flex; flex-direction:column; gap:.4rem; align-items:flex-end; }
+.cst-hud-btn{ padding:.3rem .7rem; border:1px solid var(--mx-green-faint); border-radius:var(--r-pill); background:rgba(2,8,2,.75); color:var(--mx-green); font:inherit; font-size:var(--fs-xs); letter-spacing:.06em; cursor:pointer; }
+.cst-hud-btn[aria-pressed="true"]{ border-color:var(--mx-green-dim); color:var(--mx-head); }
+
+/* violet-rain variant — remaps the scoped construct greens to the arcane violet/cyan TOKENS */
+.construct[data-cst-tint="violet"]{
+  --mx-green:var(--violet);
+  --mx-green-dim:var(--violet-deep);
+  --mx-green-faint:color-mix(in srgb, var(--violet) 16%, transparent);
+  --mx-head:var(--cyan-bright);
+  --mx-text:var(--text);
+}
 
 /* ---- print: always the clean static document (immersive writes inline styles,
         hence !important), black on white ---- */
 @media print{
-  .nav, .cst-wake, .cst-rain, .cst-spacer, .cst-veil, .ambient, .footstrip{ display:none !important; }
+  .nav, .cst-wake, .cst-hud, .cst-rain, .cst-spacer, .cst-veil, .ambient, .footstrip{ display:none !important; }
   body{ background:#fff !important; } /* print — construct */
   .construct, .construct[data-mode="immersive"]{ background:#fff; } /* print — construct */
   .cst-card{

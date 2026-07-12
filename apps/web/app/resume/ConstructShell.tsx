@@ -36,9 +36,9 @@ export function ConstructShell({ children }: { children: React.ReactNode }) {
     import("./Immersive")
       .then(() => {
         if (cancelled) return;
-        setVeil(true); // green veil covers the static→stations snap
-        timers.push(window.setTimeout(() => setMode("immersive"), 200)); // veil fully opaque ≥163ms
-        timers.push(window.setTimeout(() => setVeil(false), 700));
+        setVeil(true); // green rain-wipe covers the static→stations snap
+        timers.push(window.setTimeout(() => setMode("immersive"), 200)); // wipe fully covers by ~140ms
+        timers.push(window.setTimeout(() => setVeil(false), 760)); // let the 700ms wipe fully fade out
       })
       .catch(() => {
         /* chunk failed to load — remain in static mode */
