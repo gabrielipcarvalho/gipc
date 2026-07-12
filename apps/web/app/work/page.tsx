@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
+import { WorkGrid } from "../components/WorkGrid";
+import { projects } from "../../data/projects";
 
 export const metadata: Metadata = {
   title: "The Work — selected projects · gipc.dev",
@@ -17,10 +19,10 @@ export default function WorkPage() {
           <span className="prompt">arcane@prod:~$</span> ls ./grimoire
         </p>
         <p className="page-lead">
-          Projects as inspectable artifacts — gipc.dev (you&apos;re in it), Nina Nails,
-          a seismic U-Net, a transformer market platform and IEEE-published research.
-          Full cards land in this sprint.
+          Projects as inspectable artifacts — sourced from the same résumé data that
+          drives the Construct. Filter by technology, or follow the links out.
         </p>
+        <WorkGrid projects={projects} />
       </TerminalWindow>
     </main>
   );

@@ -1,0 +1,40 @@
+[
+  {
+    "slug": "gipc-dev",
+    "name": "gipc.dev — self-hosted operator platform",
+    "year": "2026",
+    "blurb": "Live-demo platform on bare-metal k3s behind a Cloudflare Tunnel (zero inbound ports), infrastructure-as-code in-repo; migrated the full domain + mail estate solo.",
+    "tags": ["Kubernetes", "Cloudflare Tunnel", "IaC", "Linux"],
+    "featured": true,
+    "links": [{ "label": "visit live site", "href": "https://gipc.dev" }]
+  },
+  {
+    "slug": "nina-nails",
+    "name": "Nina Nails — booking platform (client)",
+    "year": "2026",
+    "blurb": "Full-stack Next.js 15 / React 19 / Supabase product on Vercel (~15k LOC) with a three-tier test suite (Vitest, Playwright e2e, axe) and Google Calendar + email integration.",
+    "tags": ["Next.js", "React", "TypeScript", "testing"]
+  },
+  {
+    "slug": "seismic-unet",
+    "name": "Seismic inversion (PyTorch U-Net)",
+    "year": "2026",
+    "blurb": "Reproducible U-Net (12.5M parameters) inverting 2,000 synthetic seismograms via a differentiable wave simulation; functional-core design, 27 deterministic tests.",
+    "tags": ["PyTorch", "deep learning", "testing"]
+  },
+  {
+    "slug": "transformer-fin",
+    "name": "Transformer financial-prediction platform",
+    "year": "2023-2024",
+    "blurb": "Node.js + Python orchestration to Azure Kubernetes; ETL over 3M+ records/day, sub-200 ms per query, ~12% MAE reduction, IaC (Bicep/Terraform), >90% coverage.",
+    "tags": ["Transformers", "Azure", "Kubernetes", "ETL", "IaC"]
+  },
+  {
+    "slug": "drowning-detection",
+    "name": "Real-time drowning detection (Griffith × Huizhou)",
+    "year": "2024-2026",
+    "blurb": "Edge computer-vision on Raspberry Pi/ARM at >=20 fps and 95%+ accuracy, with sub-100 ms multi-sensor fusion; published in IEEE Access.",
+    "tags": ["computer vision", "edge AI", "Docker/Kubernetes"],
+    "links": [{ "label": "read the paper (IEEE Access)", "href": "https://doi.org/10.1109/ACCESS.2026.3701060" }]
+  }
+]

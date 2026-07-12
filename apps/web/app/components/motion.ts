@@ -32,6 +32,7 @@ export function castRipple(e: React.PointerEvent<HTMLElement>) {
 export function tiltHandlers(maxDeg = 6) {
   return {
     onPointerMove(e: React.PointerEvent<HTMLElement>) {
+      if (e.pointerType !== "mouse") return; // touch scroll-over must not jitter-tilt
       if (prefersReducedMotion()) return;
       const el = e.currentTarget;
       const rect = el.getBoundingClientRect();
