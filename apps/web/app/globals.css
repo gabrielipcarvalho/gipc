@@ -305,6 +305,101 @@ a{ color:inherit; text-decoration:none; }
 .card-links{ margin-top:.85rem; display:flex; flex-wrap:wrap; gap:1rem; }
 .card-links a{ color:var(--cyan); font-size:var(--fs-sm); text-decoration:underline; text-underline-offset:2px; }
 
+/* ==========================================================================
+   The Construct (/resume) — Matrix world-shift. The green family below is the
+   ONE sanctioned exception to tokens-only (design-system + CLAUDE.md).
+   ========================================================================== */
+.construct{
+  --mx-green:#00ff41;                 /* Matrix green — sanctioned construct exception */
+  --mx-green-dim:rgba(0,255,65,.55);  /* Matrix green dim — construct */
+  --mx-green-faint:rgba(0,255,65,.16);/* Matrix green faint — construct */
+  --mx-bg:#020802;                    /* Matrix void — construct */
+  --mx-head:#c8ffc8;                  /* Matrix head glyph — construct */
+  --mx-text:#d4ffd9;                  /* Matrix body text — construct */
+}
+
+/* ---- static document (the recruiter/ATS/print/reduced-motion deliverable) ---- */
+.cst-doc{ display:flex; flex-direction:column; gap:1.2rem; }
+.cst-section{ display:flex; flex-direction:column; gap:1.2rem; }
+.cst-chapter{
+  margin-top:1.4rem; color:var(--mx-green-dim);
+  font-size:var(--fs-section); letter-spacing:.3em; text-transform:uppercase;
+}
+.cst-card{
+  padding:1.3rem 1.4rem;
+  background:rgba(2,8,2,.82); /* construct glass-black */
+  border:1px solid var(--mx-green-faint); border-radius:var(--r-card);
+  color:var(--mx-text);
+}
+.cst-kicker{ color:var(--mx-green-dim); font-size:var(--fs-xs); letter-spacing:.14em; }
+.cst-name{ font-size:var(--fs-h1); font-weight:700; color:var(--mx-head); margin-top:.3rem; }
+.cst-title{ font-size:var(--fs-h2); font-weight:600; color:var(--mx-head); margin-top:.3rem; overflow-wrap:anywhere; }
+.cst-label{ color:var(--mx-green); font-weight:600; margin-top:.2rem; }
+.cst-meta-line{ color:var(--mx-green-dim); font-size:var(--fs-sm); margin-top:.35rem; }
+.cst-note{ color:var(--mx-green-dim); font-size:var(--fs-sm); font-style:italic; margin-top:.3rem; }
+.cst-body{ margin-top:.55rem; font-size:var(--fs-sm); line-height:1.6; }
+.cst-strong{ color:var(--mx-head); font-weight:600; }
+.cst-bullets{ margin:.6rem 0 0 1.1rem; display:flex; flex-direction:column; gap:.45rem; }
+.cst-bullets li{ font-size:var(--fs-sm); line-height:1.55; }
+.cst-contact{ margin-top:.8rem; display:flex; flex-wrap:wrap; gap:1rem; }
+.cst-contact a, .cst-links a{ color:var(--mx-green); text-decoration:underline; text-underline-offset:2px; font-size:var(--fs-sm); }
+.cst-links{ margin-top:.55rem; }
+.cst-wake{
+  position:fixed; top:calc(var(--nav-h) + .8rem); right:1rem; z-index:2;
+  padding:.4rem .8rem; border:1px solid var(--mx-green-faint); border-radius:var(--r-pill);
+  background:rgba(2,8,2,.75); /* construct */
+  color:var(--mx-green); font-size:var(--fs-xs); letter-spacing:.08em;
+}
+.cst-wake-kbd{ opacity:.6; border:1px solid var(--mx-green-faint); border-radius:4px; padding:0 .3rem; margin-left:.3rem; }
+
+/* ---- immersive mode: same DOM as depth stations behind the rain ---- */
+.construct[data-mode="immersive"]{ background:transparent; }
+.construct[data-mode="immersive"] .cst-rain{
+  position:fixed; inset:0; z-index:0; width:100%; height:100%; pointer-events:none;
+  background:var(--mx-bg);
+}
+.cst-spacer{ width:1px; }
+.construct[data-mode="immersive"] .cst-chapter{ display:none; } /* chapters ride on card kickers */
+.construct[data-mode="immersive"] .cst-card{
+  position:fixed; top:8vh; left:50%; z-index:1;
+  width:min(680px, 92vw); margin-left:calc(min(680px, 92vw) / -2);
+  max-height:82vh; overflow-y:auto;
+  transform:translate3d(0, 120vh, 0); /* offscreen until the camera writes transforms */
+  opacity:.28; border-color:var(--mx-green-faint);
+  transition:opacity var(--dur-slow) var(--ease), border-color var(--dur-slow) var(--ease), box-shadow var(--dur-slow) var(--ease);
+}
+.construct[data-mode="immersive"] .cst-card.is-focused{
+  opacity:1; border-color:var(--mx-green-dim);
+  box-shadow:0 0 40px var(--mx-green-faint), inset 0 0 24px rgba(0,255,65,.05); /* construct glow */
+}
+.cst-veil{
+  position:fixed; inset:0; z-index:15; pointer-events:none;
+  background:var(--mx-bg); opacity:0;
+  animation:cstVeil 650ms var(--ease);
+}
+@keyframes cstVeil{ 0%{ opacity:0; } 25%{ opacity:1; } 75%{ opacity:1; } 100%{ opacity:0; } }
+
+/* ---- print: always the clean static document (immersive writes inline styles,
+        hence !important), black on white ---- */
+@media print{
+  .nav, .cst-wake, .cst-rain, .cst-spacer, .cst-veil, .ambient, .footstrip{ display:none !important; }
+  body{ background:#fff !important; } /* print — construct */
+  .construct, .construct[data-mode="immersive"]{ background:#fff; } /* print — construct */
+  .cst-card{
+    position:static !important; transform:none !important; opacity:1 !important;
+    box-shadow:none !important;
+    margin:0 0 1rem !important; max-height:none !important; overflow:visible !important;
+    background:#fff !important; border-color:#bbb !important; color:#000 !important; /* print — construct */
+    break-inside:avoid;
+  }
+  .construct[data-mode="immersive"] .cst-chapter{ display:block; }
+  .cst-name, .cst-title, .cst-strong{ color:#000 !important; } /* print — construct */
+  .cst-label, .cst-kicker, .cst-meta-line, .cst-note, .cst-chapter{ color:#333 !important; } /* print — construct */
+  .cst-body, .cst-bullets li{ color:#111 !important; } /* print — construct */
+  .cst-contact a, .cst-links a{ color:#000 !important; } /* print — construct */
+  .cst-links a::after, .cst-contact a::after{ content:" (" attr(href) ")"; font-size:.85em; color:#555; } /* print — construct */
+}
+
 /* ---- footer strip ---- */
 .footstrip{ margin-top:1.6rem; text-align:center; color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.22em; text-transform:uppercase; }
 

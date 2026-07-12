@@ -37,7 +37,7 @@
       "role": "Software & DevOps Engineer",
       "location": "Gold Coast, QLD",
       "start": "2024-12", "end": "present",
-      "note": "Companies split late 2025; Gabriel engineered the separation (JDL-06/07). Two-engineer team (with Oliver); contractor structure.",
+      "note": "Companies split late 2025; Gabriel engineered the separation. Two-engineer team; contractor structure.",
       "bullets": [
         { "text": "Shipped a production voice-AI qualification agent — from a self-built AWS Bedrock (Nova Sonic) + Twilio prototype to a managed Retell platform — replacing the vendor's extraction with a PHP + GPT-4o-mini pipeline, live September 2025.", "evidence": ["CHAT-01", "CHAT-02", "GEM-01", "GEM-03", "CHAT-08", "GIT-01", "JDL-35"], "keywords": ["LLM", "AWS Bedrock", "voice AI", "prompt engineering", "Python", "PHP"] },
         { "text": "Built and deployed a standalone multi-tenant Django support portal (Python 3.12, Supabase, AI-assisted ticket triage) as sole engineer — 604 automated tests and live client workspaces on a functional-core architecture.", "evidence": ["JDL-03", "GIT-07", "JDL-41"], "keywords": ["Django", "Python", "PostgreSQL/Supabase", "testing", "AI triage"] },
