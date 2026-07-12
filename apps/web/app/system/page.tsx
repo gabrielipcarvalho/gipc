@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
+import { SystemDash } from "../components/SystemDash";
 
 export const metadata: Metadata = {
   title: "The System — live telemetry · gipc.dev",
@@ -17,9 +18,11 @@ export default function SystemPage() {
           <span className="prompt">arcane@prod:~$</span> systemctl status --all
         </p>
         <p className="page-lead">
-          Booting the operator surface — service topology, live metrics and the deploy
-          feed, read straight off the box. Coming online in this sprint.
+          The operator surface — topology, metrics, deploys and the path your request
+          takes. Values are placeholders until the telemetry backend sprint wires the
+          real feeds.
         </p>
+        <SystemDash />
       </TerminalWindow>
     </main>
   );

@@ -305,6 +305,46 @@ a{ color:inherit; text-decoration:none; }
 .card-links{ margin-top:.85rem; display:flex; flex-wrap:wrap; gap:1rem; }
 .card-links a{ color:var(--cyan); font-size:var(--fs-sm); text-decoration:underline; text-underline-offset:2px; }
 
+/* ---- /system: telemetry dashboard ---- */
+.sys{ margin-top:1.2rem; display:grid; grid-template-columns:1fr; gap:1.4rem; }
+@media (min-width:768px){ .sys{ grid-template-columns:1fr 1fr; } .sys-status{ grid-column:1 / -1; } }
+.sys-status{ min-height:1.2em; color:var(--ok); font-size:var(--fs-sm); }
+.sys-status[data-severed]{ color:var(--warn); }
+.sys-skeleton{ display:flex; flex-direction:column; gap:.7rem; }
+.skel{ height:1.1rem; border-radius:var(--r-sm); background:rgba(255,255,255,.05); }
+.sys-block{ min-width:0; }
+.sys-h{ color:var(--text-faint); font-size:var(--fs-section); letter-spacing:.22em; text-transform:uppercase; margin-bottom:.7rem; }
+.topo{ list-style:none; display:flex; flex-wrap:wrap; gap:.7rem; align-items:center; }
+.topo-node{
+  position:relative;
+  display:flex; align-items:center; gap:.5rem;
+  padding:.45rem .8rem; border:1px solid var(--hairline); border-radius:var(--r-pill);
+  font-size:var(--fs-sm); color:var(--text-muted);
+}
+.topo-node + .topo-node::before{ /* hairline connector between nodes */
+  content:""; position:absolute; left:-.7rem; top:50%; width:.7rem; height:1px;
+  background:var(--hairline);
+}
+/* hide connectors wherever the strip can wrap (2-col band squeezes it on tablets) */
+@media (max-width:919px){ .topo-node + .topo-node::before{ display:none; } }
+.topo-dot{ background:var(--ok); box-shadow:0 0 10px var(--ok); }
+.topo-node[data-status="degraded"] .topo-dot{ background:var(--warn); box-shadow:0 0 10px var(--warn); }
+.topo-node[data-status="down"] .topo-dot{ background:var(--err); box-shadow:0 0 10px var(--err); }
+.topo-name{ color:var(--text); font-weight:600; }
+.topo-state{ color:var(--text-faint); font-size:var(--fs-xs); }
+.deploys, .trace{ list-style:none; display:flex; flex-direction:column; gap:.55rem; }
+.deploys li, .trace li{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:.6rem;
+  font-size:var(--fs-sm); border-bottom:1px solid var(--hairline); padding-bottom:.5rem;
+}
+.deploy-subject{ color:var(--text); overflow-wrap:anywhere; }
+.deploy-when{ margin-left:auto; color:var(--text-faint); font-size:var(--fs-xs); white-space:nowrap; }
+.trace-hop{ color:var(--cyan); font-weight:600; min-width:4.2rem; }
+.trace-detail{ color:var(--text-muted); flex:1 1 12rem; }
+.trace-ms{ margin-left:auto; color:var(--text-faint); font-size:var(--fs-xs); white-space:nowrap; }
+.sys-empty{ color:var(--text-faint); font-size:var(--fs-sm); }
+.sys-note{ margin-top:.6rem; color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.04em; }
+
 /* ==========================================================================
    The Construct (/resume) — Matrix world-shift. The green family below is the
    ONE sanctioned exception to tokens-only (design-system + CLAUDE.md).
