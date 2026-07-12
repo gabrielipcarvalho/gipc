@@ -37,9 +37,9 @@ type OutLine = { id: number; kind: "cmd" | "out"; text: React.ReactNode };
 
 // every command + alias the switch below understands — drives tab-completion + did-you-mean
 export const KNOWN_COMMANDS = [
-  "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "resume",
-  "lab", "operator", "oracle", "ward", "summon", "connect", "contact", "social",
-  "theme", "history", "clear", "exit",
+  "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "timeline",
+  "experience", "resume", "lab", "operator", "oracle", "ward", "summon", "connect",
+  "contact", "social", "theme", "history", "clear", "exit",
 ];
 
 // bounded Levenshtein (early-out above 2) for the did-you-mean hint
@@ -69,7 +69,7 @@ function runCommand(
   switch (first) {
     case "help":
       return { out: [
-        "navigate:  system · work · resume · connect",
+        "navigate:  system · work · timeline · resume · connect",
         "inspect:   whoami · about · ls · theme · history",
         "arcane:    scry (observe) · summon (deploy) · ward (security) · oracle (ask AI) · grimoire (work)",
         "utility:   help · clear · Tab completes · ↑/↓ history",
@@ -81,7 +81,7 @@ function runCommand(
     case "whoami":
       return { out: ["arcane — Gabriel Isaias Padua Carvalho · Software · DevOps · AI engineer · Gold Coast, AU"] };
     case "ls":
-      return { out: ["system   work   lab   operator   resume   connect   .hidden"] };
+      return { out: ["system   work   timeline   lab   operator   resume   connect   .hidden"] };
     case "about":
     case "scry":
       return { out: ["I build real systems. This console runs on a box I operate — live telemetry, real deploys, a tool-using agent. Proof, not claims."] };
@@ -90,6 +90,9 @@ function runCommand(
     case "work":
     case "grimoire":
       return { out: [<>selected work → <b>/work</b>: gipc.dev (this) · Nina Nails · seismic U-Net · transformer market platform · drowning-detection (IEEE Access).</>], nav: "/work" };
+    case "timeline":
+    case "experience":
+      return { out: [<>career history → <b>/timeline</b>: roles + study, newest first.</>], nav: "/timeline" };
     case "resume":
       return { out: [<>living résumé → the Construct at <b>/resume</b> · signed PDF available on request.</>], nav: "/resume" };
     case "lab":
