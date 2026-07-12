@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
 import { resume } from "../../data/resume";
 import { ConstructShell } from "./ConstructShell";
 import { StaticResume } from "./StaticResume";
+import { pageMeta } from "../og";
 
-export const metadata: Metadata = {
-  title: "The Construct — living résumé · gipc.dev",
-  description:
-    "Gabriel Carvalho's résumé as a navigable Matrix construct — with a complete, selectable fallback for recruiters and ATS. Software · DevOps · AI Engineer, Australia.",
-};
+export const metadata = pageMeta(
+  "The Construct — living résumé · gipc.dev",
+  "Gabriel Carvalho's résumé as a navigable Matrix construct — with a complete, selectable fallback for recruiters and ATS. Software · DevOps · AI Engineer, Australia.",
+  "/resume",
+);
 
 /* schema.org @graph: Person + the IEEE publication authored by him (author → @id;
    schema.org has no WorkExperience type — worksFor + alumniOf is the standard
@@ -69,7 +69,7 @@ export default function ResumePage() {
     <main className="wrap page" tabIndex={-1}>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()).replace(/</g, "\\u003c") }}
       />
       <ConstructShell>
         <StaticResume />

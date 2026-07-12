@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
 import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
 import { SystemDash } from "../components/SystemDash";
+import { pageMeta } from "../og";
 
-export const metadata: Metadata = {
-  title: "The System — live telemetry · gipc.dev",
-  description:
-    "The operator surface: service topology, live metrics and the deploy feed for the self-hosted gipc.dev platform.",
-};
+export const metadata = pageMeta(
+  "The System — live telemetry · gipc.dev",
+  "The operator surface: service topology, live metrics and the deploy feed for the self-hosted gipc.dev platform.",
+  "/system",
+);
 
 export default function SystemPage() {
   return (

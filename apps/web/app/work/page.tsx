@@ -1,14 +1,14 @@
-import type { Metadata } from "next";
 import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
 import { WorkGrid } from "../components/WorkGrid";
 import { projects } from "../../data/projects";
+import { pageMeta } from "../og";
 
-export const metadata: Metadata = {
-  title: "The Work — selected projects · gipc.dev",
-  description:
-    "Selected engineering work: gipc.dev, Nina Nails, seismic U-Net, a transformer market platform and IEEE-published drowning detection.",
-};
+export const metadata = pageMeta(
+  "The Work — selected projects · gipc.dev",
+  "Selected engineering work: gipc.dev, Nina Nails, seismic U-Net, a transformer market platform and IEEE-published drowning detection.",
+  "/work",
+);
 
 export default function WorkPage() {
   return (
