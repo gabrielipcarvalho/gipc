@@ -9,6 +9,8 @@ node_modules/
 !.env.example
 *.key
 *.pem
+# résumé signing private key — human-only, never committed
+apps/web/.keys/
 *.crt
 *.p12
 secrets/
@@ -24,7 +26,8 @@ build/
 out/
 .next/
 .turbo/
-target/            # Rust/Go build artifacts where applicable
+# Rust/Go build artifacts where applicable
+target/
 # TypeScript incremental build cache
 *.tsbuildinfo
 

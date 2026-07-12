@@ -94,7 +94,7 @@ function runCommand(
     case "experience":
       return { out: [<>career history → <b>/timeline</b>: roles + study, newest first.</>], nav: "/timeline" };
     case "resume":
-      return { out: [<>living résumé → the Construct at <b>/resume</b> · signed PDF available on request.</>], nav: "/resume" };
+      return { out: [<>living résumé → the Construct at <b>/resume</b> · downloadable PDF (preview on /connect).</>], nav: "/resume" };
     case "lab":
       return { out: ["the lab: sandbox shell · load tests · chaos demos — hardened, coming in a later drop."] };
     case "operator":
