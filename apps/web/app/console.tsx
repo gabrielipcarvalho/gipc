@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Sigil } from "./sigil";
 import { MetricPanel } from "./components/MetricPanel";
 import { castRipple, fitText, tiltHandlers } from "./components/motion";
+import { applyTheme, currentTheme, THEME_IDS } from "../data/themes";
 
 const tilt = tiltHandlers();
 
@@ -62,7 +63,7 @@ function editDistance(a: string, b: string): number {
 function runCommand(
   raw: string,
   ctx: { history: string[] },
-): { out: React.ReactNode[]; clear?: boolean; nav?: string } {
+): { out: React.ReactNode[]; clear?: boolean; nav?: string; theme?: string } {
   const cmd = raw.trim().toLowerCase();
   if (!cmd) return { out: [] };
   const first = cmd.split(/\s+/)[0];
@@ -109,8 +110,16 @@ function runCommand(
       return { out: [<>arcan.e@gipc.dev · <a href="https://github.com/gabrielipcarvalho">github</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin</a> → <b>/connect</b></>], nav: "/connect" };
     case "social":
       return { out: [<><a href="https://github.com/gabrielipcarvalho">github.com/gabrielipcarvalho</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin.com/in/gabriel-ipcarvalho</a></>] };
-    case "theme":
-      return { out: ["theme: arcane (violet #b18cff / cyan #34e6ff). theme studio — later."] };
+    case "theme": {
+      const arg = cmd.split(/\s+/)[1] ?? "";
+      if (!arg) {
+        return { out: [<>themes → <b>arcane</b> · <b>matrix</b> · <b>amber</b> · <b>mono</b> · active: <b>{currentTheme()}</b> · apply: <b>theme &lt;name&gt;</b></>] };
+      }
+      if (THEME_IDS.includes(arg)) {
+        return { out: [<>theme applied → <b>{arg}</b>.</>], theme: arg };
+      }
+      return { out: ["custom themes arrive with the oracle (M4) — presets: arcane · matrix · amber · mono."] };
+    }
     case "clear":
       return { out: [], clear: true };
     case "exit":
@@ -231,7 +240,7 @@ export function Console() {
     const raw = input;
     const trimmed = raw.trim();
     const nextHistory = trimmed ? [...history, trimmed] : history;
-    const { out, clear, nav } = runCommand(raw, { history: nextHistory });
+    const { out, clear, nav, theme } = runCommand(raw, { history: nextHistory });
     setHistory(nextHistory);
     setHIdx(-1);
     setInput("");
@@ -239,6 +248,7 @@ export function Console() {
     const next: OutLine[] = [{ id: idRef.current++, kind: "cmd", text: raw }];
     for (const o of out) next.push({ id: idRef.current++, kind: "out", text: o });
     setLog((l) => [...l, ...next]);
+    if (theme) applyTheme(theme);
     if (nav) router.push(nav);
   };
 
