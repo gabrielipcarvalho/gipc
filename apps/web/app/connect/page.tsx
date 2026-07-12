@@ -18,7 +18,7 @@ export default function ConnectPage() {
     <main className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/connect">
         <SectionHeader marker="connect" title="Connect" />
-        <p className="line">
+        <p className="line type-line">
           <span className="prompt">arcane@prod:~$</span> cat ./contact
         </p>
         <p className="page-lead">
