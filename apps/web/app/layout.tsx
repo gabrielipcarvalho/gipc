@@ -5,6 +5,7 @@ import "./globals.css";
 import { Nav } from "./components/Nav";
 import { CommandPalette } from "./components/CommandPalette";
 import { RouteFocus } from "./components/RouteFocus";
+import { EasterEggs } from "./components/EasterEggs";
 import { THEME_IDS } from "../data/themes";
 
 // non-default theme ids for the no-flash guard — derived so a new preset can't drift
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </div>
         <CommandPalette />
         <RouteFocus />
+        <EasterEggs />
       </body>
     </html>
   );

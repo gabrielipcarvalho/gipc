@@ -1,4 +1,5 @@
 import { Console } from "./console";
+import { FootSign } from "./components/FootSign";
 import { pageMeta } from "./og";
 import { resume } from "../data/resume";
 
@@ -27,7 +28,7 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd).replace(/</g, "\\u003c") }}
       />
       <Console />
-      <p className="footstrip">gipc.dev · arcane palette · IBM Plex Mono · hex-sigil mark</p>
+      <FootSign />
     </main>
   );
 }
