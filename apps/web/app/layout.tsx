@@ -23,6 +23,8 @@ export const metadata: Metadata = {
     description: "A real, self-hosted operator console. It's all live.",
     type: "website",
     url: "https://gipc.dev",
+    siteName: "gipc.dev",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "arcane — the gipc.dev operator console" }],
   },
 };
 
