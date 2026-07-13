@@ -198,11 +198,11 @@ export function SystemDash({ initial }: { initial: Status }) {
           </section>
         </>
       ) : (
-        !statusMsg && (
-          <div className="sys-skeleton" aria-hidden>
-            <div className="skel" /><div className="skel" /><div className="skel" />
-          </div>
-        )
+        // skeleton while the stub feed loads — shown regardless of the SSE status line, so an early
+        // stream sever can't leave a blank gap here
+        <div className="sys-skeleton" aria-hidden>
+          <div className="skel" /><div className="skel" /><div className="skel" />
+        </div>
       )}
     </div>
   );
