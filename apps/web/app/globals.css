@@ -583,6 +583,10 @@ a{ color:inherit; text-decoration:none; }
 }
 .cst-spacer{ width:1px; }
 .construct[data-mode="immersive"] .cst-chapter{ display:none; } /* chapters ride on card kickers */
+/* CLS guard: hold cards invisible the INSTANT the mode flips (before the JS camera positions them), so the
+   static→fixed relayout + the 120vh default never paint at a visible wrong position. Immersive's
+   useLayoutEffect writes the camera transform, then a rAF sets inline visibility:visible (overrides this). */
+.construct[data-mode="immersive"] .cst-card{ visibility:hidden; }
 .construct[data-mode="immersive"] .cst-card{
   position:fixed; top:8vh; left:50%; z-index:1;
   width:min(680px, 92vw); margin-left:calc(min(680px, 92vw) / -2);
@@ -633,6 +637,7 @@ a{ color:inherit; text-decoration:none; }
   .construct, .construct[data-mode="immersive"]{ background:#fff; } /* print — construct */
   .cst-card{
     position:static !important; transform:none !important; opacity:1 !important;
+    visibility:visible !important; /* override the immersive CLS-guard hide so print is never blank */
     box-shadow:none !important;
     margin:0 0 1rem !important; max-height:none !important; overflow:visible !important;
     background:#fff !important; border-color:#bbb !important; color:#000 !important; /* print — construct */
