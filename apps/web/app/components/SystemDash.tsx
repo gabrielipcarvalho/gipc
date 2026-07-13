@@ -1,17 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Telemetry, TelemetryDeploy } from "../../data/telemetry";
+import type { Telemetry } from "../../data/telemetry";
 import type { Status, StatusMetric } from "../../data/status";
+import { type DeployEvent, type DeployStage, DEPLOY_STAGES } from "../../data/deploys";
 import { MetricPanel, type Metric } from "./MetricPanel";
 
-/* /system dashboard. Metrics are REAL and LIVE over SSE (/api/stream, SSR-seeded from `initial`).
-   Topology/deploy-feed/trace stay stub — a slow 30s /api/telemetry poll (kept fresh + self-healing)
-   until later phases. The SSE stream OWNS the severed/restored status line; telemetry-poll failures
-   are silent (keep last-good) so a stale "restored" can't hide a down stream. */
+/* /system dashboard. Metrics (SSE /api/stream) and the deploy feed (SSR /api/deploys + SSE `deploy`
+   events) are REAL and LIVE. Topology + request-trace stay stub (30s /api/telemetry poll) until later
+   phases. The SSE stream OWNS the severed/restored status line; telemetry-poll failures are silent. */
 const STUB_POLL_MS = 30000;
-
-type DeployView = TelemetryDeploy & { rel: string };
 
 function relTime(iso: string, now: number): string {
   const s = Math.max(0, Math.round((now - Date.parse(iso)) / 1000));
@@ -30,8 +28,6 @@ function clampPct(v: number | null, max: number): number {
 function fixed(m: StatusMetric, digits: number): string {
   return m.ok && m.value != null ? m.value.toFixed(digits) : "—";
 }
-
-/* The 5 real metrics → MetricPanel rows. Values honest ("—" when unavailable); bars decorative. */
 function statusToMetrics(s: Status): Metric[] {
   const m = s.metrics;
   const errPct = m.errorRate.ok && m.errorRate.value != null ? m.errorRate.value * 100 : null;
@@ -44,11 +40,39 @@ function statusToMetrics(s: Status): Metric[] {
   ];
 }
 
-export function SystemDash({ initial }: { initial: Status }) {
+/* Client-side idempotent merge per (sha,stage) with the same ts replay-guard as the server. */
+function mergeDeploy(list: DeployEvent[], ev: DeployEvent): DeployEvent[] {
+  const i = list.findIndex((e) => e.sha === ev.sha && e.stage === ev.stage);
+  if (i < 0) return [...list, ev];
+  if (ev.ts < list[i].ts || (list[i].status === ev.status && list[i].ts === ev.ts)) return list;
+  const out = list.slice();
+  out[i] = ev;
+  return out;
+}
+
+type DeployRow = { sha: string; subject: string; ts: string; reached: Set<DeployStage>; failed: boolean };
+function groupDeploys(events: DeployEvent[]): DeployRow[] {
+  const bySha = new Map<string, DeployRow>();
+  for (const e of events) {
+    let row = bySha.get(e.sha);
+    if (!row) {
+      row = { sha: e.sha, subject: e.subject || e.sha.slice(0, 7), ts: e.ts, reached: new Set(), failed: false };
+      bySha.set(e.sha, row);
+    }
+    if (e.subject) row.subject = e.subject;
+    if (e.ts > row.ts) row.ts = e.ts;
+    if (e.status === "success") row.reached.add(e.stage);
+    if (e.status === "failure") row.failed = true;
+  }
+  return Array.from(bySha.values()).sort((a, b) => b.ts.localeCompare(a.ts));
+}
+
+export function SystemDash({ initial, initialDeploys }: { initial: Status; initialDeploys: DeployEvent[] }) {
   const [status, setStatus] = useState<Status>(initial); // SSR-seeded → real numbers pre-hydration
+  const [deployEvents, setDeployEvents] = useState<DeployEvent[]>(initialDeploys);
   const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
-  const [deploys, setDeploys] = useState<DeployView[]>([]);
   const [statusMsg, setStatusMsg] = useState("");
+  const [now, setNow] = useState<number | null>(null); // null on SSR → relative times fill in post-mount (no hydration mismatch)
   const hadErrorRef = useRef(false);
   const backoffRef = useRef(3000);
 
@@ -56,8 +80,8 @@ export function SystemDash({ initial }: { initial: Status }) {
     let disposed = false;
     let es: EventSource | null = null;
     let reopenTimer: number | null = null;
+    setNow(Date.now());
 
-    // --- metrics via SSE (owns the status line) ---
     const restored = () => {
       backoffRef.current = 3000;
       if (hadErrorRef.current) {
@@ -72,17 +96,24 @@ export function SystemDash({ initial }: { initial: Status }) {
         if (disposed) return;
         try {
           setStatus(JSON.parse((e as MessageEvent).data) as Status);
+          setNow(Date.now());
           restored();
         } catch {
-          /* ignore a malformed frame */
+          /* ignore malformed frame */
+        }
+      });
+      es.addEventListener("deploy", (e) => {
+        if (disposed) return;
+        try {
+          setDeployEvents((prev) => mergeDeploy(prev, JSON.parse((e as MessageEvent).data) as DeployEvent));
+        } catch {
+          /* ignore malformed frame */
         }
       });
       es.onopen = restored;
       es.onerror = () => {
         hadErrorRef.current = true;
-        setStatusMsg("telemetry link severed — re-scrying…"); // last-good numbers stay rendered
-        // EventSource auto-reconnects transient network drops (readyState CONNECTING) — leave those.
-        // Only take over when it has GIVEN UP (CLOSED — e.g. an HTTP 503/5xx), with capped backoff.
+        setStatusMsg("telemetry link severed — re-scrying…");
         if (es && es.readyState === EventSource.CLOSED) {
           es.close();
           es = null;
@@ -94,7 +125,7 @@ export function SystemDash({ initial }: { initial: Status }) {
     };
     openStream();
 
-    // --- stub topology/deploy/trace via a slow 30s poll (silent on failure) ---
+    // stub topology/trace via a slow 30s poll (silent on failure)
     let telAc: AbortController | null = null;
     const pullTelemetry = async () => {
       telAc?.abort();
@@ -103,13 +134,9 @@ export function SystemDash({ initial }: { initial: Status }) {
       try {
         const res = await fetch("/api/telemetry", { cache: "no-store", signal: ac.signal });
         if (!res.ok || disposed) return;
-        const t = (await res.json()) as Telemetry;
-        if (disposed) return;
-        const now = Date.now(); // fetch time, never render time
-        setTelemetry(t);
-        setDeploys(t.deploys.map((d) => ({ ...d, rel: relTime(d.when, now) })));
+        setTelemetry((await res.json()) as Telemetry);
       } catch {
-        /* silent — SSE owns the status line; keep last-good stub data */
+        /* silent — SSE owns the status line */
       }
     };
     pullTelemetry();
@@ -131,13 +158,15 @@ export function SystemDash({ initial }: { initial: Status }) {
     };
   }, []);
 
+  const deployRows = groupDeploys(deployEvents);
+
   return (
     <div className="sys">
       <p className="sys-status" role="status" data-severed={statusMsg.includes("severed") || undefined}>
         {statusMsg}
       </p>
 
-      {/* REAL metrics — always rendered (SSR carries the initial numbers, SSE updates them live) */}
+      {/* REAL metrics — SSR-seeded, SSE-updated */}
       <section className="sys-block" aria-label="Platform metrics">
         <h2 className="sys-h">metrics</h2>
         <p className="sys-source">
@@ -146,7 +175,31 @@ export function SystemDash({ initial }: { initial: Status }) {
         <MetricPanel metrics={statusToMetrics(status)} countUp placeholder={false} />
       </section>
 
-      {/* stub sections — topology / deploy feed / trace (from /api/telemetry) */}
+      {/* REAL deploy feed — SSR-seeded from /api/deploys, live via SSE `deploy` events */}
+      <section className="sys-block" aria-label="Deploy feed">
+        <h2 className="sys-h">deploy feed</h2>
+        {deployRows.length ? (
+          <ol className="deploys">
+            {deployRows.map((r) => (
+              <li key={r.sha} data-failed={r.failed || undefined}>
+                <span className="deploy-subject">{r.subject}</span>
+                <span className="deploy-track" aria-hidden>
+                  {DEPLOY_STAGES.map((st) => (
+                    <span key={st} className="deploy-stage" data-on={r.reached.has(st) || undefined}>
+                      {st}
+                    </span>
+                  ))}
+                </span>
+                <span className="deploy-when">{now ? relTime(r.ts, now) : ""}</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="sys-empty">no deploys recorded yet — a push to main lights the feed</p>
+        )}
+      </section>
+
+      {/* stub sections — topology / trace (from /api/telemetry) */}
       {telemetry ? (
         <>
           <section className="sys-block" aria-label="Service topology (placeholder)" data-placeholder="true">
@@ -166,23 +219,6 @@ export function SystemDash({ initial }: { initial: Status }) {
             )}
           </section>
 
-          <section className="sys-block" aria-label="Deploy feed (placeholder)" data-placeholder="true">
-            <h2 className="sys-h">deploy feed</h2>
-            {deploys.length ? (
-              <ol className="deploys">
-                {deploys.map((d) => (
-                  <li key={d.id}>
-                    <span className="deploy-subject">{d.subject}</span>
-                    <span className="deploy-when">{d.rel}</span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="sys-empty">no deploys recorded — feed idle</p>
-            )}
-            <p className="sys-note">placeholder — real deploy commits land with the deploy-feed phase</p>
-          </section>
-
           <section className="sys-block" aria-label="Request trace (placeholder)" data-placeholder="true">
             <h2 className="sys-h">trace your request</h2>
             <ol className="trace" data-placeholder="true">
@@ -198,10 +234,8 @@ export function SystemDash({ initial }: { initial: Status }) {
           </section>
         </>
       ) : (
-        // skeleton while the stub feed loads — shown regardless of the SSE status line, so an early
-        // stream sever can't leave a blank gap here
         <div className="sys-skeleton" aria-hidden>
-          <div className="skel" /><div className="skel" /><div className="skel" />
+          <div className="skel" /><div className="skel" />
         </div>
       )}
     </div>

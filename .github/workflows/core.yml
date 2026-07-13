@@ -66,3 +66,19 @@ jobs:
           git config user.email "ci@gipc.dev"
           git commit -am "deploy(core): ${GITHUB_SHA:0:7} → gipc.dev [skip ci]"
           git push
+
+      - name: Notify deploy feed
+        if: github.ref == 'refs/heads/main'   # gate to real deploys — the sprint branch must NOT POST fake events
+        env:
+          DEPLOY_HOOK_KEY: ${{ secrets.DEPLOY_HOOK_KEY }}
+        run: |
+          [ -z "$DEPLOY_HOOK_KEY" ] && { echo "no key"; exit 0; }
+          SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA"); TS=$(date -u +%FT%TZ)
+          post() {
+            body=$(jq -nc --arg sha "$GITHUB_SHA" --arg subject "$SUBJECT" --arg stage "$1" --arg status "$2" --arg ts "$TS" \
+              '{sha:$sha,subject:$subject,stage:$stage,status:$status,ts:$ts}')
+            sig=$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$DEPLOY_HOOK_KEY" | awk '{print $2}')
+            curl -fsS -X POST -H "X-Signature: sha256=$sig" -H 'Content-Type: application/json' --data "$body" https://gipc.dev/api/hooks/deploy || true
+          }
+          post build success
+          post released success
