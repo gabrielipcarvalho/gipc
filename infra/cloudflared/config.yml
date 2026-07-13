@@ -4,7 +4,7 @@ originRequest:
   connectTimeout: 30s
 ingress:
   - hostname: gipc.dev
-    service: http://localhost:30081
+    service: http://localhost:30082
   - hostname: www.gipc.dev
-    service: http://localhost:30081
+    service: http://localhost:30082
   - service: http_status:404

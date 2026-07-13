@@ -90,6 +90,16 @@ func (s *statusRecorder) Write(b []byte) (int, error) {
 	return s.ResponseWriter.Write(b)
 }
 
+// Flush + Unwrap forward streaming/hijack through the wrapper so P4's SSE handler
+// (w.(http.Flusher) / http.ResponseController) works even behind the access-log middleware.
+func (s *statusRecorder) Flush() {
+	if f, ok := s.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter }
+
 // Logging emits one structured access-log line per request.
 func Logging(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -116,13 +126,13 @@ func Logging(log *slog.Logger) func(http.Handler) http.Handler {
 func CORS(allowed string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Vary", "Origin") // always — a shared cache must not serve a no-Origin response to a browser
 			if origin := r.Header.Get("Origin"); origin != "" {
 				if origin != allowed {
 					http.Error(w, "forbidden origin", http.StatusForbidden)
 					return
 				}
 				w.Header().Set("Access-Control-Allow-Origin", allowed)
-				w.Header().Set("Vary", "Origin")
 				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 				w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			}

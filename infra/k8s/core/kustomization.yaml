@@ -1,8 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-# One app managing core + caddy. Each manifest sets its own `namespace: gipc` (no namespace directive
-# here — avoids the transformer touching the caddy base unexpectedly). Exactly ONE `newTag` (core's);
-# Caddy's tag is inline in ../caddy so CI's `sed "s|newTag: "e6a204728acda7e00ee50b691e912afd8d24abb4"
+# One app manages core + caddy. Each manifest sets its own namespace: gipc (no namespace directive here).
+# Caddy's image is pinned inline in ../caddy (no images: entry), so CI's tag-pin sed matches only the
+# core image line below. Keep comments free of the literal tag-key token so the sed can't match them.
 resources:
   - core.yaml
   - ../caddy
