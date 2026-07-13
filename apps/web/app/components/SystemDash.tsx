@@ -5,10 +5,11 @@ import type { Telemetry, TelemetryDeploy } from "../../data/telemetry";
 import type { Status, StatusMetric } from "../../data/status";
 import { MetricPanel, type Metric } from "./MetricPanel";
 
-/* /system dashboard. Metrics are REAL (SSR-seeded from `initial`, then polled from /api/status);
-   topology/deploy-feed/trace stay stub (polled from /api/telemetry) until later phases. Both feeds
-   keep last-good on error and auto-recover; only the error/recovery line is announced. */
-const POLL_MS = 5000;
+/* /system dashboard. Metrics are REAL and LIVE over SSE (/api/stream, SSR-seeded from `initial`).
+   Topology/deploy-feed/trace stay stub — a slow 30s /api/telemetry poll (kept fresh + self-healing)
+   until later phases. The SSE stream OWNS the severed/restored status line; telemetry-poll failures
+   are silent (keep last-good) so a stale "restored" can't hide a down stream. */
+const STUB_POLL_MS = 30000;
 
 type DeployView = TelemetryDeploy & { rel: string };
 
@@ -30,8 +31,7 @@ function fixed(m: StatusMetric, digits: number): string {
   return m.ok && m.value != null ? m.value.toFixed(digits) : "—";
 }
 
-/* The 5 real metrics → MetricPanel rows. Values are honest ("—" when a metric is unavailable);
-   the bars are decorative magnitude cues. */
+/* The 5 real metrics → MetricPanel rows. Values honest ("—" when unavailable); bars decorative. */
 function statusToMetrics(s: Status): Metric[] {
   const m = s.metrics;
   const errPct = m.errorRate.ok && m.errorRate.value != null ? m.errorRate.value * 100 : null;
@@ -50,60 +50,84 @@ export function SystemDash({ initial }: { initial: Status }) {
   const [deploys, setDeploys] = useState<DeployView[]>([]);
   const [statusMsg, setStatusMsg] = useState("");
   const hadErrorRef = useRef(false);
+  const backoffRef = useRef(3000);
 
   useEffect(() => {
     let disposed = false;
-    const sAc = { current: null as AbortController | null };
-    const tAc = { current: null as AbortController | null };
-    const ignoreAbort = (e: unknown) => {
-      if ((e as Error)?.name === "AbortError") return; // superseded by a newer pull — not a real error
-      throw e;
-    };
+    let es: EventSource | null = null;
+    let reopenTimer: number | null = null;
 
-    const pull = async () => {
-      sAc.current?.abort();
-      const sac = new AbortController();
-      sAc.current = sac;
-      const p1 = fetch("/api/status", { cache: "no-store", signal: sac.signal })
-        .then((r) => (r.ok ? (r.json() as Promise<Status>) : Promise.reject(new Error(String(r.status)))))
-        .then((s) => { if (!disposed) setStatus(s); }) // failure → keep last-good status
-        .catch(ignoreAbort);
-
-      tAc.current?.abort();
-      const tac = new AbortController();
-      tAc.current = tac;
-      const p2 = fetch("/api/telemetry", { cache: "no-store", signal: tac.signal })
-        .then((r) => (r.ok ? (r.json() as Promise<Telemetry>) : Promise.reject(new Error(String(r.status)))))
-        .then((t) => {
-          if (disposed) return;
-          const now = Date.now(); // fetch time, never render time
-          setTelemetry(t);
-          setDeploys(t.deploys.map((d) => ({ ...d, rel: relTime(d.when, now) })));
-        })
-        .catch(ignoreAbort);
-
-      try {
-        await Promise.all([p1, p2]);
-        if (hadErrorRef.current) {
-          hadErrorRef.current = false;
-          setStatusMsg("telemetry link restored"); // identical swaps are silent to SRs
-        }
-      } catch {
-        hadErrorRef.current = true;
-        setStatusMsg("telemetry link severed — re-scrying…"); // last-good data stays rendered
+    // --- metrics via SSE (owns the status line) ---
+    const restored = () => {
+      backoffRef.current = 3000;
+      if (hadErrorRef.current) {
+        hadErrorRef.current = false;
+        setStatusMsg("telemetry link restored");
       }
     };
+    const openStream = () => {
+      if (disposed) return;
+      es = new EventSource("/api/stream");
+      es.addEventListener("metrics", (e) => {
+        if (disposed) return;
+        try {
+          setStatus(JSON.parse((e as MessageEvent).data) as Status);
+          restored();
+        } catch {
+          /* ignore a malformed frame */
+        }
+      });
+      es.onopen = restored;
+      es.onerror = () => {
+        hadErrorRef.current = true;
+        setStatusMsg("telemetry link severed — re-scrying…"); // last-good numbers stay rendered
+        // EventSource auto-reconnects transient network drops (readyState CONNECTING) — leave those.
+        // Only take over when it has GIVEN UP (CLOSED — e.g. an HTTP 503/5xx), with capped backoff.
+        if (es && es.readyState === EventSource.CLOSED) {
+          es.close();
+          es = null;
+          const delay = backoffRef.current;
+          backoffRef.current = Math.min(30000, delay * 2);
+          reopenTimer = window.setTimeout(openStream, delay);
+        }
+      };
+    };
+    openStream();
 
-    pull();
-    const interval = window.setInterval(() => { if (!document.hidden) pull(); }, POLL_MS);
-    const onVisible = () => { if (!document.hidden) pull(); };
+    // --- stub topology/deploy/trace via a slow 30s poll (silent on failure) ---
+    let telAc: AbortController | null = null;
+    const pullTelemetry = async () => {
+      telAc?.abort();
+      const ac = new AbortController();
+      telAc = ac;
+      try {
+        const res = await fetch("/api/telemetry", { cache: "no-store", signal: ac.signal });
+        if (!res.ok || disposed) return;
+        const t = (await res.json()) as Telemetry;
+        if (disposed) return;
+        const now = Date.now(); // fetch time, never render time
+        setTelemetry(t);
+        setDeploys(t.deploys.map((d) => ({ ...d, rel: relTime(d.when, now) })));
+      } catch {
+        /* silent — SSE owns the status line; keep last-good stub data */
+      }
+    };
+    pullTelemetry();
+    const telInterval = window.setInterval(() => {
+      if (!document.hidden) pullTelemetry();
+    }, STUB_POLL_MS);
+    const onVisible = () => {
+      if (!document.hidden) pullTelemetry();
+    };
     document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       disposed = true;
-      clearInterval(interval);
+      es?.close();
+      if (reopenTimer) clearTimeout(reopenTimer);
+      clearInterval(telInterval);
+      telAc?.abort();
       document.removeEventListener("visibilitychange", onVisible);
-      sAc.current?.abort();
-      tAc.current?.abort();
     };
   }, []);
 
@@ -113,7 +137,7 @@ export function SystemDash({ initial }: { initial: Status }) {
         {statusMsg}
       </p>
 
-      {/* REAL metrics — always rendered (SSR carries the initial numbers) */}
+      {/* REAL metrics — always rendered (SSR carries the initial numbers, SSE updates them live) */}
       <section className="sys-block" aria-label="Platform metrics">
         <h2 className="sys-h">metrics</h2>
         <p className="sys-source">
