@@ -27,7 +27,7 @@ async function getUptime(): Promise<Uptime> {
 export default async function StatusPage() {
   const uptime = await getUptime();
   return (
-    <main className="wrap page" tabIndex={-1}>
+    <main id="main" className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/status">
         <SectionHeader marker="status" title="Status" />
         <p className="line type-line">

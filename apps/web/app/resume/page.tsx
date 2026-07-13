@@ -66,7 +66,7 @@ function jsonLd() {
 
 export default function ResumePage() {
   return (
-    <main className="wrap page" tabIndex={-1}>
+    <main id="main" className="wrap page" tabIndex={-1}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()).replace(/</g, "\\u003c") }}
