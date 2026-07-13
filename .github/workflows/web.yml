@@ -37,6 +37,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & push image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -49,18 +50,31 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: GitOps — pin manifest to this image (deploy feed)
+        id: pin
         run: |
-          sed -i "s|newTag: .*|newTag: \"${GITHUB_SHA}\"|" infra/k8s/web/kustomization.yaml
-          if git diff --quiet; then echo "no manifest change"; exit 0; fi
+          # rebase-retry: two workflows can race to pin on the same main push; the loser fetches the
+          # winner's commit, re-applies its own tag, and retries. FETCH_HEAD is fresh on a shallow clone.
           git config user.name  "gipc-ci"
           git config user.email "ci@gipc.dev"
-          git commit -am "deploy(web): ${GITHUB_SHA:0:7} → gipc.dev [skip ci]"
-          git push
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard FETCH_HEAD
+            sed -i "s|newTag: .*|newTag: \"${GITHUB_SHA}\"|" infra/k8s/web/kustomization.yaml
+            if git diff --quiet; then echo "already pinned"; exit 0; fi
+            git commit -am "deploy(web): ${GITHUB_SHA:0:7} → gipc.dev [skip ci]"
+            if git push; then echo "pinned (attempt $attempt)"; exit 0; fi
+            echo "push rejected — another workflow pushed; retrying"
+            [ "$attempt" -lt 5 ] && sleep $((attempt * 3))
+          done
+          echo "::error::failed to pin web after 5 attempts"; exit 1
 
       - name: Notify deploy feed
-        if: github.ref == 'refs/heads/main'   # never POST fake events from non-deploy branches
+        # post whenever the image built (even if the pin retried/failed), but never on a cancelled run.
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.build.outcome == 'success' }}
         env:
           DEPLOY_HOOK_KEY: ${{ secrets.DEPLOY_HOOK_KEY }}
+          # released reflects the PIN outcome — a failed pin = manifest not bumped = site NOT on the new image
+          RELEASED_STATUS: ${{ steps.pin.outcome == 'success' && 'success' || 'failure' }}
         run: |
           [ -z "$DEPLOY_HOOK_KEY" ] && { echo "no key"; exit 0; }
           SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA"); TS=$(date -u +%FT%TZ)
@@ -71,4 +85,4 @@ jobs:
             curl -fsS -X POST -H "X-Signature: sha256=$sig" -H 'Content-Type: application/json' --data "$body" https://gipc.dev/api/hooks/deploy || true
           }
           post build success
-          post released success
+          post released "$RELEASED_STATUS"
