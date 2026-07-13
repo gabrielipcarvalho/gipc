@@ -2,9 +2,8 @@ name: core image
 
 on:
   push:
-    # sprint/m3-telemetry is included ONLY so the sprint can build the amd64 image from the branch
-    # (a branch-only workflow can't use workflow_dispatch). Narrow to [main] before merging to main.
-    branches: [main, sprint/m3-telemetry]
+    # M3 sprint complete — core builds on main only (branch build no longer needed).
+    branches: [main]
     paths:
       - "services/core/**"
       - ".github/workflows/core.yml"
