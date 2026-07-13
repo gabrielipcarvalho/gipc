@@ -23,6 +23,10 @@ func TestRedactLine(t *testing.T) {
 		{in: "dialing loki.observability:3100", mustNotHave: "loki.observability", mustKeep: "dialing"},
 		{in: "auth Bearer sk-live-abcdef123456 done", mustNotHave: "sk-live-abcdef123456", mustKeep: "auth"},
 		{in: "served at 12:34:56 fine", mustNotHave: "", mustKeep: "12:34:56"},
+		// the HIGH: Caddy upstream dial error surfaces an internal ClusterIP as host:port
+		{in: "dial tcp 10.43.0.5:80: connect: connection refused", mustNotHave: "10.43.0.5", mustKeep: "connection refused"},
+		{in: "peer [2001:db8::1]:443 reset", mustNotHave: "2001:db8::1", mustKeep: "reset"},
+		{in: "lookup alertmanager.observability:9093 failed", mustNotHave: "alertmanager.observability", mustKeep: "lookup"},
 	}
 	for _, c := range cases {
 		got := redactLine(c.in)

@@ -46,29 +46,45 @@ type LogsResponse struct {
 // other key are dropped at the source — `time` deliberately (we use Loki's numeric ts; folding RFC3339
 // in would trip the IP redactor's colon handling).
 var (
-	reHostname = regexp.MustCompile(`\b(prometheus|loki|grafana|core|web|node-exporter|kube-state-metrics|promtail)[.:][a-z0-9.:-]*`)
-	reBearer   = regexp.MustCompile(`(?i)Bearer\s+\S+`)
-	reSlack    = regexp.MustCompile(`xox[a-zA-Z]-\S+`)
-	reJWT      = regexp.MustCompile(`eyJ[\w-]+\.[\w-]+\.?[\w-]*`)
-	reAWS      = regexp.MustCompile("AKIA" + `[0-9A-Z]{16}`) // split literal so verify.sh's secret-grep doesn't self-flag
-	reHex      = regexp.MustCompile(`\b[A-Fa-f0-9]{32,}\b`)
-	reB64      = regexp.MustCompile(`\b[A-Za-z0-9+/]{40,}={0,2}`)
-	reKV       = regexp.MustCompile(`(?i)(token|secret|password|api[_-]?key)\s*[=:]\s*\S+`)
+	// dotted-quad backstop — catches IPv4 in ANY delimiter (host:port "10.43.0.5:80", URL-embedded
+	// "/proxy/1.2.3.4", logfmt "remote_ip=1.2.3.4"); needs 4 octets so it can't eat a ts/version.
+	reIPv4        = regexp.MustCompile(`\b\d{1,3}(?:\.\d{1,3}){3}\b`)
+	reHostname    = regexp.MustCompile(`\b(prometheus|loki|grafana|core|web|node-exporter|kube-state-metrics|promtail)[.:][a-z0-9.:-]*`)
+	reClusterHost = regexp.MustCompile(`\b[a-z0-9-]+\.(?:svc|observability|gipc)(?:\.cluster\.local)?\b(?::[0-9]+)?`)
+	reBearer      = regexp.MustCompile(`(?i)Bearer\s+\S+`)
+	reSlack       = regexp.MustCompile(`xox[a-zA-Z]-\S+`)
+	reJWT         = regexp.MustCompile(`eyJ[\w-]+\.[\w-]+\.?[\w-]*`)
+	reAWS         = regexp.MustCompile("AKIA" + `[0-9A-Z]{16}`) // split literal so verify.sh's secret-grep doesn't self-flag
+	reHex         = regexp.MustCompile(`\b[A-Fa-f0-9]{32,}\b`)
+	reB64         = regexp.MustCompile(`\b[A-Za-z0-9+/]{40,}={0,2}`)
+	reKV          = regexp.MustCompile(`(?i)(token|secret|password|api[_-]?key)\s*[=:]\s*\S+`)
 )
 
-// redactLine masks IPs (v4+v6, via net.ParseIP so a clock like 12:34:56 is NOT a false match), internal
-// hostnames, and secret-shaped tokens. Runs on the FINAL exposed string of EVERY line, whatever the format.
+// redactLine masks IPs, internal hostnames, and secret-shaped tokens on the FINAL exposed string of EVERY
+// line, whatever the format. IPv4 is caught two ways (tokenizer + a dotted-quad backstop that also nails
+// host:port / URL-embedded forms); IPv6 (bare + [v6]:port) via net.ParseIP/SplitHostPort so a clock like
+// 12:34:56 is NOT a false match. Belt-and-suspenders on top of the JSON field allow-list.
 func redactLine(s string) string {
-	// IPs first, token-by-token (avoids an ad-hoc IPv6 regex that eats colons in timestamps).
 	fields := strings.Fields(s)
 	for i, tok := range fields {
 		core := strings.Trim(tok, ".,;:()[]{}\"'")
-		if core != "" && net.ParseIP(core) != nil {
-			fields[i] = strings.Replace(tok, core, "‹ip›", 1)
+		if core == "" {
+			continue
+		}
+		ip := core
+		if net.ParseIP(ip) == nil {
+			// host:port or [v6]:port — trim without stripping the IPv6 brackets, then split
+			if h, _, err := net.SplitHostPort(strings.Trim(tok, ".,;()\"'")); err == nil {
+				ip = h
+			}
+		}
+		if net.ParseIP(ip) != nil {
+			fields[i] = strings.Replace(tok, ip, "‹ip›", 1)
 		}
 	}
 	s = strings.Join(fields, " ")
-	for _, re := range []*regexp.Regexp{reHostname, reBearer, reSlack, reJWT, reAWS, reHex, reB64, reKV} {
+	s = reIPv4.ReplaceAllString(s, "‹ip›") // backstop for glued/ported IPv4 the tokenizer can miss
+	for _, re := range []*regexp.Regexp{reHostname, reClusterHost, reBearer, reSlack, reJWT, reAWS, reHex, reB64, reKV} {
 		s = re.ReplaceAllString(s, "‹redacted›")
 	}
 	return s
