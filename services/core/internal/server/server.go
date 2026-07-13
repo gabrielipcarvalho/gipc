@@ -45,7 +45,9 @@ func healthz(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-// readyz is trivially ready in P2; P3 will check Prometheus reachability.
+// readyz stays Prometheus-INDEPENDENT by design. Gating it on Prometheus would 503 this single-replica
+// pod on any Prometheus blip → the core Service loses its endpoint → Caddy 502s ALL /api/* (incl.
+// /api/status). Prometheus reachability is surfaced via /api/status's `source` field, never readiness.
 func readyz(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }

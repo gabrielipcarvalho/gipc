@@ -31,8 +31,11 @@ type Status struct {
 var statusQueries = []struct{ key, unit, ql string }{
 	{"reqPerSec", "req/s", `sum(rate(caddy_http_request_duration_seconds_count{handler="subroute"}[1m]))`},
 	{"p99Ms", "ms", `histogram_quantile(0.99, sum(rate(caddy_http_request_duration_seconds_bucket{handler="subroute"}[5m])) by (le)) * 1000`},
-	// `or vector(0)` on the numerator so a healthy site (zero 5xx → empty selector) reports 0.0, not "unavailable".
-	{"errorRate", "ratio", `(sum(rate(caddy_http_request_duration_seconds_count{handler="subroute",code=~"5.."}[5m])) or vector(0)) / clamp_min(sum(rate(caddy_http_request_duration_seconds_count{handler="subroute"}[5m])), 1)`},
+	// `or vector(0)` numerator → a healthy site (zero 5xx) reports 0.0, not "unavailable". NO clamp_min on the
+	// denominator: the site permanently runs <1 req/s, so clamping to 1 under-reports the true ratio ~4x. The
+	// caddy-health probes keep the denominator >0 in practice, so this is the real ratio; true-zero traffic →
+	// empty/NaN denominator → ok:false → "—" (honest), never a fabricated number.
+	{"errorRate", "ratio", `(sum(rate(caddy_http_request_duration_seconds_count{handler="subroute",code=~"5.."}[5m])) or vector(0)) / sum(rate(caddy_http_request_duration_seconds_count{handler="subroute"}[5m]))`},
 	{"cpuCores", "cores", `sum(rate(container_cpu_usage_seconds_total{namespace="gipc",pod=~"web-.*",container="web"}[2m]))`},
 	{"memMiB", "MiB", `sum(container_memory_working_set_bytes{namespace="gipc",pod=~"web-.*",container="web"}) / 1048576`},
 }
