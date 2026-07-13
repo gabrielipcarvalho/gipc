@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -186,7 +187,7 @@ func (m *uptimeMonitor) probeOne(ctx context.Context, p probe) (bool, int64) {
 	if err != nil {
 		return false, ms
 	}
-	defer resp.Body.Close()
+	defer func() { _, _ = io.Copy(io.Discard, resp.Body); resp.Body.Close() }() // drain → keep-alive reuse
 	return resp.StatusCode >= 200 && resp.StatusCode < 400, ms
 }
 
@@ -196,7 +197,6 @@ type TargetStatus struct {
 	Status      string  `json:"status"` // up | down | collecting
 	UptimePct   float64 `json:"uptimePct"`
 	LatencyMs   *int64  `json:"latencyMs"`
-	LastChange  string  `json:"lastChange"`
 	SampleCount int     `json:"sampleCount"`
 	WindowStart string  `json:"windowStart"`
 	Strip       []bool  `json:"strip"`
@@ -240,13 +240,6 @@ func (m *uptimeMonitor) snapshot() Uptime {
 			t.LatencyMs = &ms // fresh pointer per target
 		default:
 			t.Status = "down"
-		}
-		t.LastChange = time.Unix(last.TS, 0).UTC().Format(time.RFC3339)
-		for j := n - 1; j > 0; j-- {
-			if ss[j].Up != ss[j-1].Up {
-				t.LastChange = time.Unix(ss[j].TS, 0).UTC().Format(time.RFC3339)
-				break
-			}
 		}
 		from := 0
 		if n > uptimeStripLen {
