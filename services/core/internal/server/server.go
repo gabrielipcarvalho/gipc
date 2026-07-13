@@ -19,15 +19,17 @@ var Version = "dev"
 // New builds the core HTTP handler. Health/readyz are wrapped by ONLY the base chain
 // (recover + request-id) — never the rate limiter or access log, so kubelet probes can't be
 // throttled into a CrashLoop or spam the logs. All other /api/* routes get the full chain.
-// New builds the core handler. srvCtx (main's SIGTERM context) lets long-lived handlers (SSE) end on
-// shutdown so http.Server.Shutdown drains cleanly.
-func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) http.Handler {
+// New builds the core handler and the uptime monitor. srvCtx (main's SIGTERM context) lets long-lived
+// handlers (SSE) end on shutdown so http.Server.Shutdown drains cleanly. The returned *uptimeMonitor is
+// built (not started) here — main.go calls mon.Run(ctx) so handler-only test builds don't spawn its loop.
+func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Handler, *uptimeMonitor) {
 	limiter := middleware.NewLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
 
 	prom := promql.New(cfg.PrometheusURL)
 	lk := loki.New(cfg.LokiURL)
 	hub := newHub()
 	deploys := newDeployStore()
+	uptime := newUptimeMonitor(cfg)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/healthz", healthz)
@@ -40,18 +42,19 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) http.Handl
 	mux.HandleFunc("GET /api/metrics/history", historyHandler(prom)) // aggregate range series (Grafana-on-display)
 	mux.HandleFunc("GET /api/logs", logsHandler(lk))                 // fixed+redacted log surface (Loki-on-display)
 	mux.HandleFunc("GET /api/trace", traceHandler())                // per-visitor real request path
-	// (P7 /api/uptime)
+	mux.HandleFunc("GET /api/uptime", uptimeHandler(uptime))        // probe/incident history (loop started in main)
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never
 	// throttled into a CrashLoop or spammed to the log — without a catch-all that breaks 405.
-	return middleware.Chain(
+	handler := middleware.Chain(
 		middleware.Recover(log),
 		middleware.RequestIDMiddleware,
 		middleware.Logging(log),
 		middleware.CORS(cfg.CORSOrigin),
 		limiter.Middleware,
 	)(mux)
+	return handler, uptime
 }
 
 func healthz(w http.ResponseWriter, _ *http.Request) {

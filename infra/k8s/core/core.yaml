@@ -10,6 +10,8 @@ data:
   RATE_LIMIT_BURST: "20"
   PROMETHEUS_URL: "http://prometheus.observability:9090"   # used from P3
   LOKI_URL: "http://loki.observability:3100"               # P6 log surface (cross-ns ClusterIP)
+  WEB_URL: "http://web:80"                                  # P7 uptime probe target
+  UPTIME_INTERVAL: "30s"                                    # P7 probe cadence
   SHUTDOWN_TIMEOUT: "25s"
 ---
 apiVersion: apps/v1

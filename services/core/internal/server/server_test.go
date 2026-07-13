@@ -14,7 +14,9 @@ import (
 
 func testHandler() http.Handler {
 	cfg, _ := config.Load()
-	return New(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), context.Background())
+	// discard the monitor — tests exercise the handler only; the probe loop starts in main.go, not here
+	h, _ := New(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), context.Background())
+	return h
 }
 
 func do(t *testing.T, method, path string) *httptest.ResponseRecorder {
