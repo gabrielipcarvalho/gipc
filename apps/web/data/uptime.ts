@@ -12,7 +12,6 @@ export type TargetStatus = {
   status: "up" | "down" | "collecting";
   uptimePct: number;
   latencyMs: number | null;
-  lastChange: string;
   sampleCount: number;
   windowStart: string;
   strip: boolean[]; // last ~40 up/down samples for the bar view

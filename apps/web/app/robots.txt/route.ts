@@ -7,7 +7,9 @@ export function GET() {
     "# the grimoire hides a flag — `ls -a` in the console, then `cat .hidden`",
     "User-agent: *",
     "Allow: /",
+    "Disallow: /api/", // JSON data handlers, not crawlable content
     "",
+    "Host: https://gipc.dev",
     "Sitemap: https://gipc.dev/sitemap.xml",
     "",
   ].join("\n");

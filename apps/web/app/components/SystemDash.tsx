@@ -304,6 +304,18 @@ export function SystemDash({
             {deployRows.map((r) => (
               <li key={r.sha} data-failed={r.failed || undefined}>
                 <span className="deploy-subject">{r.subject}</span>
+                {r.failed && (
+                  <span className="deploy-mark" aria-hidden>
+                    ✗ failed
+                  </span>
+                )}
+                {/* accessible twin of the aria-hidden colour track: state as text, not colour */}
+                <span className="sr-only">
+                  {r.reached.size
+                    ? `reached ${DEPLOY_STAGES.filter((s) => r.reached.has(s)).join(", ")}`
+                    : "no stages reached"}
+                  {r.failed ? "; deploy failed" : ""}
+                </span>
                 <span className="deploy-track" aria-hidden>
                   {DEPLOY_STAGES.map((st) => (
                     <span key={st} className="deploy-stage" data-on={r.reached.has(st) || undefined}>
@@ -331,6 +343,9 @@ export function SystemDash({
             {logs.lines.map((l, i) => (
               <li key={`${l.ts}-${i}`} data-level={l.level.toLowerCase() || undefined}>
                 <span className="log-pod">{l.pod}</span>
+                {["ERROR", "WARN"].includes(l.level.toUpperCase()) && (
+                  <span className="log-level">[{l.level.toLowerCase()}]</span>
+                )}
                 <span className="log-msg">{l.msg}</span>
                 <span className="log-when">{now ? relTime(l.ts, now) : ""}</span>
               </li>
