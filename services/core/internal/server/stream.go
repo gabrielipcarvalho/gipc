@@ -17,7 +17,7 @@ import (
 // srvCtx is main's SIGTERM context: the loop selects on it so streams END PROMPTLY on shutdown.
 // (http.Server.Shutdown WAITS for handlers to return — it does NOT cancel request contexts — so
 // without this a viewer would block Shutdown the full budget → os.Exit(1).)
-func streamHandler(prom *promql.Client, cfg config.Config, srvCtx context.Context) http.HandlerFunc {
+func streamHandler(prom *promql.Client, cfg config.Config, srvCtx context.Context, h *hub) http.HandlerFunc {
 	var active atomic.Int64 // scoped to this handler → deterministic cap test, injectable via cfg
 	maxStreams := int64(cfg.MaxStreams)
 	interval := cfg.StreamInterval
@@ -33,6 +33,10 @@ func streamHandler(prom *promql.Client, cfg config.Config, srvCtx context.Contex
 		}
 		defer active.Add(-1)
 
+		// subscribe AFTER the cap check so a rejected (503) stream can't leak a subscriber.
+		sub := h.subscribe()
+		defer h.unsubscribe(sub)
+
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
@@ -40,27 +44,27 @@ func streamHandler(prom *promql.Client, cfg config.Config, srvCtx context.Contex
 
 		rc := http.NewResponseController(w)
 
-		// send one frame; returns false when the client is gone (stop the stream).
-		send := func() bool {
-			// Rolling per-write deadline: defeats the 30s server WriteTimeout AND bounds each write so a
-			// stuck client errors out (freeing its slot) instead of blocking forever. Best-effort — the
-			// httptest recorder doesn't support it; a real conn does (via statusRecorder.Unwrap).
+		// writeFrame writes one SSE frame; returns false when the client is gone. The rolling per-write
+		// deadline defeats the 30s server WriteTimeout AND bounds each write so a stuck client errors out
+		// (freeing its slot). Best-effort — the httptest recorder lacks it; a real conn has it via Unwrap.
+		writeFrame := func(event string, data []byte) bool {
 			_ = rc.SetWriteDeadline(time.Now().Add(interval + 5*time.Second))
-			// computeStatus applies a 3s timeout PER QUERY internally; pass the request ctx directly.
-			st := computeStatus(r.Context(), prom)
-			b, err := json.Marshal(st)
-			if err != nil {
-				return true // skip this frame, keep the stream warm
-			}
-			// ALWAYS emit the frame — incl. an "unavailable" Status (client → "—"). Never a bare ping
-			// substitute (that would keep the last real numbers rendered = stale-as-live).
-			if _, err := fmt.Fprintf(w, "event: metrics\ndata: %s\n\n", b); err != nil {
+			if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, data); err != nil {
 				return false
 			}
 			return rc.Flush() == nil
 		}
+		// sendMetrics ALWAYS emits a metrics frame — incl. an "unavailable" Status (client → "—"); never a
+		// bare ping substitute (that would keep the last real numbers rendered = stale-as-live).
+		sendMetrics := func() bool {
+			b, err := json.Marshal(computeStatus(r.Context(), prom)) // 3s timeout PER QUERY inside
+			if err != nil {
+				return true // skip one frame, keep the stream warm
+			}
+			return writeFrame("metrics", b)
+		}
 
-		if !send() { // immediate first frame so the client paints without waiting an interval
+		if !sendMetrics() { // immediate first frame so the client paints without waiting an interval
 			return
 		}
 		ticker := time.NewTicker(interval)
@@ -68,7 +72,11 @@ func streamHandler(prom *promql.Client, cfg config.Config, srvCtx context.Contex
 		for {
 			select {
 			case <-ticker.C:
-				if !send() {
+				if !sendMetrics() {
+					return
+				}
+			case m := <-sub: // deploy event broadcast from the webhook
+				if !writeFrame(m.event, m.data) {
 					return
 				}
 			case <-r.Context().Done(): // client disconnected
