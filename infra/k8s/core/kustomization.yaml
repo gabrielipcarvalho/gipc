@@ -8,4 +8,4 @@ resources:
   - ../caddy
 images:
   - name: ghcr.io/gabrielipcarvalho/gipc-core
-    newTag: "a8d107c7205787005c890ae532f489dcde8e136c"
+    newTag: "3abcb593c9b61e34340c69b99d131ce1720804b5"
