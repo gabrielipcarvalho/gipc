@@ -16,6 +16,8 @@ type Config struct {
 	RateLimitBurst  int           // per-client bucket size (default 20)
 	PrometheusURL   string        // Prometheus base URL (used from P3; default in-cluster svc)
 	ShutdownTimeout time.Duration // graceful shutdown budget (< pod terminationGracePeriod)
+	StreamInterval  time.Duration // SSE metric tick cadence (P4)
+	MaxStreams      int           // concurrent SSE connection cap (P4)
 }
 
 // Load reads the environment and applies defaults. It never returns an error today, but keeps the
@@ -28,6 +30,8 @@ func Load() (Config, error) {
 		RateLimitBurst:  envInt("RATE_LIMIT_BURST", 20),
 		PrometheusURL:   env("PROMETHEUS_URL", "http://prometheus.observability:9090"),
 		ShutdownTimeout: envDuration("SHUTDOWN_TIMEOUT", 25*time.Second),
+		StreamInterval:  envDuration("STREAM_INTERVAL", 5*time.Second),
+		MaxStreams:      envInt("MAX_STREAMS", 64),
 	}, nil
 }
 

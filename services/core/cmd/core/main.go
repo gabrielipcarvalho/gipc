@@ -24,18 +24,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Graceful shutdown on SIGTERM (k8s) or SIGINT (local Ctrl-C). Created BEFORE the server so ctx can be
+	// threaded into handlers — long-lived SSE streams select on it and end on shutdown, so Shutdown drains
+	// cleanly (Shutdown WAITS for handlers; it does not cancel their request contexts).
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           server.New(cfg, log),
+		Handler:           server.New(cfg, log, ctx),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-
-	// Graceful shutdown on SIGTERM (k8s) or SIGINT (local Ctrl-C).
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
 
 	go func() {
 		log.Info("core listening", "addr", srv.Addr, "version", server.Version)

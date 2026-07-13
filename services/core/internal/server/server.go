@@ -2,6 +2,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -17,7 +18,9 @@ var Version = "dev"
 // New builds the core HTTP handler. Health/readyz are wrapped by ONLY the base chain
 // (recover + request-id) — never the rate limiter or access log, so kubelet probes can't be
 // throttled into a CrashLoop or spam the logs. All other /api/* routes get the full chain.
-func New(cfg config.Config, log *slog.Logger) http.Handler {
+// New builds the core handler. srvCtx (main's SIGTERM context) lets long-lived handlers (SSE) end on
+// shutdown so http.Server.Shutdown drains cleanly.
+func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) http.Handler {
 	limiter := middleware.NewLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
 
 	prom := promql.New(cfg.PrometheusURL)
@@ -26,8 +29,9 @@ func New(cfg config.Config, log *slog.Logger) http.Handler {
 	mux.HandleFunc("GET /api/healthz", healthz)
 	mux.HandleFunc("GET /api/readyz", readyz)
 	mux.HandleFunc("GET /api/version", version)
-	mux.HandleFunc("GET /api/status", statusHandler(prom)) // real metrics from Prometheus (never hard-fails)
-	// (P4 adds /api/stream; P5 POST /api/hooks/deploy; P7 /api/uptime)
+	mux.HandleFunc("GET /api/status", statusHandler(prom))              // real metrics (never hard-fails)
+	mux.HandleFunc("GET /api/stream", streamHandler(prom, cfg, srvCtx)) // SSE metric ticks
+	// (P5 POST /api/hooks/deploy; P7 /api/uptime)
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never

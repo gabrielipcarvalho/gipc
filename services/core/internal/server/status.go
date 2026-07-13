@@ -40,47 +40,48 @@ var statusQueries = []struct{ key, unit, ql string }{
 	{"memMiB", "MiB", `sum(container_memory_working_set_bytes{namespace="gipc",pod=~"web-.*",container="web"}) / 1048576`},
 }
 
-// statusHandler runs the queries concurrently (each goroutine writes its OWN slice slot — no shared
-// map race), bounded by the request context, and assembles a graceful partial Status.
+// computeStatus runs the 5 queries concurrently (each goroutine writes its OWN slice slot — no shared
+// map race), each bounded by a 3s per-query timeout derived from ctx, and assembles a graceful partial
+// Status. Shared by GET /api/status (one-shot) and GET /api/stream (per tick).
+func computeStatus(ctx context.Context, prom *promql.Client) Status {
+	type res struct {
+		v  float64
+		ok bool
+	}
+	results := make([]res, len(statusQueries))
+	var wg sync.WaitGroup
+	for i, q := range statusQueries {
+		wg.Add(1)
+		go func(i int, ql string) {
+			defer wg.Done()
+			qctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+			v, ok, _ := prom.Query(qctx, ql)
+			results[i] = res{v, ok}
+		}(i, q.ql)
+	}
+	wg.Wait()
+
+	metrics := make(map[string]Metric, len(statusQueries))
+	anyOK := false
+	for i, q := range statusQueries {
+		m := Metric{Unit: q.unit, OK: results[i].ok}
+		if results[i].ok {
+			v := results[i].v
+			m.Value = &v
+			anyOK = true
+		}
+		metrics[q.key] = m
+	}
+	source := "prometheus"
+	if !anyOK {
+		source = "unavailable" // all queries failed → Prometheus unreachable; page shows honest fallback
+	}
+	return Status{Source: source, TS: time.Now().UTC().Format(time.RFC3339), Metrics: metrics}
+}
+
 func statusHandler(prom *promql.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		type res struct {
-			v  float64
-			ok bool
-		}
-		results := make([]res, len(statusQueries))
-		var wg sync.WaitGroup
-		for i, q := range statusQueries {
-			wg.Add(1)
-			go func(i int, ql string) {
-				defer wg.Done()
-				ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-				defer cancel()
-				v, ok, _ := prom.Query(ctx, ql)
-				results[i] = res{v, ok}
-			}(i, q.ql)
-		}
-		wg.Wait()
-
-		metrics := make(map[string]Metric, len(statusQueries))
-		anyOK := false
-		for i, q := range statusQueries {
-			m := Metric{Unit: q.unit, OK: results[i].ok}
-			if results[i].ok {
-				v := results[i].v
-				m.Value = &v
-				anyOK = true
-			}
-			metrics[q.key] = m
-		}
-		source := "prometheus"
-		if !anyOK {
-			source = "unavailable" // all queries failed → Prometheus unreachable; page shows honest fallback
-		}
-		writeJSON(w, http.StatusOK, Status{
-			Source:  source,
-			TS:      time.Now().UTC().Format(time.RFC3339),
-			Metrics: metrics,
-		})
+		writeJSON(w, http.StatusOK, computeStatus(r.Context(), prom))
 	}
 }

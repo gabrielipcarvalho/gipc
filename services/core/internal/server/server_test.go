@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 
 func testHandler() http.Handler {
 	cfg, _ := config.Load()
-	return New(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return New(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), context.Background())
 }
 
 func do(t *testing.T, method, path string) *httptest.ResponseRecorder {
