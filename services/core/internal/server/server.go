@@ -19,23 +19,22 @@ var Version = "dev"
 func New(cfg config.Config, log *slog.Logger) http.Handler {
 	limiter := middleware.NewLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
 
-	api := http.NewServeMux()
-	api.HandleFunc("GET /api/version", version)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/healthz", healthz)
+	mux.HandleFunc("GET /api/readyz", readyz)
+	mux.HandleFunc("GET /api/version", version)
 	// (P3 adds GET /api/status; P4 /api/stream; P5 POST /api/hooks/deploy; P7 /api/uptime)
 
-	apiChain := middleware.Chain(
+	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
+	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never
+	// throttled into a CrashLoop or spammed to the log — without a catch-all that breaks 405.
+	return middleware.Chain(
+		middleware.Recover(log),
+		middleware.RequestIDMiddleware,
 		middleware.Logging(log),
 		middleware.CORS(cfg.CORSOrigin),
 		limiter.Middleware,
-	)
-
-	root := http.NewServeMux()
-	root.HandleFunc("GET /api/healthz", healthz) // base chain only
-	root.HandleFunc("GET /api/readyz", readyz)   // base chain only
-	root.Handle("/", apiChain(api))              // everything else: full chain
-
-	base := middleware.Chain(middleware.Recover(log), middleware.RequestIDMiddleware)
-	return base(root)
+	)(mux)
 }
 
 func healthz(w http.ResponseWriter, _ *http.Request) {
