@@ -10,6 +10,7 @@ data:
       admin off
       servers {
         trusted_proxies static private_ranges   # trust cloudflared → preserve X-Forwarded-Proto/For
+        metrics                                  # enable per-server Prometheus metrics
       }
     }
     :80 {
@@ -27,6 +28,9 @@ data:
       }
       header -Server
     }
+    :2019 {
+      metrics /metrics                           # internal only — NOT in the Service/tunnel
+    }
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -41,6 +45,10 @@ spec:
   template:
     metadata:
       labels: { app: caddy }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "2019"
+        prometheus.io/path: "/metrics"
     spec:
       securityContext:
         seccompProfile: { type: RuntimeDefault }
@@ -49,6 +57,7 @@ spec:
           image: caddy:2.8-alpine   # pinned INLINE (not in kustomization images:) so CI's sed can't touch it
           ports:
             - { containerPort: 80, name: http }
+            - { containerPort: 2019, name: metrics }
           readinessProbe:
             httpGet: { path: /caddy-health, port: 80 }
             initialDelaySeconds: 3
