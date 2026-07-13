@@ -8,6 +8,7 @@ import (
 
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/config"
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/middleware"
+	"github.com/gabrielipcarvalho/gipc/services/core/internal/promql"
 )
 
 // Version is stamped at build time via -ldflags "-X ...server.Version=<sha>"; "dev" otherwise.
@@ -19,11 +20,14 @@ var Version = "dev"
 func New(cfg config.Config, log *slog.Logger) http.Handler {
 	limiter := middleware.NewLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
 
+	prom := promql.New(cfg.PrometheusURL)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/healthz", healthz)
 	mux.HandleFunc("GET /api/readyz", readyz)
 	mux.HandleFunc("GET /api/version", version)
-	// (P3 adds GET /api/status; P4 /api/stream; P5 POST /api/hooks/deploy; P7 /api/uptime)
+	mux.HandleFunc("GET /api/status", statusHandler(prom)) // real metrics from Prometheus (never hard-fails)
+	// (P4 adds /api/stream; P5 POST /api/hooks/deploy; P7 /api/uptime)
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never
