@@ -1,11 +1,12 @@
 import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
+import { ResumePanel } from "../components/ResumePanel";
 import { pageMeta } from "../og";
 import { resume } from "../../data/resume";
 
 export const metadata = pageMeta(
   "Connect — get in touch · gipc.dev",
-  "Reach Gabriel Carvalho — email, GitHub and LinkedIn, plus a signed résumé PDF. Software · DevOps · AI Engineer, Australia.",
+  "Reach Gabriel Carvalho — email, GitHub and LinkedIn, plus a résumé PDF you can preview and download. Software · DevOps · AI Engineer, Australia.",
   "/connect",
 );
 
@@ -17,7 +18,7 @@ export default function ConnectPage() {
     <main className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/connect">
         <SectionHeader marker="connect" title="Connect" />
-        <p className="line">
+        <p className="line type-line">
           <span className="prompt">arcane@prod:~$</span> cat ./contact
         </p>
         <p className="page-lead">
@@ -41,17 +42,17 @@ export default function ConnectPage() {
               </a>
             </li>
           ))}
-          <li>
-            <span className="connect-k">résumé</span>
-            <a href="/Gabriel_Carvalho_Resume.pdf" download aria-label="Download résumé PDF (197 KB)">
-              Gabriel_Carvalho_Resume.pdf <span className="connect-hint">↓ 197 KB · signed</span>
-            </a>
-          </li>
           <li className="connect-soon">
             <span className="connect-k">book a call</span>
             <span className="connect-hint">scrying window — coming soon</span>
           </li>
         </ul>
+
+        <div className="connect-resume">
+          <p className="connect-k">résumé</p>
+          <ResumePanel />
+        </div>
+
         <p className="connect-note">
           The living version of that résumé is <a href="/resume">the Construct</a>.
         </p>

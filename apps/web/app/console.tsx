@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sigil } from "./sigil";
 import { MetricPanel } from "./components/MetricPanel";
-import { castRipple, tiltHandlers } from "./components/motion";
+import { castRipple, fitText, tiltHandlers } from "./components/motion";
+import { applyTheme, currentTheme, THEME_IDS } from "../data/themes";
 
 const tilt = tiltHandlers();
 
@@ -37,10 +38,10 @@ type OutLine = { id: number; kind: "cmd" | "out"; text: React.ReactNode };
 
 // every command + alias the switch below understands — drives tab-completion + did-you-mean
 export const KNOWN_COMMANDS = [
-  "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "resume",
-  "lab", "operator", "oracle", "ward", "summon", "connect", "contact", "social",
-  "theme", "history", "clear", "exit",
-];
+  "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "timeline",
+  "experience", "resume", "lab", "operator", "oracle", "ward", "summon", "connect",
+  "contact", "social", "theme", "history", "restore", "clear", "exit",
+]; // .hidden / cat kept OUT — the CTF trailhead stays off tab-complete + did-you-mean
 
 // bounded Levenshtein (early-out above 2) for the did-you-mean hint
 function editDistance(a: string, b: string): number {
@@ -62,14 +63,14 @@ function editDistance(a: string, b: string): number {
 function runCommand(
   raw: string,
   ctx: { history: string[] },
-): { out: React.ReactNode[]; clear?: boolean; nav?: string } {
+): { out: React.ReactNode[]; clear?: boolean; nav?: string; theme?: string; restore?: boolean; ctf?: boolean } {
   const cmd = raw.trim().toLowerCase();
   if (!cmd) return { out: [] };
   const first = cmd.split(/\s+/)[0];
   switch (first) {
     case "help":
       return { out: [
-        "navigate:  system · work · resume · connect",
+        "navigate:  system · work · timeline · resume · connect",
         "inspect:   whoami · about · ls · theme · history",
         "arcane:    scry (observe) · summon (deploy) · ward (security) · oracle (ask AI) · grimoire (work)",
         "utility:   help · clear · Tab completes · ↑/↓ history",
@@ -80,8 +81,28 @@ function runCommand(
         : ["(history empty)"] };
     case "whoami":
       return { out: ["arcane — Gabriel Isaias Padua Carvalho · Software · DevOps · AI engineer · Gold Coast, AU"] };
-    case "ls":
-      return { out: ["system   work   lab   operator   resume   connect   .hidden"] };
+    case "ls": {
+      const all = /(^|\s)-a(\s|$)/.test(cmd);
+      return { out: [
+        all
+          ? "system   work   timeline   lab   operator   resume   connect   .hidden ← the trailhead"
+          : "system   work   timeline   lab   operator   resume   connect   .hidden",
+      ] };
+    }
+    case ".hidden":
+      return { out: [
+        "decrypting .hidden …",
+        <>flag: <b>{"gipc{arcane_operator_reads_the_grimoire}"}</b> — access granted.</>,
+      ], ctf: true };
+    case "cat": {
+      const arg = cmd.split(/\s+/)[1] ?? "";
+      if (arg === ".hidden") {
+        return { out: [<>flag: <b>{"gipc{arcane_operator_reads_the_grimoire}"}</b> — access granted.</>], ctf: true };
+      }
+      return { out: ["usage: cat <file> — try `ls -a` first."] };
+    }
+    case "restore":
+      return { out: ["telemetry pane restored."], restore: true };
     case "about":
     case "scry":
       return { out: ["I build real systems. This console runs on a box I operate — live telemetry, real deploys, a tool-using agent. Proof, not claims."] };
@@ -90,8 +111,11 @@ function runCommand(
     case "work":
     case "grimoire":
       return { out: [<>selected work → <b>/work</b>: gipc.dev (this) · Nina Nails · seismic U-Net · transformer market platform · drowning-detection (IEEE Access).</>], nav: "/work" };
+    case "timeline":
+    case "experience":
+      return { out: [<>career history → <b>/timeline</b>: roles + study, newest first.</>], nav: "/timeline" };
     case "resume":
-      return { out: [<>living résumé → the Construct at <b>/resume</b> · signed PDF available on request.</>], nav: "/resume" };
+      return { out: [<>living résumé → the Construct at <b>/resume</b> · downloadable PDF (preview on /connect).</>], nav: "/resume" };
     case "lab":
       return { out: ["the lab: sandbox shell · load tests · chaos demos — hardened, coming in a later drop."] };
     case "operator":
@@ -106,8 +130,16 @@ function runCommand(
       return { out: [<>arcan.e@gipc.dev · <a href="https://github.com/gabrielipcarvalho">github</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin</a> → <b>/connect</b></>], nav: "/connect" };
     case "social":
       return { out: [<><a href="https://github.com/gabrielipcarvalho">github.com/gabrielipcarvalho</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin.com/in/gabriel-ipcarvalho</a></>] };
-    case "theme":
-      return { out: ["theme: arcane (violet #b18cff / cyan #34e6ff). theme studio — later."] };
+    case "theme": {
+      const arg = cmd.split(/\s+/)[1] ?? "";
+      if (!arg) {
+        return { out: [<>themes → <b>arcane</b> · <b>matrix</b> · <b>amber</b> · <b>mono</b> · active: <b>{currentTheme()}</b> · apply: <b>theme &lt;name&gt;</b></>] };
+      }
+      if (THEME_IDS.includes(arg)) {
+        return { out: [<>theme applied → <b>{arg}</b>.</>], theme: arg };
+      }
+      return { out: ["custom themes arrive with the oracle (M4) — presets: arcane · matrix · amber · mono."] };
+    }
     case "clear":
       return { out: [], clear: true };
     case "exit":
@@ -128,9 +160,11 @@ function runCommand(
 
 export function Console() {
   const [phase, setPhase] = useState<"idle" | "booting" | "done">("idle");
-  const [bootShown, setBootShown] = useState(0); // how many boot lines revealed
+  const [bootShown, setBootShown] = useState(0); // completed boot lines
+  const [bootChars, setBootChars] = useState(0); // chars typed of the current boot line
   const [revealed, setRevealed] = useState(false); // metric bars + content in
   const [justRevealed, setJustRevealed] = useState(false); // one-shot sweep+glint window
+  const [panelClosed, setPanelClosed] = useState(false); // closable telemetry pane (egg)
   const [input, setInput] = useState("");
   const [log, setLog] = useState<OutLine[]>([]);
   const [history, setHistory] = useState<string[]>([]);
@@ -138,8 +172,14 @@ export function Console() {
   const idRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const wordmarkRef = useRef<HTMLHeadingElement>(null);
   const bootTimers = useRef<number[]>([]); // pending boot timeouts — skip must cancel them
   const router = useRouter();
+
+  // fit the hero wordmark to its container (scales DOWN only if it would overflow — no CLS)
+  useEffect(() => {
+    if (wordmarkRef.current) return fitText(wordmarkRef.current);
+  }, []);
 
   // (Focusing this input after the palette's "open console" is owned by CommandPalette's
   // close-cleanup + RouteFocus, which target #console-input — see those components.)
@@ -154,22 +194,35 @@ export function Console() {
       return;
     }
     setPhase("booting");
-    let i = 0;
-    const step = () => {
-      i += 1;
-      setBootShown(i);
-      if (i < bootLines.length) {
-        bootTimers.current.push(window.setTimeout(step, 170));
+    let done = 0; // completed lines
+    let ch = 0; // chars typed of line[done]
+    const finale = () => {
+      sessionStorage.setItem("gipc-booted", "1");
+      setPhase("done");
+      setJustRevealed(true);
+      requestAnimationFrame(() => setRevealed(true));
+    };
+    // type the current line char-by-char, then advance — every timer joins bootTimers so
+    // skipBoot() and the unmount cleanup cancel pending char-timers (no stale setState)
+    const type = () => {
+      const text = bootLines[done];
+      if (ch < text.length) {
+        ch += 1;
+        setBootChars(ch);
+        bootTimers.current.push(window.setTimeout(type, 6));
       } else {
-        bootTimers.current.push(window.setTimeout(() => {
-          sessionStorage.setItem("gipc-booted", "1");
-          setPhase("done");
-          setJustRevealed(true);
-          requestAnimationFrame(() => setRevealed(true));
-        }, 320));
+        done += 1;
+        setBootShown(done);
+        if (done < bootLines.length) {
+          ch = 0;
+          setBootChars(0);
+          bootTimers.current.push(window.setTimeout(type, 40));
+        } else {
+          bootTimers.current.push(window.setTimeout(finale, 220));
+        }
       }
     };
-    bootTimers.current.push(window.setTimeout(step, 160));
+    bootTimers.current.push(window.setTimeout(type, 120));
     const timers = bootTimers.current;
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -208,7 +261,7 @@ export function Console() {
     const raw = input;
     const trimmed = raw.trim();
     const nextHistory = trimmed ? [...history, trimmed] : history;
-    const { out, clear, nav } = runCommand(raw, { history: nextHistory });
+    const { out, clear, nav, theme, restore, ctf } = runCommand(raw, { history: nextHistory });
     setHistory(nextHistory);
     setHIdx(-1);
     setInput("");
@@ -216,6 +269,9 @@ export function Console() {
     const next: OutLine[] = [{ id: idRef.current++, kind: "cmd", text: raw }];
     for (const o of out) next.push({ id: idRef.current++, kind: "out", text: o });
     setLog((l) => [...l, ...next]);
+    if (theme) applyTheme(theme);
+    if (restore) setPanelClosed(false);
+    if (ctf) { try { localStorage.setItem("gipc-ctf", "found"); } catch { /* private mode */ } }
     if (nav) router.push(nav);
   };
 
@@ -282,6 +338,10 @@ export function Console() {
             {bootLines.slice(0, bootShown).map((l, i) => (
               <div className="boot-line" key={i}>{l}</div>
             ))}
+            {bootShown < bootLines.length && (
+              /* key by index so the node is REUSED as it completes (no fade-in replay) */
+              <div className="boot-line" key={bootShown}>{bootLines[bootShown].slice(0, bootChars)}</div>
+            )}
             <div className="boot-skip">press any key to skip</div>
           </button>
         )}
@@ -295,7 +355,7 @@ export function Console() {
         </div>
         <p className="line whoami"><span className="prompt">arcane@prod:~$</span> whoami</p>
 
-        <h1 className="wordmark">arcane</h1>
+        <h1 className="wordmark" ref={wordmarkRef}>arcane</h1>
         <p className="tagline">the operator — backend · cloud · <span className="c">AI arts</span></p>
         <p className="bio">I build real systems. This site runs on infrastructure I operate — every metric, deploy and agent you see here is live, not a mockup.</p>
 
@@ -312,7 +372,24 @@ export function Console() {
           ))}
         </div>
 
-        <MetricPanel metrics={metrics} revealed={revealed} />
+        {panelClosed ? (
+          <p className="panel-scold" role="status">
+            Aw — you closed the telemetry pane. type <b>restore</b> or{" "}
+            <button type="button" className="link-btn" onClick={() => setPanelClosed(false)}>bring it back</button>.
+          </p>
+        ) : (
+          <div className="panel-wrap">
+            <button
+              type="button"
+              className="panel-close"
+              aria-label="Close telemetry panel"
+              onClick={() => setPanelClosed(true)}
+            >
+              ×
+            </button>
+            <MetricPanel metrics={metrics} revealed={revealed} countUp />
+          </div>
+        )}
 
         <div className="actions">
           <button
@@ -324,7 +401,10 @@ export function Console() {
             ▸ ask the oracle
             <span className="ripple-host" aria-hidden />
           </button>
-          <button className="btn btn-ghost" type="button" onClick={() => { setInput("scry"); inputRef.current?.focus(); }}>trace my request</button>
+          <button className="btn btn-ghost" type="button" onPointerDown={castRipple} onClick={() => { setInput("scry"); inputRef.current?.focus(); }}>
+            trace my request
+            <span className="ripple-host" aria-hidden />
+          </button>
           <span className="kbd"><b>type</b> a command · try <b>help</b></span>
         </div>
 

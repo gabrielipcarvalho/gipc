@@ -120,7 +120,7 @@ export function SystemDash() {
 
           <section className="sys-block" aria-label="Service metrics (placeholder)">
             <h2 className="sys-h">metrics</h2>
-            <MetricPanel metrics={toMetrics(data)} />
+            <MetricPanel metrics={toMetrics(data)} countUp />
           </section>
 
           <section className="sys-block" aria-label="Deploy feed (placeholder)">

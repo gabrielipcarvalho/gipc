@@ -1,28 +1,47 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { constructKeyBlocked } from "./ConstructShell";
 
 /* The Construct's immersive layer (lazy-loaded, client-only): glyph-rain canvas +
-   scroll-descend camera + decode reveals. The résumé text itself stays in the DOM —
-   this module only positions the existing [data-station] cards and draws rain.
-
-   Perf contract: transforms/opacity only; rain + card pass budgeted ≤2ms/frame with
-   stepwise density degradation; everything cleaned up on unmount. */
+   scroll-descend camera + decode reveals + opt-in audio + a green/violet tint toggle.
+   The résumé text stays in the DOM — this only positions [data-station] cards + draws rain.
+   Perf: transforms/opacity only; rain budgeted ≤2ms/frame; canvas + audio clean up on unmount. */
 
 const GLYPHS = "アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789ACEFXZ<>_/\\|=+*";
 const DECODE_MS = 400;
 const LERP_FINE = 0.1; // AT's desktop constant
 const LERP_COARSE = 0.5; // AT's touch constant
+const FS = [
+  { fs: 18, speed: 1.1 },
+  { fs: 13, speed: 0.75 },
+  { fs: 9, speed: 0.5 },
+];
 
-/* Pre-render the hex-sigil rune (polygon + chevron + underscore) at a cell size —
-   the brand glyph mixed into the rain at low frequency. */
+/* Rain colours per tint — JS literal strings (canvas fillStyle can't read CSS vars; the green
+   precedent already hardcodes rgba). Violet mirrors the arcane --violet/--cyan values. */
+type Tint = "green" | "violet";
+const TINTS: Record<Tint, { color: string; head: string }[]> = {
+  green: [
+    { color: "rgba(0,255,65,0.9)", head: "#c8ffc8" },
+    { color: "rgba(0,255,65,0.45)", head: "#9fdf9f" },
+    { color: "rgba(0,255,65,0.22)", head: "#7fbf7f" },
+  ],
+  violet: [
+    { color: "rgba(177,140,255,0.9)", head: "#e6dcff" },
+    { color: "rgba(52,230,255,0.5)", head: "#bff0ff" },
+    { color: "rgba(177,140,255,0.25)", head: "#c9b3ff" },
+  ],
+};
+
+/* Hex-sigil rune, rendered at 2× the cell size and drawn scaled down → crisper (supersampled). */
 function makeRune(size: number, color: string): HTMLCanvasElement {
   const c = document.createElement("canvas");
-  c.width = c.height = size;
+  const R = size * 2;
+  c.width = c.height = R;
   const g = c.getContext("2d");
   if (!g) return c;
-  const s = size / 100;
+  const s = R / 100;
   g.strokeStyle = color;
   g.lineWidth = 8 * s;
   g.lineJoin = "round";
@@ -44,10 +63,152 @@ function makeRune(size: number, color: string): HTMLCanvasElement {
   return c;
 }
 
+const readTint = (): Tint => {
+  try {
+    return localStorage.getItem("gipc-cst-tint") === "violet" ? "violet" : "green";
+  } catch {
+    return "green";
+  }
+};
+const readAudio = (): boolean => {
+  try {
+    return localStorage.getItem("gipc-audio") === "on";
+  } catch {
+    return false;
+  }
+};
+
 export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement | null> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const spacerRef = useRef<HTMLDivElement>(null);
+  const [tint, setTint] = useState<Tint>(readTint);
+  const [audioOn, setAudioOn] = useState<boolean>(readAudio);
 
+  const tintRef = useRef<Tint>(tint);
+  const apiRef = useRef<{ rebuildRain: () => void } | null>(null);
+  const tickRef = useRef<(() => void) | null>(null); // null when audio off → decode ticks no-op
+  const ctxRef = useRef<AudioContext | null>(null);
+  const masterRef = useRef<GainNode | null>(null);
+  const lastTickRef = useRef(0);
+  const didMountTint = useRef(false);
+
+  // --- audio (one persistent graph; gain-toggled; never rebuilt/closed per toggle) ---
+  const ensureCtx = (): AudioContext | null => {
+    if (ctxRef.current) return ctxRef.current;
+    try {
+      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AC();
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.4;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 900;
+      const master = ctx.createGain();
+      master.gain.value = 0;
+      src.connect(lp).connect(master).connect(ctx.destination);
+      src.start();
+      ctxRef.current = ctx;
+      masterRef.current = master;
+      return ctx;
+    } catch {
+      return null;
+    }
+  };
+  const rampMaster = (to: number) => {
+    const ctx = ctxRef.current;
+    const m = masterRef.current;
+    if (!ctx || !m) return;
+    const now = ctx.currentTime;
+    m.gain.cancelScheduledValues(now);
+    m.gain.setValueAtTime(m.gain.value, now);
+    m.gain.linearRampToValueAtTime(to, now + 0.12);
+  };
+  const enableAudio = () => {
+    const ctx = ensureCtx();
+    if (!ctx) return;
+    void ctx.resume();
+    rampMaster(0.04);
+    tickRef.current = () => {
+      const c = ctxRef.current;
+      if (!c) return;
+      const t = c.currentTime;
+      if (t - lastTickRef.current < 0.08) return; // throttle the decode-tick burst
+      lastTickRef.current = t;
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = 520 + Math.random() * 240;
+      g.gain.setValueAtTime(0.03, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+      osc.connect(g).connect(c.destination);
+      osc.start(t);
+      osc.stop(t + 0.06);
+    };
+  };
+  const disableAudio = () => {
+    rampMaster(0);
+    tickRef.current = null;
+  };
+  const toggleAudio = () => {
+    const next = !audioOn;
+    setAudioOn(next);
+    try {
+      localStorage.setItem("gipc-audio", next ? "on" : "off");
+    } catch {
+      /* private mode */
+    }
+    if (next) enableAudio();
+    else disableAudio();
+  };
+
+  // persisted-on: can't start pre-gesture → arm a one-shot unlock on the first interaction
+  useEffect(() => {
+    if (!audioOn) return;
+    const unlock = () => {
+      enableAudio();
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // close the AudioContext exactly once, on unmount, guarded
+  useEffect(
+    () => () => {
+      const c = ctxRef.current;
+      if (c && c.state !== "closed") void c.close();
+    },
+    [],
+  );
+
+  // --- tint: sync ref + data attr + persist; rebuild rain on CHANGE (skip mount) ---
+  useEffect(() => {
+    tintRef.current = tint;
+    const root = rootRef.current;
+    if (root) {
+      if (tint === "violet") root.setAttribute("data-cst-tint", "violet");
+      else root.removeAttribute("data-cst-tint");
+    }
+    try {
+      localStorage.setItem("gipc-cst-tint", tint);
+    } catch {
+      /* private mode */
+    }
+    if (didMountTint.current) apiRef.current?.rebuildRain();
+    else didMountTint.current = true;
+  }, [tint, rootRef]);
+
+  // --- main canvas effect (once) ---
   useEffect(() => {
     const root = rootRef.current;
     const canvas = canvasRef.current;
@@ -59,16 +220,14 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     const stations = cards.length;
     if (!stations) return;
 
-    /* ---- camera / station geometry (single unit source: innerHeight px) ---- */
     let vh = window.innerHeight;
     const lerp = window.matchMedia("(pointer: coarse)").matches ? LERP_COARSE : LERP_FINE;
-    let cam = window.scrollY; // no fly-through when scroll is restored mid-shaft
-    let fullPass = true; // first frame (and resizes) position every card
+    let cam = window.scrollY;
+    let fullPass = true;
 
     let lastW = 0;
     let lastH = 0;
     const layout = () => {
-      // iOS fires resize continuously during URL-bar collapse — skip no-op layouts
       if (window.innerWidth === lastW && window.innerHeight === lastH) return;
       lastW = window.innerWidth;
       lastH = window.innerHeight;
@@ -87,25 +246,26 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       resizeT = window.setTimeout(layout, 150);
     };
 
-    /* ---- decode (textContent scramble; settle-on-cancel invariant) ---- */
+    /* ---- decode ---- */
     type Decode = { el: HTMLElement; final: string; raf: number };
     const decodes = new Map<HTMLElement, Decode>();
     const settle = (d: Decode) => {
       cancelAnimationFrame(d.raf);
-      d.el.textContent = d.final; // ALWAYS restore the verbatim string
+      d.el.textContent = d.final;
       d.el.removeAttribute("aria-hidden");
       decodes.delete(d.el);
     };
     const settleAll = () => Array.from(decodes.values()).forEach(settle);
     const startDecode = (el: HTMLElement, delay: number) => {
-      if (el.children.length > 0) return; // mixed content (strong/a children) — never wipe markup
+      if (el.children.length > 0) return; // never wipe markup
       const prev = decodes.get(el);
       if (prev) settle(prev);
       const final = el.textContent ?? "";
       if (!final.trim()) return;
+      tickRef.current?.(); // decode tick (no-op when audio off) — after the guards
       const d: Decode = { el, final, raf: 0 };
       decodes.set(el, d);
-      el.setAttribute("aria-hidden", "true"); // transient — SR never reads scramble glyphs
+      el.setAttribute("aria-hidden", "true");
       const t0 = performance.now() + delay;
       const tick = (now: number) => {
         const p = (now - t0) / DECODE_MS;
@@ -138,42 +298,36 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       let i = 0;
       card
         .querySelectorAll<HTMLElement>(
-          ".cst-name, .cst-label, .cst-title, .cst-body, .cst-meta-line, .cst-note, .cst-bullets li",
+          ".cst-name, .cst-label, .cst-title, .cst-body, .cst-dc, .cst-meta-line, .cst-note, .cst-bullets li",
         )
         .forEach((t) => startDecode(t, i++ * 60));
     };
 
     /* ---- glyph rain ---- */
-    type Layer = {
-      fs: number;
-      speed: number;
-      color: string;
-      head: string;
-      drops: number[];
-      cols: number;
-      rune: HTMLCanvasElement;
-    };
+    type Layer = { fs: number; speed: number; color: string; head: string; drops: number[]; cols: number; rune: HTMLCanvasElement };
     let layers: Layer[] = [];
-    let density = 1; // frame-budget degradation: 1 → 0.8 → … → 0.3
+    let density = 1;
     const buildRain = () => {
       const w = window.innerWidth;
-      layers = [
-        { fs: 18, speed: 1.1, color: "rgba(0,255,65,0.9)", head: "#c8ffc8" },
-        { fs: 13, speed: 0.75, color: "rgba(0,255,65,0.45)", head: "#9fdf9f" },
-        { fs: 9, speed: 0.5, color: "rgba(0,255,65,0.22)", head: "#7fbf7f" },
-      ].map((l) => {
-        const cols = Math.ceil(w / l.fs);
+      const palette = TINTS[tintRef.current];
+      layers = palette.map((p, i) => {
+        const { fs, speed } = FS[i];
+        const cols = Math.ceil(w / fs);
         return {
-          ...l,
+          fs,
+          speed,
+          color: p.color,
+          head: p.head,
           cols,
-          drops: Array.from({ length: cols }, () => Math.random() * (vh / l.fs)),
-          rune: makeRune(l.fs, l.color),
+          drops: Array.from({ length: cols }, () => Math.random() * (vh / fs)),
+          rune: makeRune(fs, p.color),
         };
       });
     };
+    apiRef.current = { rebuildRain: buildRain };
 
     const drawRain = () => {
-      ctx.fillStyle = "rgba(2,8,2,0.09)"; // trailing fade
+      ctx.fillStyle = "rgba(2,8,2,0.09)";
       ctx.fillRect(0, 0, window.innerWidth, vh);
       for (const l of layers) {
         ctx.font = `${l.fs}px ui-monospace, monospace`;
@@ -182,7 +336,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
           const y = l.drops[c] * l.fs;
           const isRune = Math.random() < 0.015;
           if (isRune) {
-            ctx.drawImage(l.rune, c * l.fs, y - l.fs);
+            ctx.drawImage(l.rune, c * l.fs, y - l.fs, l.fs, l.fs); // 2× rune → scaled down
           } else {
             const g = GLYPHS[(Math.random() * GLYPHS.length) | 0];
             ctx.fillStyle = Math.random() < 0.12 ? l.head : l.color;
@@ -194,7 +348,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       }
     };
 
-    /* ---- main loop with frame budget ---- */
+    /* ---- main loop ---- */
     let raf = 0;
     let acc = 0;
     let frames = 0;
@@ -202,19 +356,15 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       const t0 = performance.now();
       cam += (window.scrollY - cam) * lerp;
       if (Math.abs(window.scrollY - cam) < 0.5) cam = window.scrollY;
-
       for (let i = 0; i < stations; i++) {
         const off = i * vh - cam;
-        if (!fullPass && Math.abs(off) > vh * 1.5) continue; // cull writes only — no visibility:hidden
+        if (!fullPass && Math.abs(off) > vh * 1.5) continue;
         cards[i].style.transform = `translate3d(0, ${off.toFixed(2)}px, 0)`;
       }
       fullPass = false;
-
       const idx = Math.round(cam / vh);
       if (idx >= 0 && idx < stations && Math.abs(idx * vh - cam) < vh * 0.5) setFocused(idx);
-
       drawRain();
-
       acc += performance.now() - t0;
       frames += 1;
       if (frames >= 30) {
@@ -226,20 +376,14 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     };
     raf = requestAnimationFrame(frame);
 
-    /* ---- keyboard: ArrowUp/Down = ±25vh — but an overflowing card reads first.
-       Yield to the browser when focus sits inside a still-scrollable card; when no
-       card holds focus (Safari never focuses scroll containers), scroll the FOCUSED
-       station's overflow ourselves before moving the camera, so clipped bullets are
-       always keyboard-reachable. ---- */
+    /* ---- keyboard: ArrowUp/Down = ±25vh, overflowing card reads first ---- */
     const scrollable = (card: HTMLElement | null | undefined, dir: 1 | -1): card is HTMLElement => {
       if (!card || card.scrollHeight <= card.clientHeight) return false;
-      return dir > 0
-        ? card.scrollTop + card.clientHeight < card.scrollHeight - 1
-        : card.scrollTop > 0;
+      return dir > 0 ? card.scrollTop + card.clientHeight < card.scrollHeight - 1 : card.scrollTop > 0;
     };
     const onArrow = (e: KeyboardEvent, dir: 1 | -1) => {
       const focusCard = document.activeElement?.closest<HTMLElement>("[data-station]");
-      if (scrollable(focusCard, dir)) return; // browser scrolls the focused card itself
+      if (scrollable(focusCard, dir)) return;
       e.preventDefault();
       const card = cards[focusedIdx];
       if (scrollable(card, dir)) {
@@ -253,8 +397,6 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       if (e.key === "ArrowDown") onArrow(e, 1);
       else if (e.key === "ArrowUp") onArrow(e, -1);
     };
-
-    /* ---- focus sync: Tab into a deep card snaps the camera to its station ---- */
     const onFocusIn = (e: FocusEvent) => {
       const card = (e.target as HTMLElement).closest<HTMLElement>("[data-station]");
       if (!card) return;
@@ -273,9 +415,10 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       window.removeEventListener("resize", onResize);
       window.removeEventListener("keydown", onKey);
       root.removeEventListener("focusin", onFocusIn);
-      settleAll(); // cards can never be left scrambled
+      settleAll();
       if (focusedIdx >= 0) cards[focusedIdx]?.classList.remove("is-focused");
       cards.forEach((c) => (c.style.transform = ""));
+      apiRef.current = null;
     };
   }, [rootRef]);
 
@@ -283,6 +426,19 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     <>
       <canvas ref={canvasRef} className="cst-rain" aria-hidden />
       <div ref={spacerRef} className="cst-spacer" aria-hidden />
+      <div className="cst-hud">
+        <button type="button" className="cst-hud-btn" aria-pressed={audioOn} onClick={toggleAudio}>
+          audio {audioOn ? "on" : "off"}
+        </button>
+        <button
+          type="button"
+          className="cst-hud-btn"
+          aria-pressed={tint === "violet"}
+          onClick={() => setTint((t) => (t === "violet" ? "green" : "violet"))}
+        >
+          {tint === "violet" ? "violet" : "green"} rain
+        </button>
+      </div>
     </>
   );
 }

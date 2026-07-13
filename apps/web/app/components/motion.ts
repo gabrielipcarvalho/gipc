@@ -6,6 +6,27 @@ export function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+/* Scale an element's font-size DOWN only when its text would overflow its container
+   (never up → no growth/CLS; a no-op on normal viewports). ResizeObserver-driven;
+   returns a disconnect cleanup for useEffect. */
+export function fitText(el: HTMLElement, min = 0.55): () => void {
+  const fit = () => {
+    const parent = el.parentElement;
+    if (!parent) return;
+    const cs = getComputedStyle(parent);
+    const avail = parent.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    if (avail <= 0) return; // element not laid out yet
+    el.style.fontSize = ""; // reset to the CSS (clamp) size to measure
+    if (el.scrollWidth <= avail) return; // fits — leave it at the natural size
+    const natural = parseFloat(getComputedStyle(el).fontSize);
+    el.style.fontSize = `${natural * Math.max(min, avail / el.scrollWidth)}px`;
+  };
+  fit();
+  const ro = new ResizeObserver(fit);
+  ro.observe(el.parentElement ?? el);
+  return () => ro.disconnect();
+}
+
 /* Cast-ripple: soft violet radial ripple (~480ms) from the pointer position. The button
    renders an empty <span class="ripple-host" aria-hidden /> that React never fills —
    imperative children appended there are outside reconciliation (standard ripple-root

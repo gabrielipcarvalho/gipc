@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { TerminalWindow } from "./components/TerminalWindow";
+import { castRipple } from "./components/motion";
 
 /* Route-error boundary (app root) — catches every page/segment error below the
    layout. The layout shell (nav, palette) stays alive; reset() re-renders the
@@ -31,8 +32,9 @@ export default function ErrorBoundary({
           <button className="btn btn-primary" type="button" onClick={reset}>
             ▸ recast
           </button>
-          <a className="btn btn-ghost" href="/">
+          <a className="btn btn-ghost" href="/" onPointerDown={castRipple}>
             back to the console
+            <span className="ripple-host" aria-hidden />
           </a>
         </p>
       </TerminalWindow>

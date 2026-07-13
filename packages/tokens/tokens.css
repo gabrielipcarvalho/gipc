@@ -51,9 +51,9 @@
 
   /* ---- elevation & effects ---- */
   --shadow-card:0 24px 60px rgba(0,0,0,.5);
-  --shadow-pop:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(177,140,255,.10);
+  --shadow-pop:0 30px 80px rgba(0,0,0,.6),0 0 60px color-mix(in srgb, var(--violet) 10%, transparent);
   --glow-soft:0 0 24px var(--glow-violet);
-  --ring:0 0 0 2px rgba(52,230,255,.40);
+  --ring:0 0 0 2px color-mix(in srgb, var(--cyan) 40%, transparent);
   --text-glow:0 0 34px var(--glow-violet);
   --glass:blur(14px);
 
@@ -61,4 +61,35 @@
   --ease:cubic-bezier(.2,.8,.2,1);
   --ease-out:cubic-bezier(.16,1,.3,1);
   --dur-fast:140ms; --dur:200ms; --dur-slow:340ms;
+}
+
+/* ==========================================================================
+   Theme Studio presets — override the accent tokens; everything else (ambient,
+   selection, nav, chips, palette, tags, ring, shadow, glow) re-skins via var()/
+   color-mix. `arcane` = the base :root above. The Construct's Matrix green is
+   independent (scoped .construct --mx-* vars).
+   ========================================================================== */
+:root[data-theme="matrix"]{
+  --violet:#00ff41; --violet-bright:#7dffa0; --violet-deep:#00c853;
+  --cyan:#39ff8c; --cyan-bright:#9dffc0;
+  --glow-violet:rgba(0,255,65,.4); --glow-cyan:rgba(57,255,140,.35);
+  --grad-accent:linear-gradient(90deg,#00ff41,#39ff8c);
+  --border:rgba(0,255,65,.22); --border-cyan:rgba(57,255,140,.22);
+  --bg-radial:radial-gradient(circle at 50% 0%,#08140c,#050a07 55%,#020402);
+}
+:root[data-theme="amber"]{
+  --violet:#ffce6b; --violet-bright:#ffe29c; --violet-deep:#f59e0b;
+  --cyan:#ff9b5b; --cyan-bright:#ffbe93;
+  --glow-violet:rgba(255,206,107,.4); --glow-cyan:rgba(255,155,91,.35);
+  --grad-accent:linear-gradient(90deg,#ffce6b,#ff9b5b);
+  --border:rgba(255,206,107,.24); --border-cyan:rgba(255,155,91,.22);
+  --bg-radial:radial-gradient(circle at 50% 0%,#1a1206,#0f0a04 55%,#080502);
+}
+:root[data-theme="mono"]{
+  --violet:#cdd0dd; --violet-bright:#e9ebf2; --violet-deep:#9aa0b0;
+  --cyan:#aeb4c6; --cyan-bright:#d4d8e2;
+  --glow-violet:rgba(205,208,221,.28); --glow-cyan:rgba(174,180,198,.22);
+  --grad-accent:linear-gradient(90deg,#cdd0dd,#aeb4c6);
+  --border:rgba(205,208,221,.2); --border-cyan:rgba(174,180,198,.18);
+  --bg-radial:radial-gradient(circle at 50% 0%,#14141a,#0a0a0e 55%,#050507);
 }
