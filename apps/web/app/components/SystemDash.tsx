@@ -116,6 +116,7 @@ export function SystemDash({
   const [history, setHistory] = useState<MetricsHistory>(initialHistory);
   const [logs, setLogs] = useState<LogsResponse | null>(null);
   const [trace, setTrace] = useState<RequestTrace | null>(null);
+  const [traceFailed, setTraceFailed] = useState(false); // distinguish failed from still-loading (honest copy)
   const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
   const [statusMsg, setStatusMsg] = useState("");
   const [now, setNow] = useState<number | null>(null); // null on SSR → relative times fill in post-mount (no hydration mismatch)
@@ -224,7 +225,21 @@ export function SystemDash({
     };
     const pullHistory = () => pull<MetricsHistory>("/api/metrics/history", setHistory);
     const pullLogs = () => pull<LogsResponse>("/api/logs", setLogs);
-    pull<RequestTrace>("/api/trace", setTrace); // the visitor's real path — fetched once on mount
+    // trace: the visitor's real path — fetched once; track failed vs still-loading so the copy stays honest
+    (async () => {
+      const ac = new AbortController();
+      acs.add(ac);
+      try {
+        const res = await fetch("/api/trace", { cache: "no-store", signal: ac.signal });
+        if (disposed) return;
+        if (!res.ok) throw new Error("trace unavailable");
+        setTrace((await res.json()) as RequestTrace);
+      } catch {
+        if (!disposed) setTraceFailed(true);
+      } finally {
+        acs.delete(ac);
+      }
+    })();
     pullHistory();
     pullLogs();
     const hi = window.setInterval(() => {
@@ -350,6 +365,8 @@ export function SystemDash({
               {trace.requestId ? ` · req ${trace.requestId}` : ""}
             </p>
           </>
+        ) : traceFailed ? (
+          <p className="sys-empty">trace unavailable — core unreachable</p>
         ) : (
           <p className="sys-empty">scrying your route…</p>
         )}
