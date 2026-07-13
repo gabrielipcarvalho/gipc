@@ -9,6 +9,7 @@ data:
   RATE_LIMIT_RPS: "10"
   RATE_LIMIT_BURST: "20"
   PROMETHEUS_URL: "http://prometheus.observability:9090"   # used from P3
+  LOKI_URL: "http://loki.observability:3100"               # P6 log surface (cross-ns ClusterIP)
   SHUTDOWN_TIMEOUT: "25s"
 ---
 apiVersion: apps/v1
