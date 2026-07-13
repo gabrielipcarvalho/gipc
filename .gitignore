@@ -67,3 +67,12 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+
+# --- terraform (infra/terraform) — state/creds never committed ---
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+.terraform.lock.hcl
