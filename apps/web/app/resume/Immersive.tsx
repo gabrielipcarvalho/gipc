@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { constructKeyBlocked } from "./ConstructShell";
 
 /* The Construct's immersive layer (lazy-loaded, client-only): glyph-rain canvas +
@@ -207,6 +207,32 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     if (didMountTint.current) apiRef.current?.rebuildRain();
     else didMountTint.current = true;
   }, [tint, rootRef]);
+
+  // --- CLS guard: position + HIDE the stations pre-paint, before the browser paints the immersive
+  // commit. Static cards → position:fixed camera transforms is one big layout shift; hiding the cards
+  // across the reposition frame excludes it from CLS (visibility:hidden ⇒ empty paint rect). The first
+  // frame() un-hides them at the exact same fixed position (an appearance is not a shift). The opaque
+  // rain-veil covers the ~16ms hidden window. Never runs under reduced motion (Immersive never mounts). ---
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const vh = window.innerHeight;
+    const cam = window.scrollY;
+    // position each camera station at its transform pre-paint (overrides the CSS 120vh default)
+    root
+      .querySelectorAll<HTMLElement>("[data-station]")
+      .forEach((c, i) => (c.style.transform = `translate3d(0, ${(i * vh - cam).toFixed(2)}px, 0)`));
+    // Reveal target = EXACTLY the set the CSS hides (`.cst-card`), so hide/reveal can't drift out of sync.
+    // The cards are held invisible by CSS `[data-mode=immersive] .cst-card{visibility:hidden}` from the
+    // first immersive paint, so NO wrong-position frame is ever visible; we reveal only AFTER the positioned
+    // frame has painted → the static→immersive relayout contributes ~0 to CLS.
+    const cards = Array.from(root.querySelectorAll<HTMLElement>(".cst-card"));
+    const raf = requestAnimationFrame(() => cards.forEach((c) => (c.style.visibility = "visible")));
+    return () => {
+      cancelAnimationFrame(raf);
+      cards.forEach((c) => (c.style.visibility = ""));
+    };
+  }, [rootRef]);
 
   // --- main canvas effect (once) ---
   useEffect(() => {
@@ -417,7 +443,10 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       root.removeEventListener("focusin", onFocusIn);
       settleAll();
       if (focusedIdx >= 0) cards[focusedIdx]?.classList.remove("is-focused");
-      cards.forEach((c) => (c.style.transform = ""));
+      cards.forEach((c) => {
+        c.style.transform = "";
+        c.style.visibility = ""; // clear the CLS-guard in case unmount raced the first frame()
+      });
       apiRef.current = null;
     };
   }, [rootRef]);
