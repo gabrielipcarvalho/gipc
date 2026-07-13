@@ -1,0 +1,78 @@
+# Promtail — ships pod logs to Loki. k3s = containerd, so the pipeline uses `cri: {}` (NOT docker).
+# Uses STATIC file discovery (globs /var/log/pods on the host) — no k8s API service discovery, so
+# NO cluster RBAC is needed (least privilege). The SA carries only default permissions.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: promtail
+  namespace: observability
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  namespace: observability
+data:
+  promtail.yaml: |
+    server:
+      http_listen_port: 9080
+      log_level: warn
+    positions:
+      filename: /run/promtail/positions.yaml
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+    scrape_configs:
+      # Static file discovery — tails every pod log on the node directly (bulletproof; no k8s API SD).
+      # Labels come from the containerd log path: /var/log/pods/<ns>_<pod>_<uid>/<container>/N.log
+      - job_name: pod-logs
+        static_configs:
+          - targets: [localhost]
+            labels:
+              job: pod-logs
+              __path__: /var/log/pods/*/*/*.log
+        pipeline_stages:
+          - cri: {}                        # containerd CRI log format
+          - regex:
+              source: filename
+              expression: '^/var/log/pods/(?P<namespace>[^_]+)_(?P<pod>.+)_[^/]+/(?P<container>[^/]+)/[^/]+\.log$'
+          - labels:
+              namespace:
+              pod:
+              container:
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: observability
+  labels: { app: promtail }
+spec:
+  selector:
+    matchLabels: { app: promtail }
+  template:
+    metadata:
+      labels: { app: promtail }
+    spec:
+      serviceAccountName: promtail
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: promtail
+          image: grafana/promtail:3.0.0
+          args: ["-config.file=/etc/promtail/promtail.yaml"]
+          ports:
+            - { containerPort: 9080, name: http }
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { cpu: 100m, memory: 128Mi }
+          volumeMounts:
+            - { name: config, mountPath: /etc/promtail }
+            - { name: positions, mountPath: /run/promtail }
+            - { name: pods, mountPath: /var/log/pods, readOnly: true }
+      volumes:
+        - name: config
+          configMap: { name: promtail-config }
+        - name: positions
+          hostPath: { path: /var/lib/promtail, type: DirectoryOrCreate }
+        - name: pods
+          hostPath: { path: /var/log/pods }

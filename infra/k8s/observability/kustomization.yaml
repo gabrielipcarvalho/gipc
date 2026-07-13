@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# No `namespace:` directive — each manifest sets its own namespace, and the set includes
+# cluster-scoped RBAC + the Namespace object which a blanket namespace rewrite would mangle.
+resources:
+  - 00-namespace.yaml
+  - prometheus.yaml
+  - node-exporter.yaml
+  - kube-state-metrics.yaml
+  - loki.yaml
+  - promtail.yaml
+  - grafana.yaml
+# grafana-admin.secret.example.yaml is intentionally NOT listed — the real Secret is imperative-only.
