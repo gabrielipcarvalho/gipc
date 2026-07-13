@@ -31,7 +31,8 @@ type Status struct {
 var statusQueries = []struct{ key, unit, ql string }{
 	{"reqPerSec", "req/s", `sum(rate(caddy_http_request_duration_seconds_count{handler="subroute"}[1m]))`},
 	{"p99Ms", "ms", `histogram_quantile(0.99, sum(rate(caddy_http_request_duration_seconds_bucket{handler="subroute"}[5m])) by (le)) * 1000`},
-	{"errorRate", "ratio", `sum(rate(caddy_http_request_duration_seconds_count{handler="subroute",code=~"5.."}[5m])) / clamp_min(sum(rate(caddy_http_request_duration_seconds_count{handler="subroute"}[5m])), 1)`},
+	// `or vector(0)` on the numerator so a healthy site (zero 5xx → empty selector) reports 0.0, not "unavailable".
+	{"errorRate", "ratio", `(sum(rate(caddy_http_request_duration_seconds_count{handler="subroute",code=~"5.."}[5m])) or vector(0)) / clamp_min(sum(rate(caddy_http_request_duration_seconds_count{handler="subroute"}[5m])), 1)`},
 	{"cpuCores", "cores", `sum(rate(container_cpu_usage_seconds_total{namespace="gipc",pod=~"web-.*",container="web"}[2m]))`},
 	{"memMiB", "MiB", `sum(container_memory_working_set_bytes{namespace="gipc",pod=~"web-.*",container="web"}) / 1048576`},
 }
