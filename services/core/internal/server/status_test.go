@@ -4,10 +4,39 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/promql"
 )
+
+// TestStatusPartial: one query returns empty → that metric ok:false, the rest ok, source still "prometheus".
+func TestStatusPartial(t *testing.T) {
+	prom := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Query().Get("query"), "container_memory") { // memMiB → empty
+			_, _ = w.Write([]byte(`{"status":"success","data":{"resultType":"vector","result":[]}}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"status":"success","data":{"resultType":"vector","result":[{"value":[1,"2"]}]}}`))
+	}))
+	defer prom.Close()
+
+	rec := httptest.NewRecorder()
+	statusHandler(promql.New(prom.URL))(rec, httptest.NewRequest("GET", "/api/status", nil))
+	var s Status
+	if err := json.Unmarshal(rec.Body.Bytes(), &s); err != nil {
+		t.Fatal(err)
+	}
+	if s.Source != "prometheus" {
+		t.Fatalf("source=%q, want prometheus (some ok)", s.Source)
+	}
+	if m := s.Metrics["memMiB"]; m.OK || m.Value != nil {
+		t.Fatalf("memMiB must be ok:false/null: %+v", m)
+	}
+	if m := s.Metrics["reqPerSec"]; !m.OK || m.Value == nil {
+		t.Fatalf("reqPerSec must be ok: %+v", m)
+	}
+}
 
 func TestStatusAllOK(t *testing.T) {
 	prom := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
