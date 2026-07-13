@@ -9,18 +9,20 @@ export function MetricPanel({
   metrics,
   revealed = true,
   countUp = false,
+  placeholder = true,
 }: {
   metrics: Metric[];
   revealed?: boolean;
   countUp?: boolean;
+  placeholder?: boolean;
 }) {
   const active = countUp && revealed;
   return (
     <div
       className="panel"
       role="group"
-      aria-label="Live service metrics (placeholder)"
-      data-placeholder="true"
+      aria-label={placeholder ? "Live service metrics (placeholder)" : "Live service metrics"}
+      data-placeholder={placeholder || undefined}
     >
       {metrics.map((m) => (
         <div className="metric" key={m.k}>

@@ -2,13 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Telemetry, TelemetryDeploy } from "../../data/telemetry";
+import type { Status, StatusMetric } from "../../data/status";
 import { MetricPanel, type Metric } from "./MetricPanel";
 
-/* /system dashboard — polls the stub telemetry API every 5s. Server-renders a
-   deterministic skeleton; all values arrive client-side (zero hydration surface).
-   Error keeps last-good data visible and auto-recovers; refreshes are silent to
-   screen readers (only the error/recovery line is announced via the persistent
-   status node). */
+/* /system dashboard. Metrics are REAL (SSR-seeded from `initial`, then polled from /api/status);
+   topology/deploy-feed/trace stay stub (polled from /api/telemetry) until later phases. Both feeds
+   keep last-good on error and auto-recover; only the error/recovery line is announced. */
 const POLL_MS = 5000;
 
 type DeployView = TelemetryDeploy & { rel: string };
@@ -23,89 +22,114 @@ function relTime(iso: string, now: number): string {
   return `${Math.round(h / 24)}d ago`;
 }
 
-function toMetrics(t: Telemetry): Metric[] {
-  return t.services.map((s) => ({
-    k: s.name,
-    // stub visual: quicker services fill more of the bar
-    pct: Math.max(8, Math.min(96, Math.round(100 - Math.log10(s.latencyMs + 1) * 32))),
-    v: `${s.latencyMs} ms · ${s.rps} rps`,
-  }));
+function clampPct(v: number | null, max: number): number {
+  if (v == null || max <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((v / max) * 100)));
+}
+function fixed(m: StatusMetric, digits: number): string {
+  return m.ok && m.value != null ? m.value.toFixed(digits) : "—";
 }
 
-export function SystemDash() {
-  const [data, setData] = useState<Telemetry | null>(null);
+/* The 5 real metrics → MetricPanel rows. Values are honest ("—" when a metric is unavailable);
+   the bars are decorative magnitude cues. */
+function statusToMetrics(s: Status): Metric[] {
+  const m = s.metrics;
+  const errPct = m.errorRate.ok && m.errorRate.value != null ? m.errorRate.value * 100 : null;
+  return [
+    { k: "req/s", v: fixed(m.reqPerSec, 2), pct: clampPct(m.reqPerSec.value, 20) },
+    { k: "p99 latency", v: m.p99Ms.ok ? `${fixed(m.p99Ms, 1)} ms` : "—", pct: clampPct(m.p99Ms.value, 200) },
+    { k: "error rate", v: errPct != null ? `${errPct.toFixed(2)}%` : "—", pct: clampPct(errPct, 5) },
+    { k: "web cpu", v: m.cpuCores.ok ? `${fixed(m.cpuCores, 3)} cores` : "—", pct: clampPct(m.cpuCores.value, 1) },
+    { k: "web mem", v: m.memMiB.ok ? `${fixed(m.memMiB, 0)} MiB` : "—", pct: clampPct(m.memMiB.value, 384) },
+  ];
+}
+
+export function SystemDash({ initial }: { initial: Status }) {
+  const [status, setStatus] = useState<Status>(initial); // SSR-seeded → real numbers pre-hydration
+  const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
   const [deploys, setDeploys] = useState<DeployView[]>([]);
-  // status line: "" (quiet) | severed | restored — a live region only announces
-  // ADDED text, so recovery must write a message, not clear one
   const [statusMsg, setStatusMsg] = useState("");
-  const abortRef = useRef<AbortController | null>(null);
   const hadErrorRef = useRef(false);
 
   useEffect(() => {
     let disposed = false;
+    const sAc = { current: null as AbortController | null };
+    const tAc = { current: null as AbortController | null };
+    const ignoreAbort = (e: unknown) => {
+      if ((e as Error)?.name === "AbortError") return; // superseded by a newer pull — not a real error
+      throw e;
+    };
+
     const pull = async () => {
-      abortRef.current?.abort(); // newest request wins — no stale clobber
-      const ac = new AbortController();
-      abortRef.current = ac;
+      sAc.current?.abort();
+      const sac = new AbortController();
+      sAc.current = sac;
+      const p1 = fetch("/api/status", { cache: "no-store", signal: sac.signal })
+        .then((r) => (r.ok ? (r.json() as Promise<Status>) : Promise.reject(new Error(String(r.status)))))
+        .then((s) => { if (!disposed) setStatus(s); }) // failure → keep last-good status
+        .catch(ignoreAbort);
+
+      tAc.current?.abort();
+      const tac = new AbortController();
+      tAc.current = tac;
+      const p2 = fetch("/api/telemetry", { cache: "no-store", signal: tac.signal })
+        .then((r) => (r.ok ? (r.json() as Promise<Telemetry>) : Promise.reject(new Error(String(r.status)))))
+        .then((t) => {
+          if (disposed) return;
+          const now = Date.now(); // fetch time, never render time
+          setTelemetry(t);
+          setDeploys(t.deploys.map((d) => ({ ...d, rel: relTime(d.when, now) })));
+        })
+        .catch(ignoreAbort);
+
       try {
-        const res = await fetch("/api/telemetry", { cache: "no-store", signal: ac.signal });
-        if (!res.ok) throw new Error(String(res.status));
-        const t = (await res.json()) as Telemetry;
-        if (disposed) return;
-        const now = Date.now(); // fetch time, never render time
-        setData(t);
-        setDeploys(t.deploys.map((d) => ({ ...d, rel: relTime(d.when, now) })));
+        await Promise.all([p1, p2]);
         if (hadErrorRef.current) {
           hadErrorRef.current = false;
-          setStatusMsg("telemetry link restored"); // stays rendered; identical swaps are silent
+          setStatusMsg("telemetry link restored"); // identical swaps are silent to SRs
         }
-      } catch (err) {
-        if (disposed || (err as Error)?.name === "AbortError") return;
+      } catch {
         hadErrorRef.current = true;
         setStatusMsg("telemetry link severed — re-scrying…"); // last-good data stays rendered
       }
     };
+
     pull();
-    // single interval, armed once; ticks no-op while the tab is hidden
-    const interval = window.setInterval(() => {
-      if (!document.hidden) pull();
-    }, POLL_MS);
-    const onVisible = () => {
-      if (!document.hidden) pull(); // immediate refresh on return
-    };
+    const interval = window.setInterval(() => { if (!document.hidden) pull(); }, POLL_MS);
+    const onVisible = () => { if (!document.hidden) pull(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       disposed = true;
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
-      abortRef.current?.abort();
+      sAc.current?.abort();
+      tAc.current?.abort();
     };
   }, []);
 
   return (
-    <div className="sys" data-placeholder="true">
-      {/* persistent status node — text swaps on error/recovery, refreshes stay silent */}
-      <p
-        className="sys-status"
-        role="status"
-        data-severed={statusMsg.includes("severed") || undefined}
-      >
+    <div className="sys">
+      <p className="sys-status" role="status" data-severed={statusMsg.includes("severed") || undefined}>
         {statusMsg}
       </p>
 
-      {!data && !statusMsg && (
-        <div className="sys-skeleton" aria-hidden>
-          <div className="skel" /><div className="skel" /><div className="skel" />
-        </div>
-      )}
+      {/* REAL metrics — always rendered (SSR carries the initial numbers) */}
+      <section className="sys-block" aria-label="Platform metrics">
+        <h2 className="sys-h">metrics</h2>
+        <p className="sys-source">
+          source: {status.source === "prometheus" ? "prometheus · live" : "unavailable — re-scrying"}
+        </p>
+        <MetricPanel metrics={statusToMetrics(status)} countUp placeholder={false} />
+      </section>
 
-      {data && (
+      {/* stub sections — topology / deploy feed / trace (from /api/telemetry) */}
+      {telemetry ? (
         <>
-          <section className="sys-block" aria-label="Service topology (placeholder)">
+          <section className="sys-block" aria-label="Service topology (placeholder)" data-placeholder="true">
             <h2 className="sys-h">topology</h2>
-            {data.services.length ? (
+            {telemetry.services.length ? (
               <ul className="topo">
-                {data.services.map((s) => (
+                {telemetry.services.map((s) => (
                   <li className="topo-node" key={s.name} data-status={s.status}>
                     <span className="pulse topo-dot" aria-hidden />
                     <span className="topo-name">{s.name}</span>
@@ -118,12 +142,7 @@ export function SystemDash() {
             )}
           </section>
 
-          <section className="sys-block" aria-label="Service metrics (placeholder)">
-            <h2 className="sys-h">metrics</h2>
-            <MetricPanel metrics={toMetrics(data)} countUp />
-          </section>
-
-          <section className="sys-block" aria-label="Deploy feed (placeholder)">
+          <section className="sys-block" aria-label="Deploy feed (placeholder)" data-placeholder="true">
             <h2 className="sys-h">deploy feed</h2>
             {deploys.length ? (
               <ol className="deploys">
@@ -137,13 +156,13 @@ export function SystemDash() {
             ) : (
               <p className="sys-empty">no deploys recorded — feed idle</p>
             )}
-            <p className="sys-note">placeholder — real deploy commits land with the telemetry backend</p>
+            <p className="sys-note">placeholder — real deploy commits land with the deploy-feed phase</p>
           </section>
 
-          <section className="sys-block" aria-label="Request trace (placeholder)">
+          <section className="sys-block" aria-label="Request trace (placeholder)" data-placeholder="true">
             <h2 className="sys-h">trace your request</h2>
             <ol className="trace" data-placeholder="true">
-              {data.trace.map((h) => (
+              {telemetry.trace.map((h) => (
                 <li key={h.hop}>
                   <span className="trace-hop">{h.hop}</span>
                   <span className="trace-detail">{h.detail}</span>
@@ -154,6 +173,12 @@ export function SystemDash() {
             <p className="sys-note">sample trace — placeholder timings</p>
           </section>
         </>
+      ) : (
+        !statusMsg && (
+          <div className="sys-skeleton" aria-hidden>
+            <div className="skel" /><div className="skel" /><div className="skel" />
+          </div>
+        )
       )}
     </div>
   );
