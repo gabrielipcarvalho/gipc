@@ -15,6 +15,7 @@ type Config struct {
 	RateLimitRPS    float64       // per-client token-bucket refill rate (default 10)
 	RateLimitBurst  int           // per-client bucket size (default 20)
 	PrometheusURL   string        // Prometheus base URL (used from P3; default in-cluster svc)
+	LokiURL         string        // Loki base URL (P6 log surface; default in-cluster svc)
 	ShutdownTimeout time.Duration // graceful shutdown budget (< pod terminationGracePeriod)
 	StreamInterval  time.Duration // SSE metric tick cadence (P4)
 	MaxStreams      int           // concurrent SSE connection cap (P4)
@@ -30,6 +31,7 @@ func Load() (Config, error) {
 		RateLimitRPS:    envFloat("RATE_LIMIT_RPS", 10),
 		RateLimitBurst:  envInt("RATE_LIMIT_BURST", 20),
 		PrometheusURL:   env("PROMETHEUS_URL", "http://prometheus.observability:9090"),
+		LokiURL:         env("LOKI_URL", "http://loki.observability:3100"),
 		ShutdownTimeout: envDuration("SHUTDOWN_TIMEOUT", 25*time.Second),
 		StreamInterval:  envDuration("STREAM_INTERVAL", 5*time.Second),
 		MaxStreams:      envInt("MAX_STREAMS", 64),

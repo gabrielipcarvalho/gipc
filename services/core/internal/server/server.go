@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/config"
+	"github.com/gabrielipcarvalho/gipc/services/core/internal/loki"
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/middleware"
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/promql"
 )
@@ -24,6 +25,7 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) http.Handl
 	limiter := middleware.NewLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
 
 	prom := promql.New(cfg.PrometheusURL)
+	lk := loki.New(cfg.LokiURL)
 	hub := newHub()
 	deploys := newDeployStore()
 
@@ -35,6 +37,9 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) http.Handl
 	mux.HandleFunc("GET /api/stream", streamHandler(prom, cfg, srvCtx, hub)) // SSE metric ticks + deploy events
 	mux.HandleFunc("POST /api/hooks/deploy", deployHookHandler([]byte(cfg.DeployHookKey), deploys, hub))
 	mux.HandleFunc("GET /api/deploys", deploysHandler(deploys))
+	mux.HandleFunc("GET /api/metrics/history", historyHandler(prom)) // aggregate range series (Grafana-on-display)
+	mux.HandleFunc("GET /api/logs", logsHandler(lk))                 // fixed+redacted log surface (Loki-on-display)
+	mux.HandleFunc("GET /api/trace", traceHandler())                // per-visitor real request path
 	// (P7 /api/uptime)
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
