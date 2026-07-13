@@ -47,7 +47,7 @@ export default async function SystemPage() {
   // parallel — serial awaits would ~triple TTFB when core is down
   const [status, deploys, history] = await Promise.all([getStatus(), getDeploys(), getHistory()]);
   return (
-    <main className="wrap page" tabIndex={-1}>
+    <main id="main" className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/system">
         <SectionHeader marker="system" title="The System" />
         <p className="line type-line">

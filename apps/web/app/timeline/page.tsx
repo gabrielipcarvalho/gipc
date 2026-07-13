@@ -12,7 +12,7 @@ export const metadata = pageMeta(
 
 export default function TimelinePage() {
   return (
-    <main className="wrap page" tabIndex={-1}>
+    <main id="main" className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/timeline">
         <SectionHeader marker="timeline" title="Experience" />
         <p className="line type-line">

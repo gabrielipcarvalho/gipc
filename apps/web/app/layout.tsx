@@ -49,6 +49,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `try{var t=localStorage.getItem('gipc-theme');if(t&&${THEME_GUARD}.indexOf(t)>-1)document.documentElement.dataset.theme=t}catch(e){}`,
           }}
         />
+        {/* skip-to-content: first tab stop, visible only on focus → jumps past the nav to the page main */}
+        <a className="skip-link" href="#main">
+          skip to content
+        </a>
         <div className="ambient" aria-hidden />
         {/* app-shell is the palette's inert target when the dialog is open */}
         <div id="app-shell">

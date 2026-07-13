@@ -22,7 +22,7 @@
   /* ---- text (one base + opacity ramp) ---- */
   --text:#ece8ff;
   --text-muted:#a99fce;
-  --text-faint:rgba(236,232,255,.50);
+  --text-faint:rgba(236,232,255,.56);   /* ~5:1 on the darkest surface — AA margin (was .50 ≈4.65:1) */
 
   /* ---- signal / semantic ---- */
   --ok:#57e6a8;  --warn:#ffce6b;  --err:#ff6f93;  --info:#34e6ff;
@@ -53,7 +53,7 @@
   --shadow-card:0 24px 60px rgba(0,0,0,.5);
   --shadow-pop:0 30px 80px rgba(0,0,0,.6),0 0 60px color-mix(in srgb, var(--violet) 10%, transparent);
   --glow-soft:0 0 24px var(--glow-violet);
-  --ring:0 0 0 2px color-mix(in srgb, var(--cyan) 40%, transparent);
+  --ring:0 0 0 2px color-mix(in srgb, var(--cyan) 60%, transparent);   /* ≥3:1 focus indicator (1.4.11) in all themes */
   --text-glow:0 0 34px var(--glow-violet);
   --glass:blur(14px);
 

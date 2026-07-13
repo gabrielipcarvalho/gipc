@@ -19,7 +19,7 @@ export default function ErrorBoundary({
   }, [error]);
 
   return (
-    <main className="wrap page" tabIndex={-1}>
+    <main id="main" className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/fault">
         <p className="line">
           <span className="prompt">arcane@prod:~$</span> segfault in the weave

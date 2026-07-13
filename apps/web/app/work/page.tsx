@@ -12,7 +12,7 @@ export const metadata = pageMeta(
 
 export default function WorkPage() {
   return (
-    <main className="wrap page" tabIndex={-1}>
+    <main id="main" className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/work">
         <SectionHeader marker="work" title="The Work" />
         <p className="line type-line">

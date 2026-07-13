@@ -22,7 +22,7 @@ const personLd = {
 
 export default function Home() {
   return (
-    <main className="wrap stage" tabIndex={-1}>
+    <main id="main" className="wrap stage" tabIndex={-1}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd).replace(/</g, "\\u003c") }}
