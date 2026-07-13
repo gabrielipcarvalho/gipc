@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ROUTES } from "./routes";
+import { THEMES, applyTheme } from "../../data/themes";
 
 /* ⌘K command palette (client). Overlay dialog — no portal; rendered as a fixed sibling
    in <body> via the layout, so it's SSR/`next build` safe. Opens on ⌘K/Ctrl-K or the
@@ -59,6 +60,17 @@ export function CommandPalette() {
           router.push("/");
         },
       },
+      ...THEMES.map<Cmd>((t) => ({
+        id: `theme:${t.id}`,
+        label: `theme · ${t.id}`,
+        hint: "re-skin",
+        // theme navigates nowhere → restore focus to the trigger on close
+        run: () => {
+          applyTheme(t.id);
+          shouldRestore.current = true;
+          setOpen(false);
+        },
+      })),
     ];
   }, [router, pathname]);
 

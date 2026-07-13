@@ -5,12 +5,15 @@ import projectsData from "./projects.json";
    where the résumé provides one. Edit the résumé first, then mirror here. */
 export type ProjectLink = { label: string; href: string };
 
+export type ProjectAccent = "violet" | "cyan" | "ok" | "warn" | "err";
+
 export type Project = {
   slug: string;
   name: string;
   year: string;
   blurb: string;
   tags: string[];
+  accent?: ProjectAccent; // corner-glow + chip-tint hue (a design choice, not a fact)
   featured?: boolean;
   links?: ProjectLink[];
 };

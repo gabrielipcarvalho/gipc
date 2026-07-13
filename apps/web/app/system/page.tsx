@@ -14,7 +14,7 @@ export default function SystemPage() {
     <main className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/system">
         <SectionHeader marker="system" title="The System" />
-        <p className="line">
+        <p className="line type-line">
           <span className="prompt">arcane@prod:~$</span> systemctl status --all
         </p>
         <p className="page-lead">

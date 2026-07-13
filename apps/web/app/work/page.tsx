@@ -15,7 +15,7 @@ export default function WorkPage() {
     <main className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/work">
         <SectionHeader marker="work" title="The Work" />
-        <p className="line">
+        <p className="line type-line">
           <span className="prompt">arcane@prod:~$</span> ls ./grimoire
         </p>
         <p className="page-lead">
