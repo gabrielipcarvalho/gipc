@@ -1,0 +1,33 @@
+# gipc-core — GitOps for services/core + Caddy (infra/k8s/core references ../caddy as a base).
+#
+# NOT applied during the sprint: path is absent on `main` until merge → ArgoCD would ComparisonError.
+# No app-of-apps exists, so committing this file alone does NOT register the Application.
+# ONE-TIME manual bootstrap AFTER merge to main AND after core.yml has pinned the first real SHA
+# (bootstrapping before the first pin would sync the placeholder :latest):
+#     ssh garuda 'kubectl apply -f -' < infra/argocd/core.yaml
+# It then adopts the manually-applied core + caddy resources in the gipc namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gipc-core
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:gabrielipcarvalho/gipc.git
+    targetRevision: main
+    path: infra/k8s/core
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gipc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff: { duration: 10s, factor: 2, maxDuration: 2m }

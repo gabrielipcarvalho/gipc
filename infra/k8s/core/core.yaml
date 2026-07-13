@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-config
+  namespace: gipc
+data:
+  PORT: "8080"
+  CORS_ORIGIN: "https://gipc.dev"
+  RATE_LIMIT_RPS: "10"
+  RATE_LIMIT_BURST: "20"
+  PROMETHEUS_URL: "http://prometheus.observability:9090"   # used from P3
+  LOKI_URL: "http://loki.observability:3100"               # P6 log surface (cross-ns ClusterIP)
+  WEB_URL: "http://web:80"                                  # P7 uptime probe target
+  UPTIME_INTERVAL: "30s"                                    # P7 probe cadence
+  SHUTDOWN_TIMEOUT: "25s"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core
+  namespace: gipc
+  labels: { app: core }
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels: { app: core }
+  template:
+    metadata:
+      labels: { app: core }
+    spec:
+      terminationGracePeriodSeconds: 30   # ≥ SHUTDOWN_TIMEOUT so /api/* drains on a roll
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532        # distroless:nonroot
+        fsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: core
+          image: ghcr.io/gabrielipcarvalho/gipc-core:latest   # tag pinned by CI via kustomization
+          ports:
+            - { containerPort: 8080, name: http }
+          envFrom:
+            - configMapRef: { name: core-config }
+          env:
+            - name: DEPLOY_HOOK_KEY   # HMAC key for /api/hooks/deploy — imperative Secret, never committed
+              valueFrom:
+                secretKeyRef: { name: deploy-hook, key: hmac }
+          readinessProbe:
+            httpGet: { path: /api/readyz, port: 8080 }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/healthz, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 25m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+          securityContext:               # static binary writes nothing → full lockdown
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core
+  namespace: gipc
+  labels: { app: core }
+spec:
+  type: ClusterIP
+  selector: { app: core }
+  ports:
+    - { port: 8080, targetPort: 8080, name: http }

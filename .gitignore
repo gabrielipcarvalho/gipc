@@ -15,6 +15,9 @@ apps/web/.keys/
 *.p12
 secrets/
 *.secret
+# k8s Secret manifests — never commit a real one; the *.example.yaml shape files are allowed
+*.secret.yaml
+!*.secret.example.yaml
 *_rsa
 *_ed25519
 kubeconfig
@@ -64,3 +67,12 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+
+# --- terraform (infra/terraform) — state/creds never committed ---
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+.terraform.lock.hcl
