@@ -1,31 +1,38 @@
-name: web image
+name: core image
 
 on:
   push:
+    # M3 sprint complete — core builds on main only (branch build no longer needed).
     branches: [main]
     paths:
-      - "apps/web/**"
-      - "packages/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/web.yml"
-  workflow_dispatch:
+      - "services/core/**"
+      - ".github/workflows/core.yml"
 
 concurrency:
-  group: web-image
+  group: core-image
   cancel-in-progress: false
 
 env:
-  IMAGE: ghcr.io/gabrielipcarvalho/gipc-web
+  IMAGE: ghcr.io/gabrielipcarvalho/gipc-core
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest   # amd64 — matches garuda
     permissions:
       contents: write     # to commit the GitOps tag bump
-      packages: write      # to push to GHCR
+      packages: write     # to push to GHCR
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Vet & test (authoritative — no local go on the dev machine)
+        working-directory: services/core
+        run: |
+          go vet ./...
+          go test ./...
 
       - uses: docker/setup-buildx-action@v3
 
@@ -39,9 +46,11 @@ jobs:
       - name: Build & push image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: apps/web/Dockerfile
+          context: services/core
+          file: services/core/Dockerfile
           push: true
+          build-args: |
+            VERSION=${{ github.sha }}
           tags: |
             ${{ env.IMAGE }}:${{ github.sha }}
             ${{ env.IMAGE }}:latest
@@ -50,21 +59,21 @@ jobs:
 
       - name: GitOps — pin manifest to this image (deploy feed)
         run: |
-          sed -i "s|newTag: .*|newTag: \"${GITHUB_SHA}\"|" infra/k8s/web/kustomization.yaml
+          sed -i "s|newTag: .*|newTag: \"${GITHUB_SHA}\"|" infra/k8s/core/kustomization.yaml
           if git diff --quiet; then echo "no manifest change"; exit 0; fi
           git config user.name  "gipc-ci"
           git config user.email "ci@gipc.dev"
-          git commit -am "deploy(web): ${GITHUB_SHA:0:7} → gipc.dev [skip ci]"
+          git commit -am "deploy(core): ${GITHUB_SHA:0:7} → gipc.dev [skip ci]"
           git push
 
       - name: Notify deploy feed
-        if: github.ref == 'refs/heads/main'   # never POST fake events from non-deploy branches
+        if: github.ref == 'refs/heads/main'   # gate to real deploys — the sprint branch must NOT POST fake events
         env:
           DEPLOY_HOOK_KEY: ${{ secrets.DEPLOY_HOOK_KEY }}
         run: |
           [ -z "$DEPLOY_HOOK_KEY" ] && { echo "no key"; exit 0; }
           SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA"); TS=$(date -u +%FT%TZ)
-          post() {   # $1 stage, $2 status — jq builds subject-safe JSON; sign the exact bytes sent
+          post() {
             body=$(jq -nc --arg sha "$GITHUB_SHA" --arg subject "$SUBJECT" --arg stage "$1" --arg status "$2" --arg ts "$TS" \
               '{sha:$sha,subject:$subject,stage:$stage,status:$status,ts:$ts}')
             sig=$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$DEPLOY_HOOK_KEY" | awk '{print $2}')

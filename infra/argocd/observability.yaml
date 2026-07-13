@@ -1,0 +1,34 @@
+# gipc-observability — GitOps for the observability stack (Prometheus/Grafana/Loki).
+#
+# NOT applied during the sprint: the manifests live only on the sprint branch, so ArgoCD would hit a
+# manifest-generation ComparisonError (path absent on `main`). There is no app-of-apps in the repo, so
+# committing this file alone does NOT register the Application. ONE-TIME manual bootstrap AFTER the
+# manifests are merged to `main`:
+#     ssh garuda 'kubectl apply -f -' < infra/argocd/observability.yaml
+# ArgoCD then adopts the manually-applied resources (matched by GVK+name+namespace); the imperative
+# grafana-admin Secret is untracked and survives.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gipc-observability
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:gabrielipcarvalho/gipc.git
+    targetRevision: main
+    path: infra/k8s/observability
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff: { duration: 10s, factor: 2, maxDuration: 2m }

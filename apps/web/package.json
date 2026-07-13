@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "gen:iac": "node scripts/gen-iac.mjs",
+    "prebuild": "node scripts/gen-iac.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
