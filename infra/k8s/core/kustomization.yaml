@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# One app managing core + caddy. Each manifest sets its own `namespace: gipc` (no namespace directive
+# here — avoids the transformer touching the caddy base unexpectedly). Exactly ONE `newTag` (core's);
+# Caddy's tag is inline in ../caddy so CI's `sed "s|newTag: .*|...|"` can't clobber it.
+resources:
+  - core.yaml
+  - ../caddy
+images:
+  - name: ghcr.io/gabrielipcarvalho/gipc-core
+    newTag: latest
