@@ -1,0 +1,53 @@
+---
+# Codifies garuda's host-level provisioning for gipc.dev — the parts below k8s (k3s itself, cloudflared,
+# base packages) that Terraform doesn't model. CHECK-ONLY this sprint: the box is already built; the
+# deliverable is the codified IaC + a clean dry-run.
+#
+#   ansible-playbook -i inventory.ini playbook.yml --check --diff   # dry-run, changes NOTHING
+#
+# Do NOT run without --check — re-provisioning a live single-node cluster would risk gipc.dev.
+- name: Provision garuda (k3s host for gipc.dev)
+  hosts: gipc_servers
+  become: true
+  vars:
+    k3s_channel: stable
+    cloudflared_config_dir: /etc/cloudflared
+
+  tasks:
+    - name: Base packages present
+      ansible.builtin.package:
+        name:
+          - git
+          - curl
+          - ca-certificates
+        state: present
+
+    - name: Detect k3s binary
+      ansible.builtin.stat:
+        path: /usr/local/bin/k3s
+      register: k3s_bin
+
+    - name: Install k3s server (single node) if absent
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL={{ k3s_channel }} sh -
+      args:
+        creates: /usr/local/bin/k3s
+      when: not k3s_bin.stat.exists
+
+    - name: k3s service enabled + running
+      ansible.builtin.systemd:
+        name: k3s
+        enabled: true
+        state: started
+
+    - name: cloudflared config directory
+      ansible.builtin.file:
+        path: "{{ cloudflared_config_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: cloudflared tunnel service enabled + running
+      ansible.builtin.systemd:
+        name: cloudflared
+        enabled: true
+        state: started
