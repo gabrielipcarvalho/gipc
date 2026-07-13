@@ -13,10 +13,18 @@ data:
       }
     }
     :80 {
-      handle /caddy-health { respond 200 }              # upstream-independent readiness target
-      handle /api/telemetry { reverse_proxy web:80 }    # v1 stub — SystemDash polls it; keep on web until P3
-      handle /api/* { reverse_proxy core:8080 }
-      handle { reverse_proxy web:80 }
+      handle /caddy-health {
+        respond 200
+      }
+      handle /api/telemetry {
+        reverse_proxy web:80
+      }
+      handle /api/* {
+        reverse_proxy core:8080
+      }
+      handle {
+        reverse_proxy web:80
+      }
       header -Server
     }
 ---
