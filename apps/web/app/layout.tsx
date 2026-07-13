@@ -29,8 +29,27 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://gipc.dev",
     siteName: "gipc.dev",
+    locale: "en_AU",
     images: [{ url: "/og.png", width: 1200, height: 630, alt: "arcane — the gipc.dev operator console" }],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "gipc.dev — the arcane operator console",
+    description: "A real, self-hosted operator console. It's all live.",
+    images: ["/og.png"],
+  },
+};
+
+// Site-identity structured data (every page). Author/publisher reference the Person defined on / and /resume.
+const websiteLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://gipc.dev/#website",
+  name: "gipc.dev",
+  url: "https://gipc.dev",
+  inLanguage: "en-AU",
+  publisher: { "@id": "https://gipc.dev/#gabriel" },
+  author: { "@id": "https://gipc.dev/#gabriel" },
 };
 
 export const viewport = {
@@ -41,8 +60,12 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={plex.variable} suppressHydrationWarning>
+    <html lang="en-AU" className={plex.variable} suppressHydrationWarning>
       <body suppressHydrationWarning>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd).replace(/</g, "\\u003c") }}
+        />
         {/* no-flash theme: apply the saved preset before first paint */}
         <script
           dangerouslySetInnerHTML={{
