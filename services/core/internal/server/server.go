@@ -24,14 +24,18 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) http.Handl
 	limiter := middleware.NewLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
 
 	prom := promql.New(cfg.PrometheusURL)
+	hub := newHub()
+	deploys := newDeployStore()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/healthz", healthz)
 	mux.HandleFunc("GET /api/readyz", readyz)
 	mux.HandleFunc("GET /api/version", version)
-	mux.HandleFunc("GET /api/status", statusHandler(prom))              // real metrics (never hard-fails)
-	mux.HandleFunc("GET /api/stream", streamHandler(prom, cfg, srvCtx)) // SSE metric ticks
-	// (P5 POST /api/hooks/deploy; P7 /api/uptime)
+	mux.HandleFunc("GET /api/status", statusHandler(prom))                   // real metrics (never hard-fails)
+	mux.HandleFunc("GET /api/stream", streamHandler(prom, cfg, srvCtx, hub)) // SSE metric ticks + deploy events
+	mux.HandleFunc("POST /api/hooks/deploy", deployHookHandler([]byte(cfg.DeployHookKey), deploys, hub))
+	mux.HandleFunc("GET /api/deploys", deploysHandler(deploys))
+	// (P7 /api/uptime)
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never

@@ -41,6 +41,10 @@ spec:
             - { containerPort: 8080, name: http }
           envFrom:
             - configMapRef: { name: core-config }
+          env:
+            - name: DEPLOY_HOOK_KEY   # HMAC key for /api/hooks/deploy — imperative Secret, never committed
+              valueFrom:
+                secretKeyRef: { name: deploy-hook, key: hmac }
           readinessProbe:
             httpGet: { path: /api/readyz, port: 8080 }
             initialDelaySeconds: 3

@@ -18,6 +18,7 @@ type Config struct {
 	ShutdownTimeout time.Duration // graceful shutdown budget (< pod terminationGracePeriod)
 	StreamInterval  time.Duration // SSE metric tick cadence (P4)
 	MaxStreams      int           // concurrent SSE connection cap (P4)
+	DeployHookKey   string        // HMAC key for POST /api/hooks/deploy (P5; empty ⇒ endpoint 503)
 }
 
 // Load reads the environment and applies defaults. It never returns an error today, but keeps the
@@ -32,6 +33,7 @@ func Load() (Config, error) {
 		ShutdownTimeout: envDuration("SHUTDOWN_TIMEOUT", 25*time.Second),
 		StreamInterval:  envDuration("STREAM_INTERVAL", 5*time.Second),
 		MaxStreams:      envInt("MAX_STREAMS", 64),
+		DeployHookKey:   env("DEPLOY_HOOK_KEY", ""),
 	}, nil
 }
 

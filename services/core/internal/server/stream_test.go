@@ -23,7 +23,7 @@ func fakeProm(t *testing.T) *promql.Client {
 // The stream writes an event: metrics frame and returns promptly on client (context) cancel.
 func TestStreamFrameAndCancel(t *testing.T) {
 	cfg := config.Config{StreamInterval: 10 * time.Millisecond, MaxStreams: 8}
-	h := streamHandler(fakeProm(t), cfg, context.Background())
+	h := streamHandler(fakeProm(t), cfg, context.Background(), newHub())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	req := httptest.NewRequest("GET", "/api/stream", nil).WithContext(ctx)
@@ -50,7 +50,7 @@ func TestStreamFrameAndCancel(t *testing.T) {
 // A 2nd concurrent stream past MaxStreams → 503 (deterministic via closure-scoped counter + cfg cap).
 func TestStreamCap(t *testing.T) {
 	cfg := config.Config{StreamInterval: time.Second, MaxStreams: 1}
-	h := streamHandler(fakeProm(t), cfg, context.Background())
+	h := streamHandler(fakeProm(t), cfg, context.Background(), newHub())
 
 	ctx1, cancel1 := context.WithCancel(context.Background())
 	defer cancel1()
