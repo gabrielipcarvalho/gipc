@@ -25,6 +25,13 @@ func Chain(mw ...func(http.Handler) http.Handler) func(http.Handler) http.Handle
 	}
 }
 
+// IsHealthPath reports whether p is a liveness/readiness endpoint — exempt from the rate limiter
+// (kubelet probes carry no CF-Connecting-IP → would share a node-IP bucket and could 429 into a
+// CrashLoop) and from the access log (probe noise).
+func IsHealthPath(p string) bool {
+	return p == "/api/healthz" || p == "/api/readyz"
+}
+
 // Recover turns a handler panic into a 500 + error log instead of a dropped connection.
 func Recover(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -90,6 +97,9 @@ func Logging(log *slog.Logger) func(http.Handler) http.Handler {
 			start := time.Now()
 			rec := &statusRecorder{ResponseWriter: w}
 			next.ServeHTTP(rec, r)
+			if IsHealthPath(r.URL.Path) {
+				return // no access-log noise for kubelet probes
+			}
 			if rec.status == 0 {
 				rec.status = http.StatusOK
 			}

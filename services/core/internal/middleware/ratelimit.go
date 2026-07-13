@@ -83,7 +83,7 @@ func (l *Limiter) sweepLoop() {
 // Middleware enforces the limit, returning 429 + Retry-After on refusal.
 func (l *Limiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !l.allow(clientIP(r), time.Now()) {
+		if !IsHealthPath(r.URL.Path) && !l.allow(clientIP(r), time.Now()) {
 			w.Header().Set("Retry-After", strconv.Itoa(int(1.0/l.rps)+1))
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return
