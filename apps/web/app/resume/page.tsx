@@ -20,6 +20,14 @@ function jsonLd() {
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "ProfilePage",
+        "@id": "https://gipc.dev/resume#profilepage",
+        url: "https://gipc.dev/resume",
+        name: "The Construct — living résumé",
+        inLanguage: "en-AU",
+        mainEntity: { "@id": personId }, // reference, not inline — the Person node below stays canonical
+      },
+      {
         "@type": "Person",
         "@id": personId,
         name: b.name,
@@ -66,7 +74,7 @@ function jsonLd() {
 
 export default function ResumePage() {
   return (
-    <main className="wrap page" tabIndex={-1}>
+    <main id="main" className="wrap page" tabIndex={-1}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()).replace(/</g, "\\u003c") }}

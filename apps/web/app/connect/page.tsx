@@ -15,7 +15,7 @@ export const metadata = pageMeta(
 export default function ConnectPage() {
   const profiles = resume.basics.profiles;
   return (
-    <main className="wrap page" tabIndex={-1}>
+    <main id="main" className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/connect">
         <SectionHeader marker="connect" title="Connect" />
         <p className="line type-line">
@@ -32,13 +32,11 @@ export default function ConnectPage() {
           {profiles.map((p) => (
             <li key={p.network}>
               <span className="connect-k">{p.network.toLowerCase()}</span>
-              <a
-                href={p.url}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`${p.network} profile (opens in new tab)`}
-              >
+              {/* 2.5.3 label-in-name: the visible URL must BE the accessible name — the new-tab
+                  hint is appended via sr-only, not an overriding aria-label */}
+              <a href={p.url} target="_blank" rel="noreferrer">
                 {p.url.replace("https://www.", "").replace("https://", "")}
+                <span className="sr-only"> (opens in new tab)</span>
               </a>
             </li>
           ))}

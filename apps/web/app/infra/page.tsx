@@ -62,7 +62,7 @@ function Code({ content, lang }: { content: string; lang: string }) {
 
 export default function InfraPage() {
   return (
-    <main className="wrap page" tabIndex={-1}>
+    <main id="main" className="wrap page" tabIndex={-1}>
       <TerminalWindow path="~/infra">
         <SectionHeader marker="infra" title="Infrastructure" />
         <p className="line type-line">
