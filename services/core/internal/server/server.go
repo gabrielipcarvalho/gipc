@@ -62,7 +62,7 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	// M5 Lab — chaos: kill is cooldown-limited per IP; status is a plain read.
 	mux.Handle("POST /api/lab/chaos", chaosLimiter.Middleware(http.HandlerFunc(chaosKillHandler(killer, cfg, log, labHub))))
 	mux.HandleFunc("GET /api/lab/chaos/status", chaosStatusHandler(prom, killer, cfg))
-	mux.Handle("GET /api/lab/loadtest", loadLimiter.Middleware(http.HandlerFunc(loadTestHandler(cfg, srvCtx, labHub)))) // bounded SSE load
+	mux.Handle("GET /api/lab/loadtest", loadLimiter.Middleware(http.HandlerFunc(loadTestHandler(cfg, srvCtx, labHub, log)))) // bounded SSE load
 	mux.HandleFunc("GET /api/lab/events", labEventsHandler(labHub, srvCtx, cfg))
 	mux.HandleFunc("GET /api/lab/ratelimit", labRateLimitHandler(limiter))
 
