@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     oracle_history_turns: int = 6
     oracle_history_char_cap: int = 4000
     tool_rounds_max: int = 4
+    jd_rate_per_hour: int = 3  # stricter — the JD analyzer is expensive
+    jd_max_tokens: int = 3500
 
     @property
     def anthropic_configured(self) -> bool:

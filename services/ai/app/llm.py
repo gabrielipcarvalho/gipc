@@ -13,6 +13,8 @@ from .config import get_settings
 class LLM(Protocol):
     def stream(self, **kwargs: Any) -> Any: ...  # -> async context manager (MessageStreamManager-like)
 
+    async def create(self, **kwargs: Any) -> Any: ...  # -> Message (.content/.usage/.stop_reason)
+
 
 class AnthropicLLM:
     def __init__(self, api_key: str) -> None:
@@ -22,6 +24,9 @@ class AnthropicLLM:
 
     def stream(self, **kwargs: Any) -> Any:
         return self._client.messages.stream(**kwargs)
+
+    async def create(self, **kwargs: Any) -> Any:
+        return await self._client.messages.create(**kwargs)
 
 
 _llm: LLM | None = None

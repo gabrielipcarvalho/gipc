@@ -738,3 +738,45 @@ a{ color:inherit; text-decoration:none; }
 .card-oracle{ margin-top:.7rem; }
 .card-oracle a{ color:var(--violet); font-size:var(--fs-xs); letter-spacing:.03em; text-decoration:none; }
 .card-oracle a:hover{ color:var(--violet-bright); }
+
+/* ── Oracle tabs + Paste-a-JD ────────────────────────────────────────────── */
+.oracle-tablist{ display:flex; gap:.4rem; margin-top:1.2rem; border-bottom:1px solid var(--border); }
+.oracle-tab{ background:none; border:none; border-bottom:2px solid transparent; padding:.5rem .9rem;
+  color:var(--text-muted); font:inherit; font-size:var(--fs-sm); cursor:pointer; }
+.oracle-tab:hover{ color:var(--text); }
+.oracle-tab.active{ color:var(--cyan); border-bottom-color:var(--cyan); }
+.oracle-tab:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+.oracle-tabpanel:focus-visible{ outline:none; }
+
+.jd{ margin-top:1.1rem; display:flex; flex-direction:column; gap:1rem; }
+.jd-form{ display:flex; flex-direction:column; gap:.55rem; }
+.jd-input{ width:100%; background:var(--bg-elev); border:1px solid var(--border); border-radius:6px;
+  padding:.7rem .8rem; color:var(--text); font:inherit; font-size:var(--fs-body); line-height:1.5;
+  resize:vertical; min-height:9rem; }
+.jd-input:focus-visible{ outline:2px solid var(--cyan); outline-offset:1px; border-color:var(--border-cyan); }
+.jd-input:disabled{ opacity:.55; }
+.jd-pending{ color:var(--text-muted); font-size:var(--fs-sm); }
+
+.jd-result{ display:flex; flex-direction:column; gap:1.3rem; }
+.jd-h{ font-size:var(--fs-h2); color:var(--violet); margin:0 0 .5rem; }
+.jd-table-wrap{ overflow-x:auto; }
+.jd-table{ width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+.jd-caption{ text-align:left; color:var(--text-faint); font-size:var(--fs-xs); margin-bottom:.4rem; }
+.jd-table th, .jd-table td{ text-align:left; vertical-align:top; padding:.55rem .6rem;
+  border-bottom:1px solid var(--border); }
+.jd-table th{ color:var(--text-faint); font-weight:600; font-size:var(--fs-xs); letter-spacing:.03em; }
+.jd-ev{ margin:0; padding-left:1.1rem; display:flex; flex-direction:column; gap:.2rem; color:var(--text-muted); }
+.jd-none{ color:var(--text-faint); }
+.jd-badge{ display:inline-flex; align-items:center; gap:.35rem; font-size:var(--fs-xs);
+  letter-spacing:.03em; white-space:nowrap; }
+.jd-badge.strong{ color:var(--ok); }
+.jd-badge.partial{ color:var(--warn); }
+.jd-badge.gap{ color:var(--text-faint); }
+
+.jd-pitch-head{ display:flex; align-items:center; gap:.9rem; }
+.jd-pitch p{ margin:0; color:var(--text); line-height:1.55; max-width:60ch; }
+.jd-copy{ background:none; border:1px solid var(--border-cyan); border-radius:5px; padding:.25rem .6rem;
+  color:var(--cyan); font:inherit; font-size:var(--fs-xs); cursor:pointer; }
+.jd-copy:hover{ color:var(--cyan-bright); border-color:var(--cyan-bright); }
+.jd-gaps ul{ margin:0; padding-left:1.2rem; display:flex; flex-direction:column; gap:.3rem;
+  color:var(--text-muted); }
