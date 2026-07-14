@@ -1,0 +1,26 @@
+# Isolate the demo namespace: ingress only from ns gipc (core reaches it); egress only DNS + intra-demo.
+# demo is the designated blast-radius zone.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: demo-isolate
+  namespace: demo
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: gipc }
+  egress:
+    # DNS to kube-system (kube-dns)
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    # intra-demo only
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: demo }

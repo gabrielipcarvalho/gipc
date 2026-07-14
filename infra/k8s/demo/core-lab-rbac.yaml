@@ -1,0 +1,26 @@
+# The ONLY new power M5 grants core: a NAMESPACED Role (ns demo) — pods list/delete, nothing else, nowhere
+# else. RoleBinding (in ns demo) binds the core-lab SA that lives in ns gipc (a valid cross-ns binding).
+# These live in the demo kustomization so core's own deploy never couples to the demo namespace existing.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: chaos
+  namespace: demo
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [list, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: core-lab-chaos
+  namespace: demo
+subjects:
+  - kind: ServiceAccount
+    name: core-lab
+    namespace: gipc      # cross-ns subject — must NOT be rewritten by kustomize (no namespace: directive)
+roleRef:
+  kind: Role
+  name: chaos
+  apiGroup: rbac.authorization.k8s.io

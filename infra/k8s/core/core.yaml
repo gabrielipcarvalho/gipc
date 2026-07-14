@@ -13,6 +13,8 @@ data:
   WEB_URL: "http://web:80"                                  # P7 uptime probe target
   UPTIME_INTERVAL: "30s"                                    # P7 probe cadence
   SHUTDOWN_TIMEOUT: "25s"
+  LAB_ENABLED: "false"                                     # M5 — flip to "true" in P2 (needs rollout restart)
+  LAB_NAMESPACE: "demo"                                    # the ONLY ns core's k8s client touches
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -31,6 +33,7 @@ spec:
     metadata:
       labels: { app: core }
     spec:
+      serviceAccountName: core-lab        # M5 — SA whose namespaced Role (ns demo) grants pods list/delete
       terminationGracePeriodSeconds: 30   # ≥ SHUTDOWN_TIMEOUT so /api/* drains on a roll
       securityContext:
         runAsNonRoot: true

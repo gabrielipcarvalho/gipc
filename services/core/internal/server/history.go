@@ -12,8 +12,8 @@ import (
 // History is the metrics-history surface (Grafana-on-display): a few aggregate range series for
 // native arcane sparklines. Only sum(...) series → no per-series/internal labels leak.
 type History struct {
-	Source string                   `json:"source"` // "prometheus" | "unavailable"
-	TS     string                   `json:"ts"`
+	Source string                    `json:"source"` // "prometheus" | "unavailable"
+	TS     string                    `json:"ts"`
 	Series map[string][]promql.Point `json:"series"`
 }
 

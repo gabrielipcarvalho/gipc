@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# NO `namespace:` directive — each manifest declares its own metadata.namespace, and a namespace
+# transformer would rewrite the RoleBinding's cross-ns ServiceAccount subject (gipc → demo) and break the
+# grant. Verify: `kubectl kustomize infra/k8s/demo | grep -A4 subjects` must still show namespace: gipc.
+resources:
+  - 00-namespace.yaml
+  - chaos-target.yaml
+  - netpol.yaml
+  - core-lab-rbac.yaml
