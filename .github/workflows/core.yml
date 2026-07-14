@@ -2,9 +2,7 @@ name: core image
 
 on:
   push:
-    # sprint/m5-lab included so M5 can build the core image from the branch (garuda has no toolchains).
-    # Narrow back to [main] before merging to main (sprint-end step).
-    branches: [main, sprint/m5-lab]
+    branches: [main]
     paths:
       - "services/core/**"
       - ".github/workflows/core.yml"
