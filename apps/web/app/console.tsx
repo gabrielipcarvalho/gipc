@@ -117,7 +117,15 @@ function runCommand(
     case "resume":
       return { out: [<>living résumé → the Construct at <b>/resume</b> · downloadable PDF (preview on /connect).</>], nav: "/resume" };
     case "lab":
-      return { out: ["the lab: sandbox shell · load tests · chaos demos — hardened, coming in a later drop."] };
+      return {
+        out: [
+          <>
+            the lab — live, safe-by-construction infra demos: chaos (kill a pod, watch it heal) · load test
+            (isolated target, live histogram) · events · rate-limit · API playground. → <b>/lab</b>
+          </>,
+        ],
+        nav: "/lab",
+      };
     case "operator":
     case "oracle":
       return { out: [<>the oracle — a tool-using AI operator over my real infra: cited answers + a live trace. → <b>/oracle</b></>], nav: "/oracle" };

@@ -5,7 +5,8 @@ kind: Kustomization
 # core image line below. Keep comments free of the literal tag-key token so the sed can't match them.
 resources:
   - core.yaml
+  - core-lab-sa.yaml
   - ../caddy
 images:
   - name: ghcr.io/gabrielipcarvalho/gipc-core
-    newTag: "edc439685b63866bea8b1ac3fe9749257eb16625"
+    newTag: "8ac2b4988bd73160a55ae084c91e76bca37c4ab1"

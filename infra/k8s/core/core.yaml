@@ -13,6 +13,17 @@ data:
   WEB_URL: "http://web:80"                                  # P7 uptime probe target
   UPTIME_INTERVAL: "30s"                                    # P7 probe cadence
   SHUTDOWN_TIMEOUT: "25s"
+  LAB_ENABLED: "true"                                      # M5 — chaos/lab handlers active (P2)
+  LAB_NAMESPACE: "demo"                                    # the ONLY ns core's k8s client touches
+  CHAOS_RPS: "0.1"                                         # chaos-kill per-IP cooldown ≈ 1 / 10s
+  CHAOS_BURST: "1"                                         # single-flight per IP
+  LOAD_TARGET_URL: "http://chaos-target.demo"             # FIXED load target (isolated demo echo) — no SSRF
+  LOAD_MAX_CONCURRENCY: "50"                              # code-clamped ceiling
+  LOAD_MAX_SECONDS: "10"                                  # code-clamped ceiling
+  LOAD_MAX_RUNS: "4"                                      # global concurrent-run ceiling
+  LOAD_RPS: "0.2"                                         # per-IP cooldown ≈ 1 run / 5s
+  LOAD_BURST: "1"
+  LAB_EVENT_HEARTBEAT: "10s"                              # /api/lab/events heartbeat cadence
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -31,6 +42,7 @@ spec:
     metadata:
       labels: { app: core }
     spec:
+      serviceAccountName: core-lab        # M5 — SA whose namespaced Role (ns demo) grants pods list/delete
       terminationGracePeriodSeconds: 30   # ≥ SHUTDOWN_TIMEOUT so /api/* drains on a roll
       securityContext:
         runAsNonRoot: true

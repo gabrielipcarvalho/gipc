@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -17,7 +18,7 @@ type bucket struct {
 }
 
 // Limiter is a per-client token-bucket rate limiter (stdlib only — no external deps).
-// Clients are keyed by CF-Connecting-IP (see clientIP) so the limit is genuinely per-visitor
+// Clients are keyed by CF-Connecting-IP (see ClientIP) so the limit is genuinely per-visitor
 // behind the Cloudflare → cloudflared → Caddy → core proxy chain, not one global bucket.
 type Limiter struct {
 	mu      sync.Mutex
@@ -25,6 +26,24 @@ type Limiter struct {
 	rps     float64
 	burst   float64
 	ttl     time.Duration
+	denied  atomic.Int64 // cumulative 429s since start (for the lab rate-limit visualizer — aggregate only)
+}
+
+// RateLimitSnapshot is the AGGREGATE-only view for the lab visualizer — never bucket keys (IPs) or tokens.
+// Denied is cumulative since process start; the client renders a rate from successive-snapshot deltas.
+type RateLimitSnapshot struct {
+	RPS           float64 `json:"rps"`
+	Burst         int     `json:"burst"`
+	ActiveBuckets int     `json:"activeBuckets"`
+	Denied        int64   `json:"denied"`
+}
+
+// Snapshot returns the limiter's live aggregate state. No per-IP data is exposed.
+func (l *Limiter) Snapshot() RateLimitSnapshot {
+	l.mu.Lock()
+	n := len(l.buckets)
+	l.mu.Unlock()
+	return RateLimitSnapshot{RPS: l.rps, Burst: int(l.burst), ActiveBuckets: n, Denied: l.denied.Load()}
 }
 
 // NewLimiter builds a limiter refilling at rps tokens/sec with a bucket size of burst.
@@ -83,7 +102,8 @@ func (l *Limiter) sweepLoop() {
 // Middleware enforces the limit, returning 429 + Retry-After on refusal.
 func (l *Limiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !IsHealthPath(r.URL.Path) && !l.allow(clientIP(r), time.Now()) {
+		if !IsHealthPath(r.URL.Path) && !l.allow(ClientIP(r), time.Now()) {
+			l.denied.Add(1)
 			retry := 1
 			if l.rps > 0 {
 				retry = int(1.0/l.rps) + 1
@@ -96,9 +116,9 @@ func (l *Limiter) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// clientIP resolves the real client address behind the proxy chain:
+// ClientIP resolves the real client address behind the proxy chain:
 // CF-Connecting-IP (injected by Cloudflare, survives cloudflared→Caddy) → leftmost X-Forwarded-For → RemoteAddr.
-func clientIP(r *http.Request) string {
+func ClientIP(r *http.Request) string {
 	if ip := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); ip != "" {
 		return ip
 	}

@@ -1,0 +1,7 @@
+# The core-lab ServiceAccount (ns gipc), referenced by the core Deployment's serviceAccountName. Its ONLY
+# power comes from the RoleBinding in ns demo (infra/k8s/demo/core-lab-rbac.yaml): pods list/delete in demo.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: core-lab
+  namespace: gipc

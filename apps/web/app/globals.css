@@ -795,3 +795,86 @@ a{ color:inherit; text-decoration:none; }
 .oracle-thinking-dots span:nth-child(2){ animation-delay:.18s; }
 .oracle-thinking-dots span:nth-child(3){ animation-delay:.36s; }
 @keyframes oracle-pulse{ 0%,80%,100%{ opacity:.3; transform:translateY(0); } 40%{ opacity:1; transform:translateY(-2px); } }
+
+/* ── The Lab (M5) ─────────────────────────────────────────────────────────── */
+.lab{ margin-top:1.2rem; display:grid; gap:1.1rem; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); }
+.lab-panel{ background:var(--bg-elev); border:1px solid var(--border); border-radius:8px; padding:1.1rem 1.15rem;
+  display:flex; flex-direction:column; gap:.7rem; }
+.lab-h{ font-size:var(--fs-h2); color:var(--violet); margin:0; }
+.lab-lead{ margin:0; color:var(--text-muted); font-size:var(--fs-sm); line-height:1.55; }
+.lab-lead code{ color:var(--cyan); }
+.lab-msg{ margin:0; min-height:1.2em; color:var(--text-muted); font-size:var(--fs-sm); }
+
+/* chaos */
+.chaos-status{ display:flex; flex-direction:column; gap:.55rem; }
+.chaos-count{ color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.04em; }
+.chaos-pods{ display:flex; flex-wrap:wrap; gap:.5rem; }
+.chaos-pod{ display:inline-flex; align-items:center; gap:.35rem; font-size:var(--fs-xs); letter-spacing:.03em;
+  border:1px solid var(--border); border-radius:5px; padding:.25rem .55rem; white-space:nowrap; }
+.chaos-pod.up{ color:var(--ok); border-color:color-mix(in srgb, var(--ok) 40%, var(--border)); }
+.chaos-pod.recovering{ color:var(--warn); border-color:color-mix(in srgb, var(--warn) 40%, var(--border)); }
+.chaos-kill,.load-start,.load-stop{ background:none; border:1px solid var(--border-cyan); border-radius:6px;
+  padding:.45rem 1rem; color:var(--cyan); font:inherit; font-size:var(--fs-sm); cursor:pointer; align-self:flex-start; }
+.chaos-kill:hover:not(:disabled),.load-start:hover,.load-stop:hover{ color:var(--cyan-bright); border-color:var(--cyan-bright); }
+.chaos-kill:disabled{ opacity:.45; cursor:not-allowed; }
+
+/* load test */
+.load-controls{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:.75rem; }
+.load-field{ display:flex; flex-direction:column; gap:.25rem; color:var(--text-faint); font-size:var(--fs-xs);
+  letter-spacing:.03em; }
+.load-field input{ width:5.5rem; background:var(--bg); border:1px solid var(--border); border-radius:5px;
+  padding:.4rem .5rem; color:var(--text); font:inherit; font-size:var(--fs-sm); }
+.load-field input:focus-visible{ outline:2px solid var(--cyan); outline-offset:1px; border-color:var(--border-cyan); }
+.load-field input:disabled{ opacity:.55; }
+.load-hist{ display:flex; align-items:flex-end; gap:2px; height:96px; padding:.4rem .1rem; border-bottom:1px solid var(--border); }
+.load-bar{ flex:1 1 0; min-height:2px; background:var(--violet); opacity:.85; border-radius:1px 1px 0 0;
+  transition:height .2s ease; }
+.load-stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(70px,1fr)); gap:.6rem .9rem; margin:0; }
+.load-stats div{ display:flex; flex-direction:column; gap:.1rem; }
+.load-stats dt{ color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.04em; }
+.load-stats dd{ margin:0; color:var(--cyan); font-size:var(--fs-body); }
+
+/* ── The Lab (M5) · P6 panels ─────────────────────────────────────────────── */
+.lab-wide{ grid-column:1/-1; }
+.lab-empty{ margin:0; color:var(--text-faint); font-size:var(--fs-sm); }
+.lab-note{ margin:0; color:var(--text-faint); font-size:var(--fs-xs); line-height:1.5; }
+
+/* event stream */
+.evt-log{ list-style:none; margin:0; padding:.4rem .1rem; display:flex; flex-direction:column; gap:.4rem;
+  max-height:260px; overflow:auto; }
+.evt-log:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+.evt-row{ display:grid; grid-template-columns:auto 1fr auto; align-items:baseline; gap:.6rem;
+  font-size:var(--fs-sm); }
+.evt-kind{ font-size:var(--fs-xs); letter-spacing:.04em; text-transform:uppercase;
+  border:1px solid var(--border); border-radius:4px; padding:.05rem .4rem; white-space:nowrap; }
+.evt-kind.chaos{ color:var(--violet); border-color:color-mix(in srgb, var(--violet) 40%, var(--border)); }
+.evt-kind.loadtest{ color:var(--cyan); border-color:var(--border-cyan); }
+.evt-kind.other{ color:var(--text-muted); }
+.evt-detail{ color:var(--text-muted); min-width:0; word-break:break-word; }
+.evt-when{ color:var(--text-faint); font-size:var(--fs-xs); white-space:nowrap; }
+
+/* rate-limit cells */
+.rl-cells{ display:flex; flex-wrap:wrap; gap:3px; }
+.rl-cell{ width:1.05rem; height:1.05rem; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:3px; font-size:var(--fs-xs); border:1px solid var(--border); }
+.rl-cell.ok{ color:var(--ok); border-color:color-mix(in srgb, var(--ok) 40%, var(--border)); }
+.rl-cell.limited{ color:var(--warn); border-color:color-mix(in srgb, var(--warn) 40%, var(--border)); }
+.rl-cell.failed{ color:var(--text-faint); }
+
+/* API playground */
+.pg-tabs{ display:flex; flex-wrap:wrap; gap:.4rem; }
+.pg-tab{ background:none; border:1px solid var(--border); border-radius:6px; padding:.35rem .8rem;
+  color:var(--text-muted); font:inherit; font-size:var(--fs-sm); cursor:pointer; }
+.pg-tab:hover:not(:disabled){ color:var(--text); border-color:var(--border-cyan); }
+.pg-tab[aria-pressed="true"]{ color:var(--cyan); border-color:var(--cyan); }
+.pg-tab:disabled{ opacity:.55; cursor:not-allowed; }
+.pg-result{ display:flex; flex-direction:column; gap:.7rem; }
+.pg-meta{ display:flex; flex-wrap:wrap; gap:.5rem 1.2rem; margin:0; }
+.pg-meta div{ display:flex; flex-direction:column; gap:.1rem; }
+.pg-meta dt{ color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.04em; }
+.pg-meta dd{ margin:0; color:var(--text); font-size:var(--fs-sm); }
+.pg-meta dd[data-ok]{ color:var(--ok); }
+.pg-body{ margin:0; background:var(--bg); border:1px solid var(--border); border-radius:6px;
+  padding:.7rem .8rem; max-height:320px; overflow:auto; color:var(--text-muted);
+  font-size:var(--fs-xs); line-height:1.5; white-space:pre; }
+.pg-body:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }

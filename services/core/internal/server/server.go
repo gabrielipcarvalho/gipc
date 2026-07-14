@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/config"
+	"github.com/gabrielipcarvalho/gipc/services/core/internal/k8s"
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/loki"
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/middleware"
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/promql"
@@ -31,6 +32,21 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	deploys := newDeployStore()
 	uptime := newUptimeMonitor(cfg)
 
+	// M5 Lab — the k8s client (nil when disabled/uninit'd → lab handlers 503). Build as an untyped-nil
+	// interface so the `killer == nil` guard fires (a nil *k8s.Client in an interface is a typed-nil).
+	k8sc, err := k8s.New(cfg)
+	if err != nil {
+		log.Warn("lab k8s client init failed — chaos disabled", "err", err)
+		k8sc = nil
+	}
+	var killer podKiller
+	if k8sc != nil {
+		killer = k8sc
+	}
+	chaosLimiter := middleware.NewLimiter(cfg.ChaosRPS, cfg.ChaosBurst) // per-IP cooldown ≈ 1 kill / 10s
+	loadLimiter := middleware.NewLimiter(cfg.LoadRPS, cfg.LoadBurst)    // per-IP cooldown ≈ 1 run / 5s
+	labHub := newHub()                                                  // lab lifecycle events — separate from /api/stream
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/healthz", healthz)
 	mux.HandleFunc("GET /api/readyz", readyz)
@@ -41,8 +57,14 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	mux.HandleFunc("GET /api/deploys", deploysHandler(deploys))
 	mux.HandleFunc("GET /api/metrics/history", historyHandler(prom)) // aggregate range series (Grafana-on-display)
 	mux.HandleFunc("GET /api/logs", logsHandler(lk))                 // fixed+redacted log surface (Loki-on-display)
-	mux.HandleFunc("GET /api/trace", traceHandler())                // per-visitor real request path
-	mux.HandleFunc("GET /api/uptime", uptimeHandler(uptime))        // probe/incident history (loop started in main)
+	mux.HandleFunc("GET /api/trace", traceHandler())                 // per-visitor real request path
+	mux.HandleFunc("GET /api/uptime", uptimeHandler(uptime))         // probe/incident history (loop started in main)
+	// M5 Lab — chaos: kill is cooldown-limited per IP; status is a plain read.
+	mux.Handle("POST /api/lab/chaos", chaosLimiter.Middleware(http.HandlerFunc(chaosKillHandler(killer, cfg, log, labHub))))
+	mux.HandleFunc("GET /api/lab/chaos/status", chaosStatusHandler(prom, killer, cfg))
+	mux.Handle("GET /api/lab/loadtest", loadLimiter.Middleware(http.HandlerFunc(loadTestHandler(cfg, srvCtx, labHub, log)))) // bounded SSE load
+	mux.HandleFunc("GET /api/lab/events", labEventsHandler(labHub, srvCtx, cfg))
+	mux.HandleFunc("GET /api/lab/ratelimit", labRateLimitHandler(limiter))
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never
