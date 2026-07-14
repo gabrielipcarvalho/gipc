@@ -13,8 +13,10 @@ data:
   WEB_URL: "http://web:80"                                  # P7 uptime probe target
   UPTIME_INTERVAL: "30s"                                    # P7 probe cadence
   SHUTDOWN_TIMEOUT: "25s"
-  LAB_ENABLED: "false"                                     # M5 — flip to "true" in P2 (needs rollout restart)
+  LAB_ENABLED: "true"                                      # M5 — chaos/lab handlers active (P2)
   LAB_NAMESPACE: "demo"                                    # the ONLY ns core's k8s client touches
+  CHAOS_RPS: "0.1"                                         # chaos-kill per-IP cooldown ≈ 1 / 10s
+  CHAOS_BURST: "1"                                         # single-flight per IP
 ---
 apiVersion: apps/v1
 kind: Deployment

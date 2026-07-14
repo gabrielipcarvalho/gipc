@@ -2,8 +2,9 @@ name: core image
 
 on:
   push:
-    # M3 sprint complete — core builds on main only (branch build no longer needed).
-    branches: [main]
+    # sprint/m5-lab included so M5 can build the core image from the branch (garuda has no toolchains).
+    # Narrow back to [main] before merging to main (sprint-end step).
+    branches: [main, sprint/m5-lab]
     paths:
       - "services/core/**"
       - ".github/workflows/core.yml"
@@ -61,17 +62,17 @@ jobs:
       - name: GitOps — pin manifest to this image (deploy feed)
         id: pin
         run: |
-          # rebase-retry: two workflows can race to pin on the same main push; the loser fetches the
-          # winner's commit, re-applies its own tag, and retries. FETCH_HEAD is fresh on a shallow clone.
+          # rebase-retry (Sprint-C pattern), BRANCH-AWARE: this workflow also runs on the sprint branch,
+          # so fetch/push the triggering ref — never hardcode main.
           git config user.name  "gipc-ci"
           git config user.email "ci@gipc.dev"
           for attempt in 1 2 3 4 5; do
-            git fetch origin main
+            git fetch origin "$GITHUB_REF_NAME"
             git reset --hard FETCH_HEAD
             sed -i "s|newTag: .*|newTag: \"${GITHUB_SHA}\"|" infra/k8s/core/kustomization.yaml
             if git diff --quiet; then echo "already pinned"; exit 0; fi
             git commit -am "deploy(core): ${GITHUB_SHA:0:7} → gipc.dev [skip ci]"
-            if git push; then echo "pinned (attempt $attempt)"; exit 0; fi
+            if git push origin HEAD:"$GITHUB_REF_NAME"; then echo "pinned (attempt $attempt)"; exit 0; fi
             echo "push rejected — another workflow pushed; retrying"
             [ "$attempt" -lt 5 ] && sleep $((attempt * 3))
           done
