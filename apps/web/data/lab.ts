@@ -20,3 +20,12 @@ export type LabEvent = { kind: string; ts: string; detail?: string }; // P6
 export type RateLimitSnapshot = { rps: number; burst: number; activeBuckets: number; denied: number }; // P6
 
 export type LabError = { error: string };
+
+// API-playground allowlist — fixed read-only GET paths (method is never a caller field → SSRF-safe).
+export type ApiEndpoint = { label: string; path: string; note: string };
+export const PLAYGROUND_ENDPOINTS: readonly ApiEndpoint[] = [
+  { label: "version", path: "/api/version", note: "build sha + version" },
+  { label: "status", path: "/api/status", note: "live platform metrics" },
+  { label: "uptime", path: "/api/uptime", note: "probe / incident history" },
+  { label: "deploys", path: "/api/deploys", note: "recent deploy events" },
+];
