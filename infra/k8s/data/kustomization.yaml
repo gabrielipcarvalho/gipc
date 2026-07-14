@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: data
+resources:
+  - 00-namespace.yaml
+  - postgres.yaml
+# No images: pin — pgvector/pgvector:pg16 is upstream, not CI-built. The real `postgres` Secret is
+# imperative-only (postgres.secret.example.yaml is the shape; deliberately NOT a resource here).
