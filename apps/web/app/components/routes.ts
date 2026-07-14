@@ -5,6 +5,7 @@ export type Route = { href: string; label: string };
 
 export const ROUTES: readonly Route[] = [
   { href: "/system", label: "system" },
+  { href: "/oracle", label: "oracle" },
   { href: "/status", label: "status" },
   { href: "/infra", label: "infra" },
   { href: "/work", label: "work" },

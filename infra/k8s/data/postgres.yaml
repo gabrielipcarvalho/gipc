@@ -1,0 +1,102 @@
+# Postgres + pgvector — the M4 vector store. Isolated in ns `data`, ClusterIP only, NetworkPolicy-gated:
+# nothing outside ns `gipc` can reach it, and it is never exposed via Caddy/tunnel/NodePort.
+# Password comes from the IMPERATIVE Secret `postgres` (see postgres.secret.example.yaml for the shape).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: data
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path   # explicit (k3s default) — pins behavior, matches prometheus.yaml precedent
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: data
+  labels: { app: postgres }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO PVC — RollingUpdate would deadlock on the volume
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      terminationGracePeriodSeconds: 60   # clean shutdown/checkpoint
+      automountServiceAccountToken: false # postgres never talks to the k8s API
+      securityContext:                     # non-root: uid/gid 999 = postgres in the Debian-based image
+        runAsUser: 999
+        runAsGroup: 999
+        runAsNonRoot: true
+        fsGroup: 999                       # no-op on hostPath-backed local-path, kept future-proof
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg16
+          ports:
+            - { containerPort: 5432, name: pg }
+          env:
+            - { name: POSTGRES_DB, value: gipc_ai }
+            - { name: POSTGRES_USER, value: gipc }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: postgres, key: password }
+            # subdir: local-path's mount root isn't guaranteed empty; initdb wants to own its dir (0700)
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+          readinessProbe:
+            exec:
+              # -h 127.0.0.1 (TCP) — the entrypoint's init-time temp server is socket-only, so this
+              # can't report ready during first-boot initialization
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "gipc", "-d", "gipc_ai"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "gipc", "-d", "gipc_ai"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: postgres-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: data
+  labels: { app: postgres }
+spec:
+  type: ClusterIP
+  selector: { app: postgres }
+  ports:
+    - { port: 5432, targetPort: 5432, name: pg }
+---
+# Defense-in-depth: default-deny ingress to postgres; ONLY pods in ns `gipc` may connect (port 5432).
+# k3s enforces NetworkPolicy by default (embedded kube-router controller alongside flannel).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-ingress
+  namespace: data
+spec:
+  podSelector:
+    matchLabels: { app: postgres }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: gipc }
+      ports:
+        - { protocol: TCP, port: 5432 }
