@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { JdAnalysis, JdStrength } from "../../data/oracle";
 import { mapOracleError } from "../../data/oracleErrors";
 import { TurnstileWidget } from "./TurnstileWidget";
+import { MatrixText } from "./MatrixText";
 
 /* Paste-a-JD: a JD in → an evidence-mapped analysis out (one-shot JSON, not streamed). Every strength is
    cited to a real résumé fact by the backend; gaps are honest. Non-color strength cues (symbol + word).
@@ -25,6 +26,7 @@ export function JdAnalyzer() {
   const [token, setToken] = useState("");
   const [botUnavailable, setBotUnavailable] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [engaged, setEngaged] = useState(false);
   const resetTurnstile = useRef<(() => void) | null>(null);
 
   async function submit(e: React.FormEvent) {
@@ -89,6 +91,7 @@ export function JdAnalyzer() {
           rows={8}
           placeholder="Paste the full JD. The oracle maps each requirement to real résumé evidence, writes a pitch, and lists gaps honestly."
           onChange={(e) => setText(e.target.value)}
+          onFocus={() => setEngaged(true)}
           disabled={phase === "pending"}
         />
         <div className="oracle-controls">
@@ -101,8 +104,10 @@ export function JdAnalyzer() {
         </div>
         {botUnavailable ? (
           <p className="oracle-note">bot check unavailable — the analyzer needs it.</p>
-        ) : (
+        ) : engaged ? (
           <TurnstileWidget onToken={setToken} onError={() => setBotUnavailable(true)} resetRef={resetTurnstile} />
+        ) : (
+          <p className="oracle-note">a quick bot check appears when you start typing.</p>
         )}
       </form>
 
@@ -164,7 +169,9 @@ export function JdAnalyzer() {
                 {copied ? "copied ✓" : "copy"}
               </button>
             </div>
-            <p>{result.pitch}</p>
+            <p className="oracle-answer">
+              <MatrixText text={result.pitch} />
+            </p>
           </div>
 
           {result.gaps.length > 0 && (

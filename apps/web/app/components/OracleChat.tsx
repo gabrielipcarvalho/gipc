@@ -6,6 +6,7 @@ import type { OracleCitation, OracleFrame } from "../../data/oracle";
 import { mapOracleError } from "../../data/oracleErrors";
 import { firstStation } from "../../data/construct";
 import { TurnstileWidget } from "./TurnstileWidget";
+import { MatrixText } from "./MatrixText";
 
 /* The oracle chat. Streams POST /api/ai/oracle (SSE via fetch+getReader — EventSource can't POST).
    All facts about the operator come from the backend's cited retrieval; the trace panel is the
@@ -15,12 +16,16 @@ import { TurnstileWidget } from "./TurnstileWidget";
 const MSG_MAX = 2000;
 const bySlug = new Map(projects.map((p) => [p.slug, p]));
 
-type ChatMessage = { role: "user" | "assistant"; content: string; citations?: OracleCitation[] };
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  citations?: OracleCitation[];
+  cost?: number;
+};
 
 export function OracleChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [answer, setAnswer] = useState("");
   const [trace, setTrace] = useState<OracleFrame[]>([]);
   const [done, setDone] = useState<{ tokens_in: number; tokens_out: number; est_cost: number } | null>(null);
   const [phase, setPhase] = useState<"idle" | "streaming" | "error">("idle");
@@ -28,6 +33,7 @@ export function OracleChat() {
   const [token, setToken] = useState("");
   const [botUnavailable, setBotUnavailable] = useState(false);
   const [context, setContext] = useState<string | null>(null);
+  const [engaged, setEngaged] = useState(false); // lazy-mount Turnstile only once the visitor engages
 
   const disposed = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -56,7 +62,6 @@ export function OracleChat() {
     const history = messages.slice(-12).map((m) => ({ role: m.role, content: m.content.slice(0, MSG_MAX) }));
     setMessages((m) => [...m, { role: "user", content: msg }]);
     setInput("");
-    setAnswer("");
     setTrace([]);
     setDone(null);
     setPhase("streaming");
@@ -66,6 +71,7 @@ export function OracleChat() {
     abortRef.current = ctrl;
     let acc = "";
     let cites: OracleCitation[] = [];
+    let doneCost: number | undefined;
     let hadError = false;
     try {
       const res = await fetch("/api/ai/oracle", {
@@ -104,12 +110,12 @@ export function OracleChat() {
             continue; // a malformed frame must not kill the read loop
           }
           if (f.type === "token") {
-            acc += f.text;
-            if (!disposed.current) setAnswer(acc);
+            acc += f.text; // buffered — the full answer is decode-revealed on commit, not streamed raw
           } else if (f.type === "trace") {
             if (f.kind === "retrieval") cites = f.chunks;
             if (!disposed.current) setTrace((t) => [...t, f]);
           } else if (f.type === "done") {
+            doneCost = f.est_cost;
             if (!disposed.current) setDone(f);
           } else if (f.type === "error") {
             hadError = true;
@@ -122,9 +128,8 @@ export function OracleChat() {
       }
       if (disposed.current) return;
       if (acc.trim() && !hadError) {
-        setMessages((m) => [...m, { role: "assistant", content: acc, citations: cites }]);
+        setMessages((m) => [...m, { role: "assistant", content: acc, citations: cites, cost: doneCost }]);
       }
-      setAnswer("");
       if (!hadError) setPhase("idle");
     } catch (err) {
       if (disposed.current || (err as { name?: string })?.name === "AbortError") return;
@@ -145,7 +150,13 @@ export function OracleChat() {
                 {m.role === "user" ? "you ▸" : "oracle ▸"}
               </span>
               <div className="oracle-body">
-                <p>{m.content}</p>
+                {m.role === "assistant" ? (
+                  <p className="oracle-answer">
+                    <MatrixText text={m.content} />
+                  </p>
+                ) : (
+                  <p>{m.content}</p>
+                )}
                 {m.citations && m.citations.length > 0 && (
                   <p className="oracle-cites">
                     {m.citations.map((c, j) => (
@@ -164,18 +175,30 @@ export function OracleChat() {
                       </a>
                     ) : null;
                   })()}
+                {m.role === "assistant" && m.cost != null && (
+                  <p className="oracle-cost" aria-hidden>
+                    ~${m.cost.toFixed(4)}
+                  </p>
+                )}
               </div>
             </li>
           ))}
         </ol>
 
-        {phase === "streaming" && answer && (
-          <div className="oracle-msg assistant streaming" aria-busy="true">
+        {phase === "streaming" && (
+          <div className="oracle-msg assistant" aria-live="polite">
             <span className="oracle-role" aria-hidden>
               oracle ▸
             </span>
             <div className="oracle-body">
-              <p>{answer}</p>
+              <p className="oracle-thinking">
+                <span className="oracle-thinking-dots" aria-hidden>
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                consulting the grimoire…
+              </p>
             </div>
           </div>
         )}
@@ -198,6 +221,7 @@ export function OracleChat() {
             autoComplete="off"
             placeholder="what runs this site? what's the load right now?"
             onChange={(e) => setInput(e.target.value)}
+            onFocus={() => setEngaged(true)}
             disabled={phase === "streaming"}
           />
           <div className="oracle-controls">
@@ -210,12 +234,14 @@ export function OracleChat() {
           </div>
           {botUnavailable ? (
             <p className="oracle-note">bot check unavailable — the oracle needs it to answer.</p>
-          ) : (
+          ) : engaged ? (
             <TurnstileWidget
               onToken={setToken}
               onError={() => setBotUnavailable(true)}
               resetRef={resetTurnstile}
             />
+          ) : (
+            <p className="oracle-note">a quick bot check appears when you start typing.</p>
           )}
         </form>
       </div>
