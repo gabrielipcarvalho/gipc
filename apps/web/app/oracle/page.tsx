@@ -1,6 +1,6 @@
 import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
-import { OracleChat } from "../components/OracleChat";
+import { OracleTabs } from "../components/OracleTabs";
 import { pageMeta } from "../og";
 
 export const metadata = pageMeta(
@@ -29,11 +29,11 @@ export default function OraclePage() {
         </p>
         <noscript>
           <p className="page-lead">
-            The oracle chat needs JavaScript. The same facts it draws on are on{" "}
+            The oracle chat and JD analyzer need JavaScript. The same facts they draw on are on{" "}
             <a href="/resume">/resume</a>, <a href="/work">/work</a> and <a href="/system">/system</a>.
           </p>
         </noscript>
-        <OracleChat />
+        <OracleTabs />
       </TerminalWindow>
     </main>
   );

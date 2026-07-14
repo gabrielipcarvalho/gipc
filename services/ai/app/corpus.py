@@ -72,7 +72,11 @@ def resume_chunks(resume: dict) -> list[Chunk]:
         body = f"{r['role']} at {r['org']} ({r.get('location', '')}), {r['start']} – {r['end']}."
         if r.get("note"):
             body += f" {r['note']}"
-        body += "\n" + "\n".join(f"- {x}" for x in r.get("bullets", []))
+        # bullets are {text, evidence, keywords} — take ONLY text (evidence ids reference the private
+        # career evidence base and must never enter the public corpus; keywords are internal noise)
+        body += "\n" + "\n".join(
+            f"- {b['text'] if isinstance(b, dict) else b}" for b in r.get("bullets", [])
+        )
         out.append(Chunk("resume", f"Experience — {r['role']} · {r['org']}", "/timeline", body))
 
     for p in resume.get("projects", []):

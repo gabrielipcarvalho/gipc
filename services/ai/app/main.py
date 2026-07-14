@@ -18,7 +18,7 @@ from .config import get_settings
 from .limiter import RateLimiter, RateLimitMiddleware
 from .llm import get_llm
 from .log import AccessLogMiddleware, configure_logging, info
-from .routes import health, oracle, search
+from .routes import health, jd, oracle, search
 
 
 @asynccontextmanager
@@ -49,6 +49,7 @@ def create_app() -> FastAPI:
     # oracle concurrency cap + strict per-IP limiter — on app.state (no module-level shared state)
     app.state.oracle_sem = asyncio.Semaphore(cfg.max_streams)
     app.state.oracle_limiter = RateLimiter(cfg.oracle_rate_per_10min / 600.0, cfg.oracle_rate_per_10min)
+    app.state.jd_limiter = RateLimiter(cfg.jd_rate_per_hour / 3600.0, cfg.jd_rate_per_hour)
 
     limiter = RateLimiter(cfg.rate_limit_rps, cfg.rate_limit_burst)
     app.add_middleware(RateLimitMiddleware, limiter=limiter)  # innermost
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(search.router)
     app.include_router(oracle.router)
+    app.include_router(jd.router)
     info("gipc-ai configured", anthropic_configured=cfg.anthropic_configured)
     return app
 

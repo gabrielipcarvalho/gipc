@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { projects } from "../../data/projects";
 import type { OracleCitation, OracleFrame } from "../../data/oracle";
+import { mapOracleError } from "../../data/oracleErrors";
 import { TurnstileWidget } from "./TurnstileWidget";
 
 /* The oracle chat. Streams POST /api/ai/oracle (SSE via fetch+getReader — EventSource can't POST).
@@ -14,21 +15,6 @@ const MSG_MAX = 2000;
 const bySlug = new Map(projects.map((p) => [p.slug, p]));
 
 type ChatMessage = { role: "user" | "assistant"; content: string; citations?: OracleCitation[] };
-
-function mapError(status: number, code?: string): string {
-  switch (code) {
-    case "oracle not configured":
-      return "the oracle isn't awakened yet — no key bound.";
-    case "the oracle rests — daily budget spent":
-    case "the oracle is temporarily unavailable":
-      return `${code}.`;
-    case "the oracle is busy":
-      return "the oracle is busy — try again in a moment.";
-  }
-  if (status === 403 || code === "turnstile") return "verification failed — solve the check and retry.";
-  if (status === 429 || code === "rate limited") return "too many questions — slow down a moment.";
-  return "the oracle faltered.";
-}
 
 export function OracleChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -94,7 +80,7 @@ export function OracleChat() {
         const body = await res.json().catch(() => ({}));
         if (!disposed.current) {
           setPhase("error");
-          setErrorMsg(mapError(res.status, body?.error));
+          setErrorMsg(mapOracleError(res.status, body?.error));
         }
         return;
       }

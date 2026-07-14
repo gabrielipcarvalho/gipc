@@ -47,6 +47,10 @@ def test_chunks_never_contain_phone_or_private(tmp_path: Path) -> None:
         assert not AU_MOBILE.search(c.content), f"AU mobile pattern in: {c.title}"
         assert PRIVATE_TEXT not in c.content, f"basics.private leaked in: {c.title}"
         assert "career/" not in c.content, f"career path leaked in: {c.title}"
+        # internal MCD evidence ids (keys INTO career/) must never reach the public corpus
+        assert "'evidence'" not in c.content and "evidence:" not in c.content, c.title
+        for marker in ("JDL-", "CHAT-", "GEM-", "GIT-"):
+            assert marker not in c.content, f"evidence id {marker} leaked in: {c.title}"
 
 
 def test_resume_chunks_cover_sections() -> None:

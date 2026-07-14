@@ -22,3 +22,20 @@ export type OracleFrame =
   | { type: "trace"; kind: "tool_result"; name: string; summary: string }
   | { type: "done"; tokens_in: number; tokens_out: number; est_cost: number }
   | { type: "error"; message: string };
+
+// ── Paste-a-JD (POST /api/ai/jd) — mirrors services/ai/app/jd.py ─────────────
+export type JdStrength = "strong" | "partial" | "gap";
+
+export type JdRequirement = {
+  requirement: string;
+  evidence: string[];
+  strength: JdStrength;
+};
+
+export type JdAnalysis = {
+  requirements: JdRequirement[];
+  pitch: string;
+  gaps: string[];
+};
+
+export type JdRequest = { jdText: string; turnstileToken: string };
