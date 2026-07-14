@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     price_in_per_mtok: float = 1.0
     price_out_per_mtok: float = 5.0
     cors_origin: str = "https://gipc.dev"
+    # oracle (P4)
+    audit_salt: SecretStr = SecretStr("")  # ip-hash salt — generated into the k8s Secret at deploy
+    core_base: str = "https://gipc.dev"  # tools GET the site's own public APIs
+    oracle_rate_per_10min: int = 10  # strict per-IP oracle budget
+    oracle_max_tokens: int = 700
+    oracle_history_turns: int = 6
+    oracle_history_char_cap: int = 4000
+    tool_rounds_max: int = 4
 
     @property
     def anthropic_configured(self) -> bool:

@@ -8,10 +8,8 @@ import json
 import logging
 import sys
 import time
-from collections.abc import Awaitable, Callable
 
-from starlette.requests import Request
-from starlette.responses import Response
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 EXEMPT_PATHS = {"/api/ai/readyz"}  # kubelet probe — no access-log noise (and limiter-exempt)
 
@@ -47,18 +45,36 @@ def error(msg: str, **fields: object) -> None:
     log.error(msg, extra={"fields": fields})
 
 
-async def access_log_middleware(
-    request: Request, call_next: Callable[[Request], Awaitable[Response]]
-) -> Response:
-    if request.url.path in EXEMPT_PATHS:
-        return await call_next(request)
-    start = time.monotonic()
-    response = await call_next(request)
-    info(
-        "request",
-        method=request.method,
-        path=request.url.path,
-        status=response.status_code,
-        dur_ms=int((time.monotonic() - start) * 1000),
-    )
-    return response
+class AccessLogMiddleware:
+    """Pure-ASGI access log (streaming-safe: never buffers the body, unlike BaseHTTPMiddleware)."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":  # lifespan/websocket must pass straight through
+            await self.app(scope, receive, send)
+            return
+        path = scope["path"]
+        if path in EXEMPT_PATHS:
+            await self.app(scope, receive, send)
+            return
+        start = time.monotonic()
+        status = 500  # default if http.response.start never arrives (e.g. crash mid-stream)
+
+        async def send_wrapper(message: Message) -> None:
+            nonlocal status
+            if message["type"] == "http.response.start":
+                status = message["status"]
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        finally:
+            info(
+                "request",
+                method=scope["method"],
+                path=path,
+                status=status,
+                dur_ms=int((time.monotonic() - start) * 1000),
+            )
