@@ -7,4 +7,4 @@ resources:
   - ai.yaml
 images:
   - name: ghcr.io/gabrielipcarvalho/gipc-ai
-    newTag: "461c49ae9cca665b3b070012bc45a6d020849cc3"
+    newTag: "0eae7fc7bc2c22041b0a57445b51a8f552e15c12"
