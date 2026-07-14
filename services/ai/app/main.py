@@ -27,6 +27,8 @@ async def lifespan(app: FastAPI):
     await db.open_pool()
     await db.ensure_schema()  # best-effort — failure is logged and retried lazily on first search
     get_llm()  # build the Anthropic client if a key is configured (cheap, no network); else stays None
+    if get_settings().anthropic_configured and not get_settings().audit_salt.get_secret_value():
+        info("AUDIT_SALT empty — oracle audit IP hashes are reversible (set the Secret)", degraded=True)
     if os.environ.get("SKIP_EMBEDDER_WARMUP") != "1":  # tests/dev without the baked model
         try:
             from .embedder import get_embedder

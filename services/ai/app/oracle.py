@@ -73,6 +73,10 @@ def _trim_history(history: list, turns: int, char_cap: int) -> list[dict]:
             break
         out.append({"role": t.role, "content": t.content})
     out.reverse()
+    # The window MUST start on a user turn (+ the current user turn is appended after) — the Anthropic
+    # Messages API rejects a leading assistant turn. Trimming can leave one; drop it.
+    while out and out[0]["role"] == "assistant":
+        out.pop(0)
     return out
 
 
@@ -134,7 +138,7 @@ async def run_oracle(
                 for block in final.content:
                     if getattr(block, "type", None) != "tool_use":
                         continue
-                    yield frame("trace", kind="tool_call", name=block.name, args=block.input)
+                    yield frame("trace", kind="tool_call", name=block.name, args=block.input or {})
                     result = await dispatch(block.name, block.input or {}, http, cfg)
                     tools_used.append(block.name)
                     yield frame("trace", kind="tool_result", name=block.name, summary=_summary(result))
