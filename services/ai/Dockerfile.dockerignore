@@ -1,0 +1,10 @@
+# Allow-list context for the gipc-ai build (context = repo root). Everything excluded except the
+# explicit corpus + service sources — keeps private dirs (career/) and junk (node_modules, .venv)
+# out of the build context entirely. dockerignore negations re-include nested paths after `*`.
+*
+!services/ai/app
+!services/ai/pyproject.toml
+!services/ai/uv.lock
+!services/ai/corpus
+!resume/resume.json
+!apps/web/data/projects.json
