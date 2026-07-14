@@ -75,7 +75,9 @@ export function ConstructShell({ children }: { children: React.ReactNode }) {
         const target = el.matches("[data-station]") ? el : el.querySelector<HTMLElement>("[data-station]");
         if (!(target instanceof HTMLElement)) return;
         if (mode === "immersive") {
-          const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-station]"));
+          // scope to the construct root — the SAME set/order Immersive positions (index must match)
+          const scope = rootRef.current ?? document;
+          const cards = Array.from(scope.querySelectorAll<HTMLElement>("[data-station]"));
           const idx = cards.indexOf(target);
           // instant scroll (like Immersive's own focusin nav) — the camera lerp animates the descent;
           // "smooth" fights the rAF loop and gets cancelled

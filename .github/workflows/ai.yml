@@ -2,9 +2,9 @@ name: ai image
 
 on:
   push:
-    # sprint/m4-operator is included so the sprint can build the amd64 image from the branch.
-    # Narrow to [main] before merging to main (sprint-end step).
-    branches: [main, sprint/m4-operator]
+    # Deploy = merge to main. (During the M4 sprint this also built from sprint/m4-operator; narrowed to
+    # [main] at sprint end.)
+    branches: [main]
     paths:
       - "services/ai/**"
       - "resume/resume.json"          # baked into the corpus — edits must rebuild the image
