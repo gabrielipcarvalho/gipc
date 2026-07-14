@@ -134,7 +134,9 @@ export function OracleChat() {
         }
       }
       if (disposed.current) return;
-      if (acc.trim()) setMessages((m) => [...m, { role: "assistant", content: acc, citations: cites }]);
+      if (acc.trim() && !hadError) {
+        setMessages((m) => [...m, { role: "assistant", content: acc, citations: cites }]);
+      }
       setAnswer("");
       if (!hadError) setPhase("idle");
     } catch (err) {
