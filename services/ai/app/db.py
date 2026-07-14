@@ -37,8 +37,14 @@ async def _ping() -> bool:
     if not dsn:
         return False
     try:
-        async with await psycopg.AsyncConnection.connect(dsn, connect_timeout=2) as conn:
-            await conn.execute("SELECT 1")
-        return True
+        # wait_for bounds the WHOLE ping — connect_timeout only covers TCP/auth, and a wedged-but-
+        # accepting postgres must not hang healthz requests
+        return await asyncio.wait_for(_connect_and_select(dsn), timeout=3.0)
     except Exception:
         return False
+
+
+async def _connect_and_select(dsn: str) -> bool:
+    async with await psycopg.AsyncConnection.connect(dsn, connect_timeout=2) as conn:
+        await conn.execute("SELECT 1")
+    return True

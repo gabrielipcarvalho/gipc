@@ -47,6 +47,8 @@ async def test_rate_limit_429_and_readyz_exempt() -> None:
         limited = await c.get("/api/ai/version", headers=headers)
         if limited.status_code == 429:
             assert "retry-after" in {k.lower() for k in limited.headers}
+        # healthz is NOT exempt — the QA-r1 HIGH; a regression re-exempting it must fail here
+        assert (await c.get("/api/ai/healthz", headers=headers)).status_code == 429
         # readyz stays exempt for the same hammered client
         r = await c.get("/api/ai/readyz", headers=headers)
         assert r.status_code == 200

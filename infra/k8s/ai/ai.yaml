@@ -4,7 +4,7 @@ metadata:
   name: ai-config
   namespace: gipc
 data:
-  PORT: "8000"
+  # (no PORT key — the Dockerfile CMD hardcodes --port 8000; a ConfigMap PORT would be dead config)
   ANTHROPIC_MODEL: "claude-haiku-4-5"
   RATE_LIMIT_RPS: "5"
   RATE_LIMIT_BURST: "10"
