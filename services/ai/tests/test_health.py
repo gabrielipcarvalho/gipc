@@ -33,10 +33,11 @@ async def test_version(client) -> None:
     assert r.json()["service"] == "gipc-ai"
 
 
-async def test_rate_limit_429_and_readyz_exempt() -> None:
+async def test_rate_limit_429_and_readyz_exempt(monkeypatch) -> None:
     import app.main as main_mod
     from app.config import get_settings
 
+    monkeypatch.setenv("RATE_LIMIT_RPS", "0.001")  # stall-proof: no refill mid-test
     get_settings.cache_clear()
     app = main_mod.create_app()
     transport = httpx.ASGITransport(app=app)
