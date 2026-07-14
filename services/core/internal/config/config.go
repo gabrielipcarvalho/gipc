@@ -28,6 +28,24 @@ type Config struct {
 	ChaosTargetSelector string  // label selector for the chaos target (default app=chaos-target)
 	ChaosRPS            float64 // chaos-kill per-IP cooldown refill (default 0.1 ⇒ ~1 kill / 10s)
 	ChaosBurst          int     // chaos-kill per-IP bucket (default 1 ⇒ single-flight)
+	// load test — the target is FIXED (never request-derived); caps are CODE-CLAMPED so no env can exceed them
+	LoadTargetURL      string  // the ONLY load target (default the demo echo)
+	LoadMaxConcurrency int     // absolute ceiling 50
+	LoadMaxSeconds     int     // absolute ceiling 10
+	LoadMaxRuns        int     // absolute ceiling 4 (global concurrent runs)
+	LoadRPS            float64 // per-IP cooldown refill (default 0.2 ⇒ ~1 run / 5s)
+	LoadBurst          int     // per-IP bucket (default 1)
+}
+
+// clampInt bounds v to [1, hi] — used so a misconfigured env cap can neither exceed the invariant nor drop below 1.
+func clampInt(v, hi int) int {
+	if v < 1 {
+		return 1
+	}
+	if v > hi {
+		return hi
+	}
+	return v
 }
 
 // Load reads the environment and applies defaults. It never returns an error today, but keeps the
@@ -52,6 +70,13 @@ func Load() (Config, error) {
 		ChaosTargetSelector: env("CHAOS_TARGET_SELECTOR", "app=chaos-target"),
 		ChaosRPS:            envFloat("CHAOS_RPS", 0.1),
 		ChaosBurst:          envInt("CHAOS_BURST", 1),
+
+		LoadTargetURL:      env("LOAD_TARGET_URL", "http://chaos-target.demo"),
+		LoadMaxConcurrency: clampInt(envInt("LOAD_MAX_CONCURRENCY", 50), 50),
+		LoadMaxSeconds:     clampInt(envInt("LOAD_MAX_SECONDS", 10), 10),
+		LoadMaxRuns:        clampInt(envInt("LOAD_MAX_RUNS", 4), 4),
+		LoadRPS:            envFloat("LOAD_RPS", 0.2),
+		LoadBurst:          envInt("LOAD_BURST", 1),
 	}, nil
 }
 

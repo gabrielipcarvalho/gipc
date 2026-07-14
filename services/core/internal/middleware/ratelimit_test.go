@@ -70,15 +70,15 @@ func TestClientIPPrefersCFHeader(t *testing.T) {
 	req.RemoteAddr = "10.0.0.1:5555"
 	req.Header.Set("X-Forwarded-For", "3.3.3.3, 4.4.4.4")
 	req.Header.Set("CF-Connecting-IP", "5.5.5.5")
-	if got := clientIP(req); got != "5.5.5.5" {
-		t.Fatalf("clientIP = %q, want CF-Connecting-IP 5.5.5.5", got)
+	if got := ClientIP(req); got != "5.5.5.5" {
+		t.Fatalf("ClientIP = %q, want CF-Connecting-IP 5.5.5.5", got)
 	}
 	req.Header.Del("CF-Connecting-IP")
-	if got := clientIP(req); got != "3.3.3.3" {
-		t.Fatalf("clientIP = %q, want leftmost XFF 3.3.3.3", got)
+	if got := ClientIP(req); got != "3.3.3.3" {
+		t.Fatalf("ClientIP = %q, want leftmost XFF 3.3.3.3", got)
 	}
 	req.Header.Del("X-Forwarded-For")
-	if got := clientIP(req); got != "10.0.0.1" {
-		t.Fatalf("clientIP = %q, want RemoteAddr host 10.0.0.1", got)
+	if got := ClientIP(req); got != "10.0.0.1" {
+		t.Fatalf("ClientIP = %q, want RemoteAddr host 10.0.0.1", got)
 	}
 }
