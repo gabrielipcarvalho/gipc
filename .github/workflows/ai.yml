@@ -7,6 +7,8 @@ on:
     branches: [main, sprint/m4-operator]
     paths:
       - "services/ai/**"
+      - "resume/resume.json"          # baked into the corpus — edits must rebuild the image
+      - "apps/web/data/projects.json" # baked into the corpus
       - ".github/workflows/ai.yml"
   workflow_dispatch:
 
@@ -47,7 +49,7 @@ jobs:
         id: build
         uses: docker/build-push-action@v6
         with:
-          context: services/ai
+          context: .
           file: services/ai/Dockerfile
           push: true
           build-args: |
