@@ -5,6 +5,7 @@ import { projects } from "../../data/projects";
 import type { OracleCitation, OracleFrame } from "../../data/oracle";
 import { mapOracleError } from "../../data/oracleErrors";
 import { firstStation } from "../../data/construct";
+import { TURNSTILE_ON } from "../../data/turnstile";
 import { TurnstileWidget } from "./TurnstileWidget";
 import { MatrixText } from "./MatrixText";
 
@@ -20,14 +21,12 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   citations?: OracleCitation[];
-  cost?: number;
 };
 
 export function OracleChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [trace, setTrace] = useState<OracleFrame[]>([]);
-  const [done, setDone] = useState<{ tokens_in: number; tokens_out: number; est_cost: number } | null>(null);
   const [phase, setPhase] = useState<"idle" | "streaming" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [token, setToken] = useState("");
@@ -54,7 +53,7 @@ export function OracleChat() {
     e.preventDefault();
     const msg = input.trim();
     if (!msg || phase === "streaming") return;
-    if (!token) {
+    if (TURNSTILE_ON && !token) {
       setPhase("error");
       setErrorMsg("solve the bot check first.");
       return;
@@ -63,7 +62,6 @@ export function OracleChat() {
     setMessages((m) => [...m, { role: "user", content: msg }]);
     setInput("");
     setTrace([]);
-    setDone(null);
     setPhase("streaming");
     setErrorMsg("");
 
@@ -71,7 +69,6 @@ export function OracleChat() {
     abortRef.current = ctrl;
     let acc = "";
     let cites: OracleCitation[] = [];
-    let doneCost: number | undefined;
     let hadError = false;
     try {
       const res = await fetch("/api/ai/oracle", {
@@ -115,8 +112,7 @@ export function OracleChat() {
             if (f.kind === "retrieval") cites = f.chunks;
             if (!disposed.current) setTrace((t) => [...t, f]);
           } else if (f.type === "done") {
-            doneCost = f.est_cost;
-            if (!disposed.current) setDone(f);
+            // tokens/cost are recorded server-side (audit) — never surfaced in the UI
           } else if (f.type === "error") {
             hadError = true;
             if (!disposed.current) {
@@ -128,7 +124,7 @@ export function OracleChat() {
       }
       if (disposed.current) return;
       if (acc.trim() && !hadError) {
-        setMessages((m) => [...m, { role: "assistant", content: acc, citations: cites, cost: doneCost }]);
+        setMessages((m) => [...m, { role: "assistant", content: acc, citations: cites }]);
       }
       if (!hadError) setPhase("idle");
     } catch (err) {
@@ -138,7 +134,8 @@ export function OracleChat() {
     }
   }
 
-  const canSend = phase !== "streaming" && input.trim().length > 0 && !!token;
+  const canSend =
+    phase !== "streaming" && input.trim().length > 0 && (!TURNSTILE_ON || !!token);
 
   return (
     <div className="oracle">
@@ -175,11 +172,6 @@ export function OracleChat() {
                       </a>
                     ) : null;
                   })()}
-                {m.role === "assistant" && m.cost != null && (
-                  <p className="oracle-cost" aria-hidden>
-                    ~${m.cost.toFixed(4)}
-                  </p>
-                )}
               </div>
             </li>
           ))}
@@ -232,17 +224,18 @@ export function OracleChat() {
               {phase === "streaming" ? "…" : "send ▸"}
             </button>
           </div>
-          {botUnavailable ? (
-            <p className="oracle-note">bot check unavailable — the oracle needs it to answer.</p>
-          ) : engaged ? (
-            <TurnstileWidget
-              onToken={setToken}
-              onError={() => setBotUnavailable(true)}
-              resetRef={resetTurnstile}
-            />
-          ) : (
-            <p className="oracle-note">a quick bot check appears when you start typing.</p>
-          )}
+          {TURNSTILE_ON &&
+            (botUnavailable ? (
+              <p className="oracle-note">bot check unavailable — the oracle needs it to answer.</p>
+            ) : engaged ? (
+              <TurnstileWidget
+                onToken={setToken}
+                onError={() => setBotUnavailable(true)}
+                resetRef={resetTurnstile}
+              />
+            ) : (
+              <p className="oracle-note">a quick bot check appears when you start typing.</p>
+            ))}
         </form>
       </div>
 
@@ -283,11 +276,6 @@ export function OracleChat() {
             );
           })}
         </ol>
-        {done && (
-          <p className="oracle-trace-cost" aria-hidden>
-            ~${done.est_cost.toFixed(4)} · {done.tokens_in + done.tokens_out} tok
-          </p>
-        )}
       </section>
     </div>
   );

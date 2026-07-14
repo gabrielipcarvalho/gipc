@@ -44,7 +44,9 @@ async def jd(req: JdRequest, request: Request) -> object:
             {"error": "rate limited"}, status_code=429, headers={"Retry-After": str(retry)}
         )
 
-    if not await turnstile.verify(req.turnstileToken, ip, request.app.state.http):
+    if cfg.turnstile_enabled and not await turnstile.verify(
+        req.turnstileToken, ip, request.app.state.http
+    ):
         return JSONResponse({"error": "turnstile"}, status_code=403)
 
     pool = db.pool()

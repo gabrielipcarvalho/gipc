@@ -220,6 +220,8 @@ async def test_no_key_503(app_client) -> None:
 
 async def test_turnstile_invalid_403(app_client, monkeypatch) -> None:
     app, mk = app_client
+    real = Settings(turnstile_secret="0xrealsecret")  # enforced only when a REAL secret is set
+    monkeypatch.setattr("app.routes.oracle.get_settings", lambda: real)
 
     async def _false(*a, **k):
         return False
@@ -229,7 +231,21 @@ async def test_turnstile_invalid_403(app_client, monkeypatch) -> None:
     async with mk() as c:
         r = await c.post("/api/ai/oracle", json={"message": "hi", "turnstileToken": ""})
     assert r.status_code == 403
-    assert r.json()["error"] == "turnstile"
+
+
+async def test_turnstile_graceful_with_test_key(app_client, monkeypatch) -> None:
+    # default TEST secret → turnstile_enabled False → a failing verify is BYPASSED (per-IP + budget protect)
+    app, mk = app_client
+    monkeypatch.setattr(oracle_mod, "retrieve", _fake_retrieve)
+
+    async def _false(*a, **k):
+        return False
+
+    monkeypatch.setattr("app.turnstile.verify", _false)
+    set_llm(ScriptedLLM([(["ok"], FakeMessage([FakeText("ok")], "end_turn", FakeUsage(10, 2)))]))
+    async with mk() as c:
+        r = await c.post("/api/ai/oracle", json={"message": "hi", "turnstileToken": ""})
+    assert r.status_code == 200  # NOT 403 — the gate is skipped in graceful mode
 
 
 async def test_budget_out_503_before_llm(app_client, monkeypatch) -> None:

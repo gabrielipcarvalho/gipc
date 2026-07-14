@@ -38,6 +38,14 @@ class Settings(BaseSettings):
     def anthropic_configured(self) -> bool:
         return bool(self.anthropic_api_key.get_secret_value())
 
+    @property
+    def turnstile_enabled(self) -> bool:
+        """Enforce Turnstile only when a REAL secret is set. With the official test secret (or none),
+        the widget is a placeholder that shows 'For testing only' — so run in graceful mode: no bot-gate,
+        relying on the per-IP limiter + the daily budget breaker. Real key → full enforcement."""
+        secret = self.turnstile_secret.get_secret_value()
+        return bool(secret) and secret != TURNSTILE_TEST_SECRET
+
 
 @lru_cache
 def get_settings() -> Settings:
