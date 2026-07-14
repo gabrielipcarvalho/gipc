@@ -1,0 +1,97 @@
+name: ai image
+
+on:
+  push:
+    # sprint/m4-operator is included so the sprint can build the amd64 image from the branch.
+    # Narrow to [main] before merging to main (sprint-end step).
+    branches: [main, sprint/m4-operator]
+    paths:
+      - "services/ai/**"
+      - ".github/workflows/ai.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ai-image
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/gabrielipcarvalho/gipc-ai
+
+jobs:
+  build:
+    runs-on: ubuntu-latest   # amd64 — matches garuda
+    permissions:
+      contents: write     # to commit the GitOps tag bump
+      packages: write      # to push to GHCR
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint & test (authoritative — Anthropic mocked, no network)
+        uses: astral-sh/setup-uv@v5
+      - run: |
+          cd services/ai
+          uv sync --frozen
+          uv run ruff check .
+          uv run pytest -q
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: services/ai
+          file: services/ai/Dockerfile
+          push: true
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: GitOps — pin manifest to this image (deploy feed)
+        id: pin
+        run: |
+          # rebase-retry (Sprint-C pattern), BRANCH-AWARE: this workflow also runs on the sprint
+          # branch, so fetch/push the triggering ref — never hardcode main.
+          git config user.name  "gipc-ci"
+          git config user.email "ci@gipc.dev"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$GITHUB_REF_NAME"
+            git reset --hard FETCH_HEAD
+            sed -i "s|newTag: .*|newTag: \"${GITHUB_SHA}\"|" infra/k8s/ai/kustomization.yaml
+            if git diff --quiet; then echo "already pinned"; exit 0; fi
+            git commit -am "deploy(ai): ${GITHUB_SHA:0:7} → gipc.dev [skip ci]"
+            if git push origin HEAD:"$GITHUB_REF_NAME"; then echo "pinned (attempt $attempt)"; exit 0; fi
+            echo "push rejected — another workflow pushed; retrying"
+            [ "$attempt" -lt 5 ] && sleep $((attempt * 3))
+          done
+          echo "::error::failed to pin ai after 5 attempts"; exit 1
+
+      - name: Notify deploy feed
+        # post whenever the image built (even if the pin retried/failed), but never on a cancelled run.
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.build.outcome == 'success' }}
+        env:
+          DEPLOY_HOOK_KEY: ${{ secrets.DEPLOY_HOOK_KEY }}
+          # released reflects the PIN outcome — a failed pin = manifest not bumped = site NOT on the new image
+          RELEASED_STATUS: ${{ steps.pin.outcome == 'success' && 'success' || 'failure' }}
+        run: |
+          [ -z "$DEPLOY_HOOK_KEY" ] && { echo "no key"; exit 0; }
+          SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA"); TS=$(date -u +%FT%TZ)
+          post() {
+            body=$(jq -nc --arg sha "$GITHUB_SHA" --arg subject "$SUBJECT" --arg stage "$1" --arg status "$2" --arg ts "$TS" \
+              '{sha:$sha,subject:$subject,stage:$stage,status:$status,ts:$ts}')
+            sig=$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$DEPLOY_HOOK_KEY" | awk '{print $2}')
+            curl -fsS -X POST -H "X-Signature: sha256=$sig" -H 'Content-Type: application/json' --data "$body" https://gipc.dev/api/hooks/deploy || true
+          }
+          post build success
+          post released "$RELEASED_STATUS"
