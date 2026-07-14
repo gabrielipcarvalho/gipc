@@ -106,14 +106,17 @@ export function JdAnalyzer() {
         )}
       </form>
 
+      {/* polite region announces pending + completion; the error is a separate assertive alert so it
+          can't double-announce inside a live region */}
       <div className="jd-status" aria-live="polite">
         {phase === "pending" && <p className="jd-pending">analyzing the JD against the résumé…</p>}
-        {phase === "error" && (
-          <p className="oracle-error" role="alert">
-            {errorMsg}
-          </p>
-        )}
+        {phase === "idle" && result && <p className="jd-pending">analysis ready.</p>}
       </div>
+      {phase === "error" && (
+        <p className="oracle-error" role="alert">
+          {errorMsg}
+        </p>
+      )}
 
       {result && (
         <div className="jd-result">

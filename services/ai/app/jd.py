@@ -71,11 +71,10 @@ def _parse_json(text: str) -> dict | None:
 async def analyze_jd(jd_text: str, llm: LLM, cfg: Settings) -> tuple[JdAnalysis | None, int, int]:
     """(analysis|None, tokens_in, tokens_out). None on truncation / unparseable-after-repair / API error."""
     tin = tout = 0
-    resume = resume_evidence_json(_corpus_dir())
-    user = f"<resume>{resume}</resume>\n<job_description>{_esc(jd_text)}</job_description>"
-    messages: list[dict] = [{"role": "user", "content": user}]
-
     try:
+        resume = resume_evidence_json(_corpus_dir())  # inside try: a corrupt baked corpus → 503, not 500
+        user = f"<resume>{resume}</resume>\n<job_description>{_esc(jd_text)}</job_description>"
+        messages: list[dict] = [{"role": "user", "content": user}]
         for attempt in (1, 2):  # original + one repair
             msg = await llm.create(
                 model=cfg.anthropic_model,
