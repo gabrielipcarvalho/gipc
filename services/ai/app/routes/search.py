@@ -27,13 +27,18 @@ async def search(q: str = Query(min_length=2, max_length=200)) -> object:
 
     pool = db.pool()
     assert pool is not None  # kb_ready guarantees it
-    async with pool.connection(timeout=2) as conn:
-        cur = await conn.execute(
-            """SELECT source, title, url, content, 1 - (embedding <=> %s::vector) AS score
-               FROM chunks ORDER BY embedding <=> %s::vector LIMIT %s""",
-            (vec, vec, TOP_K),
-        )
-        rows = await cur.fetchall()
+    try:
+        # kb_ready latches on the cached schema flag — postgres can still die AFTER it; a query
+        # failure must stay an honest 503, never a raw 500
+        async with pool.connection(timeout=2) as conn:
+            cur = await conn.execute(
+                """SELECT source, title, url, content, 1 - (embedding <=> %s::vector) AS score
+                   FROM chunks ORDER BY embedding <=> %s::vector LIMIT %s""",
+                (vec, vec, TOP_K),
+            )
+            rows = await cur.fetchall()
+    except Exception:
+        return JSONResponse({"error": "knowledge base unavailable"}, status_code=503)
 
     results = [
         {

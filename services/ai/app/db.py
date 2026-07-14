@@ -74,11 +74,19 @@ async def ensure_schema() -> bool:
             return True
         try:
             async with _pool.connection(timeout=2) as conn:
-                await conn.execute("SELECT pg_advisory_lock(%s)", (ADVISORY_LOCK_KEY,))
+                # autocommit so a DDL error can't abort the tx and strand the unlock (else the
+                # session-level advisory lock leaks on a pooled conn and wedges later callers).
+                # Restore it before returning the conn — the pool has no reset callback, so a
+                # left-on autocommit would silently break ingest's single-transaction atomicity.
+                await conn.set_autocommit(True)
                 try:
-                    await conn.execute(DDL)
+                    await conn.execute("SELECT pg_advisory_lock(%s)", (ADVISORY_LOCK_KEY,))
+                    try:
+                        await conn.execute(DDL)
+                    finally:
+                        await conn.execute("SELECT pg_advisory_unlock(%s)", (ADVISORY_LOCK_KEY,))
                 finally:
-                    await conn.execute("SELECT pg_advisory_unlock(%s)", (ADVISORY_LOCK_KEY,))
+                    await conn.set_autocommit(False)
             _schema_ready = True
             info("schema ready")
             return True
