@@ -20,6 +20,11 @@ data:
       handle /api/telemetry {
         reverse_proxy web:80
       }
+      handle /api/ai/* {
+        reverse_proxy ai:8000 {
+          flush_interval -1
+        }
+      }
       handle /api/* {
         reverse_proxy core:8080 {
           flush_interval -1
