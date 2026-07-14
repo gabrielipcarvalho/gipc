@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { projects } from "../../data/projects";
 import type { OracleCitation, OracleFrame } from "../../data/oracle";
 import { mapOracleError } from "../../data/oracleErrors";
+import { firstStation } from "../../data/construct";
 import { TurnstileWidget } from "./TurnstileWidget";
 
 /* The oracle chat. Streams POST /api/ai/oracle (SSE via fetch+getReader — EventSource can't POST).
@@ -154,6 +155,15 @@ export function OracleChat() {
                     ))}
                   </p>
                 )}
+                {m.role === "assistant" &&
+                  (() => {
+                    const station = firstStation(m.citations);
+                    return station ? (
+                      <a className="oracle-construct" href={`/resume?station=${station}`}>
+                        view in the Construct →
+                      </a>
+                    ) : null;
+                  })()}
               </div>
             </li>
           ))}

@@ -780,3 +780,7 @@ a{ color:inherit; text-decoration:none; }
 .jd-copy:hover{ color:var(--cyan-bright); border-color:var(--cyan-bright); }
 .jd-gaps ul{ margin:0; padding-left:1.2rem; display:flex; flex-direction:column; gap:.3rem;
   color:var(--text-muted); }
+
+.oracle-construct{ display:inline-block; margin-top:.5rem; color:var(--violet); font-size:var(--fs-xs);
+  letter-spacing:.03em; text-decoration:none; }
+.oracle-construct:hover{ color:var(--violet-bright); }
