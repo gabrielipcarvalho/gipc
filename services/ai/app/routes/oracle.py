@@ -54,7 +54,7 @@ async def oracle(req: OracleRequest, request: Request) -> object:
         )
 
     http = request.app.state.http
-    if not await turnstile.verify(req.turnstileToken, ip, http):
+    if cfg.turnstile_enabled and not await turnstile.verify(req.turnstileToken, ip, http):
         return JSONResponse({"error": "turnstile"}, status_code=403)
 
     pool = db.pool()

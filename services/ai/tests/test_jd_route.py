@@ -71,6 +71,10 @@ async def test_valid_200(app_client) -> None:
 
 async def test_turnstile_403(app_client, monkeypatch) -> None:
     app, mk = app_client
+    from app.config import Settings
+
+    real = Settings(turnstile_secret="0xrealsecret")  # enforced only with a REAL secret
+    monkeypatch.setattr("app.routes.jd.get_settings", lambda: real)
 
     async def _false(*a, **k):
         return False
@@ -80,6 +84,20 @@ async def test_turnstile_403(app_client, monkeypatch) -> None:
     async with mk() as c:
         r = await c.post("/api/ai/jd", json={**BODY, "turnstileToken": ""})
     assert r.status_code == 403
+
+
+async def test_turnstile_graceful_with_test_key(app_client, monkeypatch) -> None:
+    # default TEST secret → gate skipped → a failing verify does NOT 403
+    app, mk = app_client
+
+    async def _false(*a, **k):
+        return False
+
+    monkeypatch.setattr("app.turnstile.verify", _false)
+    set_llm(DummyLLM())
+    async with mk() as c:
+        r = await c.post("/api/ai/jd", json={**BODY, "turnstileToken": ""})
+    assert r.status_code == 200  # NOT 403 — graceful mode
 
 
 async def test_over_limit_429(app_client) -> None:

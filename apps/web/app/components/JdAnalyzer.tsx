@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { JdAnalysis, JdStrength } from "../../data/oracle";
 import { mapOracleError } from "../../data/oracleErrors";
+import { TURNSTILE_ON } from "../../data/turnstile";
 import { TurnstileWidget } from "./TurnstileWidget";
 import { MatrixText } from "./MatrixText";
 
@@ -33,7 +34,7 @@ export function JdAnalyzer() {
     e.preventDefault();
     const jd = text.trim();
     if (!jd || phase === "pending") return;
-    if (!token) {
+    if (TURNSTILE_ON && !token) {
       setPhase("error");
       setErrorMsg("solve the bot check first.");
       return;
@@ -75,7 +76,8 @@ export function JdAnalyzer() {
     }
   }
 
-  const canSend = phase !== "pending" && text.trim().length > 0 && !!token;
+  const canSend =
+    phase !== "pending" && text.trim().length > 0 && (!TURNSTILE_ON || !!token);
 
   return (
     <div className="jd">
@@ -102,13 +104,14 @@ export function JdAnalyzer() {
             {phase === "pending" ? "analyzing…" : "analyze ▸"}
           </button>
         </div>
-        {botUnavailable ? (
-          <p className="oracle-note">bot check unavailable — the analyzer needs it.</p>
-        ) : engaged ? (
-          <TurnstileWidget onToken={setToken} onError={() => setBotUnavailable(true)} resetRef={resetTurnstile} />
-        ) : (
-          <p className="oracle-note">a quick bot check appears when you start typing.</p>
-        )}
+        {TURNSTILE_ON &&
+          (botUnavailable ? (
+            <p className="oracle-note">bot check unavailable — the analyzer needs it.</p>
+          ) : engaged ? (
+            <TurnstileWidget onToken={setToken} onError={() => setBotUnavailable(true)} resetRef={resetTurnstile} />
+          ) : (
+            <p className="oracle-note">a quick bot check appears when you start typing.</p>
+          ))}
       </form>
 
       {/* polite region announces pending + completion; the error is a separate assertive alert so it
