@@ -1,0 +1,10 @@
+# CI pins the built image tag below ([skip ci] commit). Keep comments free of the literal
+# tag-key token so the sed can't match them (core's lesson).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gipc
+resources:
+  - ai.yaml
+images:
+  - name: ghcr.io/gabrielipcarvalho/gipc-ai
+    newTag: "181f827ca4494338abe001634229e9310274b23e"

@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-config
+  namespace: gipc
+data:
+  # (no PORT key — the Dockerfile CMD hardcodes --port 8000; a ConfigMap PORT would be dead config)
+  ANTHROPIC_MODEL: "claude-haiku-4-5"
+  RATE_LIMIT_RPS: "5"
+  RATE_LIMIT_BURST: "10"
+  MAX_STREAMS: "8"
+  DAILY_BUDGET_USD: "2.0"
+  PRICE_IN_PER_MTOK: "1.0"
+  PRICE_OUT_PER_MTOK: "5.0"
+  CORS_ORIGIN: "https://gipc.dev"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai
+  namespace: gipc
+  labels: { app: ai }
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels: { app: ai }
+  template:
+    metadata:
+      labels: { app: ai }
+    spec:
+      terminationGracePeriodSeconds: 30
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: ai
+          image: ghcr.io/gabrielipcarvalho/gipc-ai:latest   # tag pinned by CI via kustomization
+          ports:
+            - { containerPort: 8000, name: http }
+          envFrom:
+            - configMapRef: { name: ai-config }
+          env:
+            - name: DATABASE_URL          # imperative Secret — derived from the ns-data postgres Secret
+              valueFrom:
+                secretKeyRef: { name: ai-secrets, key: database-url }
+            - name: ANTHROPIC_API_KEY     # OPTIONAL — absent until the credential wall; service degrades honestly
+              valueFrom:
+                secretKeyRef: { name: anthropic, key: api-key, optional: true }
+            - name: TURNSTILE_SECRET      # imperative Secret — official test key until the real one swaps in
+              valueFrom:
+                secretKeyRef: { name: turnstile, key: secret }
+            - name: AUDIT_SALT            # imperative Secret — generated (openssl rand); salts the audit IP hash
+              valueFrom:
+                secretKeyRef: { name: ai-secrets, key: audit-salt, optional: true }
+          readinessProbe:
+            httpGet: { path: /api/ai/readyz, port: 8000 }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            # readyz, NOT healthz — healthz embeds a db ping and a postgres blip must never kill the pod
+            httpGet: { path: /api/ai/readyz, port: 8000 }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 768Mi }   # onnx runtime + baked embedding model resident
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai
+  namespace: gipc
+  labels: { app: ai }
+spec:
+  type: ClusterIP
+  selector: { app: ai }
+  ports:
+    - { port: 8000, targetPort: 8000, name: http }
