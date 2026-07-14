@@ -29,12 +29,13 @@ type Config struct {
 	ChaosRPS            float64 // chaos-kill per-IP cooldown refill (default 0.1 ⇒ ~1 kill / 10s)
 	ChaosBurst          int     // chaos-kill per-IP bucket (default 1 ⇒ single-flight)
 	// load test — the target is FIXED (never request-derived); caps are CODE-CLAMPED so no env can exceed them
-	LoadTargetURL      string  // the ONLY load target (default the demo echo)
-	LoadMaxConcurrency int     // absolute ceiling 50
-	LoadMaxSeconds     int     // absolute ceiling 10
-	LoadMaxRuns        int     // absolute ceiling 4 (global concurrent runs)
-	LoadRPS            float64 // per-IP cooldown refill (default 0.2 ⇒ ~1 run / 5s)
-	LoadBurst          int     // per-IP bucket (default 1)
+	LoadTargetURL      string        // the ONLY load target (default the demo echo)
+	LoadMaxConcurrency int           // absolute ceiling 50
+	LoadMaxSeconds     int           // absolute ceiling 10
+	LoadMaxRuns        int           // absolute ceiling 4 (global concurrent runs)
+	LoadRPS            float64       // per-IP cooldown refill (default 0.2 ⇒ ~1 run / 5s)
+	LoadBurst          int           // per-IP bucket (default 1)
+	LabEventHeartbeat  time.Duration // /api/lab/events heartbeat cadence (default 10s)
 }
 
 // clampInt bounds v to [1, hi] — used so a misconfigured env cap can neither exceed the invariant nor drop below 1.
@@ -77,6 +78,7 @@ func Load() (Config, error) {
 		LoadMaxRuns:        clampInt(envInt("LOAD_MAX_RUNS", 4), 4),
 		LoadRPS:            envFloat("LOAD_RPS", 0.2),
 		LoadBurst:          envInt("LOAD_BURST", 1),
+		LabEventHeartbeat:  envDuration("LAB_EVENT_HEARTBEAT", 10*time.Second),
 	}, nil
 }
 

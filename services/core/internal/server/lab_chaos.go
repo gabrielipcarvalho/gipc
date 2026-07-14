@@ -23,7 +23,7 @@ type podKiller interface {
 
 // chaosKillHandler deletes a random Running chaos-target pod in the demo namespace. Blast radius is bounded
 // by the namespace-fixed, name-validated client + the demo-only RBAC. No request body is read.
-func chaosKillHandler(killer podKiller, cfg config.Config, log *slog.Logger) http.HandlerFunc {
+func chaosKillHandler(killer podKiller, cfg config.Config, log *slog.Logger, labHub *hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if killer == nil {
 			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "lab disabled"})
@@ -55,6 +55,7 @@ func chaosKillHandler(killer podKiller, cfg config.Config, log *slog.Logger) htt
 			return
 		}
 		log.Info("chaos_kill", "target", target.Name) // audit: pod name only — no ip, no secret, no token
+		publishLabEvent(labHub, "chaos", "killed "+target.Name)
 		writeJSON(w, http.StatusOK, map[string]string{
 			"killed": target.Name,
 			"at":     time.Now().UTC().Format(time.RFC3339),
