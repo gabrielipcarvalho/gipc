@@ -59,10 +59,10 @@ async def oracle(req: OracleRequest, request: Request) -> object:
 
     pool = db.pool()
     rem = await budget_remaining(pool, cfg)
-    if rem is None or rem <= 0:
-        return JSONResponse(
-            {"error": "the oracle rests — daily budget spent"}, status_code=503
-        )
+    if rem is None:  # DB down / unknown budget → fail closed, but honestly (not "budget spent")
+        return JSONResponse({"error": "the oracle is temporarily unavailable"}, status_code=503)
+    if rem <= 0:
+        return JSONResponse({"error": "the oracle rests — daily budget spent"}, status_code=503)
 
     sem = request.app.state.oracle_sem
     if sem.locked():
@@ -76,8 +76,12 @@ async def oracle(req: OracleRequest, request: Request) -> object:
         finally:
             sem.release()  # exactly once; runs on normal end, error, and disconnect
 
-    return StreamingResponse(
-        _gen(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+    try:
+        return StreamingResponse(
+            _gen(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+    except Exception:  # ctor failing before _gen is ever iterated would otherwise leak the slot
+        sem.release()
+        raise

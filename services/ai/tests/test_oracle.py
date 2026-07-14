@@ -148,6 +148,27 @@ async def test_loop_caps_at_max_rounds(monkeypatch) -> None:
     assert [f for f in _frames(out) if f["type"] == "done"]
 
 
+def test_trim_history_always_starts_on_user() -> None:
+    from types import SimpleNamespace
+
+    # a normal alternating transcript ending on assistant; a small cap keeps an odd suffix
+    hist = [SimpleNamespace(role=("user" if i % 2 == 0 else "assistant"),
+                            content="x" * 100) for i in range(6)]
+    for cap in (150, 350, 550, 4000):
+        out = oracle_mod._trim_history(hist, turns=6, char_cap=cap)
+        assert not out or out[0]["role"] == "user", f"cap={cap} led with assistant"
+
+
+async def test_max_tokens_stop_is_terminal(monkeypatch) -> None:
+    monkeypatch.setattr(oracle_mod, "retrieve", _fake_retrieve)
+    llm = ScriptedLLM([(["partial answer"], FakeMessage(
+        [FakeText("partial answer")], "max_tokens", FakeUsage(50, 700)))])
+    req = OracleRequest(message="long?", turnstileToken="x")
+    out = _frames([f async for f in oracle_mod.run_oracle(req, "1.2.3.4", None, None, llm, CFG)])
+    assert [f["text"] for f in out if f["type"] == "token"] == ["partial answer"]
+    assert [f for f in out if f["type"] == "done"]  # terminated cleanly, not looped
+
+
 async def test_empty_final_answer_fallback(monkeypatch) -> None:
     monkeypatch.setattr(oracle_mod, "retrieve", _fake_retrieve)
     llm = ScriptedLLM([([], FakeMessage([], "end_turn", FakeUsage(10, 0)))])
