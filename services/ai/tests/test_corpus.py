@@ -42,7 +42,8 @@ def test_chunks_never_contain_phone_or_private(tmp_path: Path) -> None:
     for c in chunks:
         digits = re.sub(r"\D", "", c.content)
         assert PHONE_DIGITS not in digits, f"phone digits leaked in: {c.title}"
-        assert PHONE_DIGITS.lstrip("61") not in digits or len(PHONE_DIGITS.lstrip("61")) < 8, c.title
+        local = PHONE_DIGITS.removeprefix("61")  # national digits, country code stripped
+        assert local not in digits, f"local phone digits leaked in: {c.title}"
         assert not AU_MOBILE.search(c.content), f"AU mobile pattern in: {c.title}"
         assert PRIVATE_TEXT not in c.content, f"basics.private leaked in: {c.title}"
         assert "career/" not in c.content, f"career path leaked in: {c.title}"

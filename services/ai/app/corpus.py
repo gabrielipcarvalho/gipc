@@ -28,7 +28,7 @@ class Chunk:
     @property
     def content_hash(self) -> str:
         h = hashlib.sha256()
-        h.update(f"{self.source}\x00{self.title}\x00{self.content}".encode())
+        h.update(f"{self.source}\x00{self.title}\x00{self.url}\x00{self.content}".encode())
         return h.hexdigest()
 
 
