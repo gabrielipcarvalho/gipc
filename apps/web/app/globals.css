@@ -689,3 +689,52 @@ a{ color:inherit; text-decoration:none; }
   .nav-link{ padding:.4rem .5rem; }
   .palette{ padding:8vh .7rem 1rem; }
 }
+
+/* ── The Oracle (/oracle) ───────────────────────────────────────────────── */
+.oracle{ margin-top:1.4rem; display:grid; grid-template-columns:1fr; gap:1.1rem; }
+@media (min-width:900px){ .oracle{ grid-template-columns:1.6fr 1fr; align-items:start; } }
+
+.oracle-log{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.8rem; }
+.oracle-msg{ display:flex; gap:.6rem; font-size:var(--fs-body); line-height:1.5; }
+.oracle-role{ flex:0 0 auto; color:var(--text-faint); font-size:var(--fs-xs); padding-top:.15rem; }
+.oracle-msg.assistant .oracle-role{ color:var(--violet); }
+.oracle-body{ min-width:0; }
+.oracle-body p{ margin:0; white-space:pre-wrap; word-break:break-word; }
+.oracle-msg.streaming .oracle-body{ color:var(--text-muted); }
+.oracle-cites{ margin-top:.4rem !important; display:flex; flex-wrap:wrap; gap:.75rem; }
+.oracle-cites a{ color:var(--cyan); font-size:var(--fs-sm); text-decoration:underline; text-underline-offset:2px; }
+.oracle-cites a:hover{ color:var(--cyan-bright); }
+.oracle-error{ margin-top:.9rem; color:var(--warn); font-size:var(--fs-sm); }
+
+.oracle-form{ margin-top:1.1rem; display:flex; flex-direction:column; gap:.55rem; }
+.oracle-label{ color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.04em; }
+.oracle-input{ width:100%; background:var(--bg-elev); border:1px solid var(--border); border-radius:6px;
+  padding:.65rem .75rem; color:var(--text); font:inherit; font-size:var(--fs-body); }
+.oracle-input:focus-visible{ outline:2px solid var(--cyan); outline-offset:1px; border-color:var(--border-cyan); }
+.oracle-input:disabled{ opacity:.55; }
+.oracle-controls{ display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
+.oracle-count{ color:var(--text-faint); font-size:var(--fs-xs); }
+.oracle-send{ background:none; border:1px solid var(--border-cyan); border-radius:6px; padding:.4rem .9rem;
+  color:var(--cyan); font:inherit; font-size:var(--fs-sm); cursor:pointer; }
+.oracle-send:hover:not(:disabled){ color:var(--cyan-bright); border-color:var(--cyan-bright); }
+.oracle-send:disabled{ opacity:.45; cursor:not-allowed; }
+.oracle-note{ color:var(--text-muted); font-size:var(--fs-xs); }
+.turnstile-box{ min-height:0; }
+
+.oracle-trace{ background:var(--bg-elev); border:1px solid var(--border); border-radius:8px;
+  padding:.9rem 1rem; font-size:var(--fs-sm); }
+.oracle-trace-head{ color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.04em; margin:0 0 .6rem; }
+.oracle-trace-idle{ color:var(--text-muted); font-size:var(--fs-xs); margin:0; }
+.oracle-trace-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.55rem; }
+.oracle-trace-list .tr{ color:var(--text-muted); line-height:1.45; }
+.oracle-trace-list .tr b{ color:var(--violet); font-weight:600; }
+.oracle-trace-list .tr.result b{ color:var(--cyan); }
+.oracle-trace-list .tr code{ display:block; color:var(--text-faint); font-size:var(--fs-xs);
+  word-break:break-all; margin-top:.15rem; }
+.tr-cite{ display:block; color:var(--cyan); font-size:var(--fs-xs); text-decoration:underline;
+  text-underline-offset:2px; margin-top:.15rem; }
+.oracle-trace-cost{ margin:.7rem 0 0; color:var(--text-faint); font-size:var(--fs-xs); }
+
+.card-oracle{ margin-top:.7rem; }
+.card-oracle a{ color:var(--violet); font-size:var(--fs-xs); letter-spacing:.03em; text-decoration:none; }
+.card-oracle a:hover{ color:var(--violet-bright); }

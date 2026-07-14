@@ -120,7 +120,7 @@ function runCommand(
       return { out: ["the lab: sandbox shell · load tests · chaos demos — hardened, coming in a later drop."] };
     case "operator":
     case "oracle":
-      return { out: ["the oracle — a tool-using AI operator over my real infra. wiring up (M4). find it on /system.", <>opening <b>/system</b>…</>], nav: "/system" };
+      return { out: [<>the oracle — a tool-using AI operator over my real infra: cited answers + a live trace. → <b>/oracle</b></>], nav: "/oracle" };
     case "ward":
       return { out: ["ward: ufw deny-in · fail2ban · Cloudflare WAF · zero inbound ports (tunnel) · CIS-minded hardening."] };
     case "summon":
@@ -138,7 +138,7 @@ function runCommand(
       if (THEME_IDS.includes(arg)) {
         return { out: [<>theme applied → <b>{arg}</b>.</>], theme: arg };
       }
-      return { out: ["custom themes arrive with the oracle (M4) — presets: arcane · matrix · amber · mono."] };
+      return { out: ["unknown theme — presets: arcane · matrix · amber · mono."] };
     }
     case "clear":
       return { out: [], clear: true };
