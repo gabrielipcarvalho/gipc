@@ -12,7 +12,6 @@ TURNSTILE_TEST_SECRET = "1x0000000000000000000000000000000AA"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 
-    port: int = 8000
     database_url: SecretStr = SecretStr("")  # empty ⇒ db features degrade, service still boots
     anthropic_api_key: SecretStr = SecretStr("")  # empty ⇒ oracle endpoints 503 honestly (P4)
     anthropic_model: str = "claude-haiku-4-5"
