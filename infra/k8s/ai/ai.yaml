@@ -55,6 +55,9 @@ spec:
             - name: TURNSTILE_SECRET      # imperative Secret — official test key until the real one swaps in
               valueFrom:
                 secretKeyRef: { name: turnstile, key: secret }
+            - name: AUDIT_SALT            # imperative Secret — generated (openssl rand); salts the audit IP hash
+              valueFrom:
+                secretKeyRef: { name: ai-secrets, key: audit-salt, optional: true }
           readinessProbe:
             httpGet: { path: /api/ai/readyz, port: 8000 }
             initialDelaySeconds: 3

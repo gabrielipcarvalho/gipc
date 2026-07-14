@@ -5,24 +5,28 @@ Lifespan: open the DB pool (non-blocking), best-effort schema, warm the local em
 depends on the DB; the embedder is a baked local artifact so its load is allowed to gate startup.
 """
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
 from . import db
 from .config import get_settings
-from .limiter import RateLimiter, rate_limit_middleware
-from .log import access_log_middleware, configure_logging, info
-from .routes import health, search
+from .limiter import RateLimiter, RateLimitMiddleware
+from .llm import get_llm
+from .log import AccessLogMiddleware, configure_logging, info
+from .routes import health, oracle, search
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.http = httpx.AsyncClient(timeout=5)
     await db.open_pool()
     await db.ensure_schema()  # best-effort — failure is logged and retried lazily on first search
+    get_llm()  # build the Anthropic client if a key is configured (cheap, no network); else stays None
     if os.environ.get("SKIP_EMBEDDER_WARMUP") != "1":  # tests/dev without the baked model
         try:
             from .embedder import get_embedder
@@ -31,6 +35,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             info("embedder warmup failed — search degrades honestly", kind=type(e).__name__)
     yield
+    await app.state.http.aclose()
     await db.close_pool()
 
 
@@ -39,18 +44,23 @@ def create_app() -> FastAPI:
     cfg = get_settings()
     app = FastAPI(title="gipc-ai", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 
+    # oracle concurrency cap + strict per-IP limiter — on app.state (no module-level shared state)
+    app.state.oracle_sem = asyncio.Semaphore(cfg.max_streams)
+    app.state.oracle_limiter = RateLimiter(cfg.oracle_rate_per_10min / 600.0, cfg.oracle_rate_per_10min)
+
     limiter = RateLimiter(cfg.rate_limit_rps, cfg.rate_limit_burst)
-    app.add_middleware(BaseHTTPMiddleware, dispatch=rate_limit_middleware(limiter))  # innermost
+    app.add_middleware(RateLimitMiddleware, limiter=limiter)  # innermost
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[cfg.cors_origin],
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["Content-Type"],
     )
-    app.add_middleware(BaseHTTPMiddleware, dispatch=access_log_middleware)  # outermost
+    app.add_middleware(AccessLogMiddleware)  # outermost
 
     app.include_router(health.router)
     app.include_router(search.router)
+    app.include_router(oracle.router)
     info("gipc-ai configured", anthropic_configured=cfg.anthropic_configured)
     return app
 

@@ -35,6 +35,20 @@ CREATE TABLE IF NOT EXISTS chunks (
   embedding    vector(384) NOT NULL,
   meta         jsonb NOT NULL DEFAULT '{}'
 );
+CREATE TABLE IF NOT EXISTS oracle_spend (
+  day date PRIMARY KEY,
+  usd numeric NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS oracle_audit (
+  id         bigserial PRIMARY KEY,
+  ts         timestamptz NOT NULL DEFAULT now(),
+  ip_hash    text NOT NULL,
+  msg_len    int NOT NULL,
+  tools_used text[] NOT NULL DEFAULT '{}',
+  tokens_in  int NOT NULL DEFAULT 0,
+  tokens_out int NOT NULL DEFAULT 0,
+  est_cost   numeric NOT NULL DEFAULT 0
+);
 """
 ADVISORY_LOCK_KEY = 74201  # service + ingest Job may run DDL concurrently — serialize it
 

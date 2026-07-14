@@ -7,10 +7,10 @@ Memory is bounded: stale buckets are pruned once the map exceeds MAX_BUCKETS.
 """
 
 import time
-from collections.abc import Awaitable, Callable
 
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .log import EXEMPT_PATHS
 
@@ -61,17 +61,26 @@ class RateLimiter:
             del self._buckets[ip]
 
 
-def rate_limit_middleware(limiter: RateLimiter):
-    async def middleware(
-        request: Request, call_next: Callable[[Request], Awaitable[Response]]
-    ) -> Response:
-        if request.url.path in EXEMPT_PATHS:
-            return await call_next(request)
-        allowed, retry = limiter.check(client_ip(request))
+class RateLimitMiddleware:
+    """Pure-ASGI token-bucket limiter. Reads headers/path/client from scope only — never the body,
+    so a streaming request/response is untouched. Only readyz is exempt."""
+
+    def __init__(self, app: ASGIApp, limiter: RateLimiter) -> None:
+        self.app = app
+        self.limiter = limiter
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":  # lifespan/websocket pass straight through
+            await self.app(scope, receive, send)
+            return
+        if scope["path"] in EXEMPT_PATHS:
+            await self.app(scope, receive, send)
+            return
+        allowed, retry = self.limiter.check(client_ip(Request(scope)))
         if not allowed:
-            return JSONResponse(
+            resp = JSONResponse(
                 {"error": "rate limited"}, status_code=429, headers={"Retry-After": str(retry)}
             )
-        return await call_next(request)
-
-    return middleware
+            await resp(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
