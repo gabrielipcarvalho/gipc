@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -25,6 +26,24 @@ type Limiter struct {
 	rps     float64
 	burst   float64
 	ttl     time.Duration
+	denied  atomic.Int64 // cumulative 429s since start (for the lab rate-limit visualizer — aggregate only)
+}
+
+// RateLimitSnapshot is the AGGREGATE-only view for the lab visualizer — never bucket keys (IPs) or tokens.
+// Denied is cumulative since process start; the client renders a rate from successive-snapshot deltas.
+type RateLimitSnapshot struct {
+	RPS           float64 `json:"rps"`
+	Burst         int     `json:"burst"`
+	ActiveBuckets int     `json:"activeBuckets"`
+	Denied        int64   `json:"denied"`
+}
+
+// Snapshot returns the limiter's live aggregate state. No per-IP data is exposed.
+func (l *Limiter) Snapshot() RateLimitSnapshot {
+	l.mu.Lock()
+	n := len(l.buckets)
+	l.mu.Unlock()
+	return RateLimitSnapshot{RPS: l.rps, Burst: int(l.burst), ActiveBuckets: n, Denied: l.denied.Load()}
 }
 
 // NewLimiter builds a limiter refilling at rps tokens/sec with a bucket size of burst.
@@ -84,6 +103,7 @@ func (l *Limiter) sweepLoop() {
 func (l *Limiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !IsHealthPath(r.URL.Path) && !l.allow(ClientIP(r), time.Now()) {
+			l.denied.Add(1)
 			retry := 1
 			if l.rps > 0 {
 				retry = int(1.0/l.rps) + 1

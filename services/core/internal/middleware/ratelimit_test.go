@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -80,5 +82,31 @@ func TestClientIPPrefersCFHeader(t *testing.T) {
 	req.Header.Del("X-Forwarded-For")
 	if got := ClientIP(req); got != "10.0.0.1" {
 		t.Fatalf("ClientIP = %q, want RemoteAddr host 10.0.0.1", got)
+	}
+}
+
+func TestDeniedCounterAndSnapshot(t *testing.T) {
+	l := NewLimiter(0, 0) // always refuses (0 tokens, no refill)
+	h := l.Middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
+	for i := 0; i < 3; i++ {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/api/version", nil)
+		req.Header.Set("CF-Connecting-IP", "8.8.8.8")
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusTooManyRequests {
+			t.Fatalf("want 429, got %d", rec.Code)
+		}
+	}
+	s := l.Snapshot()
+	if s.Denied < 3 {
+		t.Errorf("denied = %d, want >=3", s.Denied)
+	}
+	if s.ActiveBuckets != 1 {
+		t.Errorf("activeBuckets = %d, want 1", s.ActiveBuckets)
+	}
+	// aggregate-only: the snapshot must not embed any IP
+	b, _ := json.Marshal(s)
+	if strings.Contains(string(b), "8.8.8.8") {
+		t.Error("snapshot leaked an IP")
 	}
 }

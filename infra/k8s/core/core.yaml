@@ -23,6 +23,7 @@ data:
   LOAD_MAX_RUNS: "4"                                      # global concurrent-run ceiling
   LOAD_RPS: "0.2"                                         # per-IP cooldown ≈ 1 run / 5s
   LOAD_BURST: "1"
+  LAB_EVENT_HEARTBEAT: "10s"                              # /api/lab/events heartbeat cadence
 ---
 apiVersion: apps/v1
 kind: Deployment

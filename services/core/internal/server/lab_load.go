@@ -147,7 +147,7 @@ func atoiOr(s string, def int) int {
 
 // loadTestHandler runs a bounded load test against the FIXED demo target and streams a live histogram (SSE).
 // The run lives exactly as long as the connection (bounded by the duration cap) — disconnect cancels it.
-func loadTestHandler(cfg config.Config, srvCtx context.Context) http.HandlerFunc {
+func loadTestHandler(cfg config.Config, srvCtx context.Context, labHub *hub) http.HandlerFunc {
 	var activeRuns atomic.Int64
 	var inflight sync.Map // per-IP single-flight
 	maxRuns := int64(cfg.LoadMaxRuns)
@@ -195,6 +195,12 @@ func loadTestHandler(cfg config.Config, srvCtx context.Context) http.HandlerFunc
 
 		h := newHistogram()
 		start := time.Now()
+		publishLabEvent(labHub, "loadtest", fmt.Sprintf("start c=%d s=%d", c, s))
+		// done fires on EVERY termination path (ctx.Done + client-gone) — a CLOSURE so the snapshot is read
+		// at defer-time, not at registration (a direct defer would capture total=0).
+		defer func() {
+			publishLabEvent(labHub, "loadtest", fmt.Sprintf("done total=%d", h.snapshot(time.Since(start)).Total))
+		}()
 		var runWG sync.WaitGroup
 		runWG.Add(1)
 		go func() { defer runWG.Done(); runLoad(ctx, cfg.LoadTargetURL, c, h) }()
