@@ -21,7 +21,7 @@ export function StaticResume() {
   const b = resume.basics;
   return (
     <div className="cst-doc">
-      <header className="cst-card cst-identity" data-station>
+      <header id="cst-profile" className="cst-card cst-identity" data-station>
         <p className="cst-kicker">// the record</p>
         <h1 className="cst-name">{b.name}</h1>
         <p className="cst-label">{b.label}</p>
@@ -40,7 +40,7 @@ export function StaticResume() {
         </p>
       </header>
 
-      <section className="cst-section">
+      <section id="cst-skills" className="cst-section">
         <h2 className="cst-chapter">skills</h2>
         {skillPairs().map((pair) => (
           <article className="cst-card" data-station key={pair.title}>
@@ -56,7 +56,7 @@ export function StaticResume() {
         ))}
       </section>
 
-      <section className="cst-section">
+      <section id="cst-experience" className="cst-section">
         <h2 className="cst-chapter">experience</h2>
         {resume.experience.map((r) => (
           <article className="cst-card" data-station key={`${r.org}-${r.role}`}>
@@ -75,7 +75,7 @@ export function StaticResume() {
         ))}
       </section>
 
-      <section className="cst-section">
+      <section id="cst-projects" className="cst-section">
         <h2 className="cst-chapter">projects</h2>
         {resume.projects.map((p) => (
           <article className="cst-card" data-station key={p.name}>
@@ -94,7 +94,7 @@ export function StaticResume() {
         ))}
       </section>
 
-      <section className="cst-section">
+      <section id="cst-publications" className="cst-section">
         <h2 className="cst-chapter">publications</h2>
         {resume.publications.map((pub) => (
           <article className="cst-card" data-station key={pub.doi}>
@@ -119,7 +119,7 @@ export function StaticResume() {
         ))}
       </section>
 
-      <section className="cst-section">
+      <section id="cst-education" className="cst-section">
         <h2 className="cst-chapter">education</h2>
         {resume.education.map((e) => (
           <article className="cst-card" data-station key={e.degree}>
@@ -133,7 +133,7 @@ export function StaticResume() {
         ))}
       </section>
 
-      <section className="cst-section">
+      <section id="cst-honours" className="cst-section">
         <h2 className="cst-chapter">honours</h2>
         <article className="cst-card" data-station>
           <p className="cst-kicker">// certifications · awards · leadership</p>
