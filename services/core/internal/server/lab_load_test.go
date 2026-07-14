@@ -13,6 +13,8 @@ import (
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/config"
 )
 
+// discardLog() (a no-op logger) is declared in lab_chaos_test.go — same package.
+
 func TestHistogramPercentiles(t *testing.T) {
 	h := newHistogram()
 	// 100 records: 90 at ~4ms (bucket edge 5), 9 at ~40ms (edge 50), 1 at ~800ms (edge 1000)
@@ -101,7 +103,7 @@ func TestLoadTestNoGoroutineLeak(t *testing.T) {
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
 	defer target.Close()
 	cfg := config.Config{LabEnabled: true, LoadTargetURL: target.URL, LoadMaxConcurrency: 2, LoadMaxSeconds: 10, LoadMaxRuns: 4}
-	h := loadTestHandler(cfg, context.Background(), nil) // Background never cancels → a parked watcher would leak
+	h := loadTestHandler(cfg, context.Background(), nil, discardLog()) // Background never cancels → a parked watcher would leak
 
 	time.Sleep(50 * time.Millisecond)
 	runtime.GC()
@@ -121,7 +123,7 @@ func TestLoadTestNoGoroutineLeak(t *testing.T) {
 }
 
 func TestLoadTestDisabled(t *testing.T) {
-	h := loadTestHandler(config.Config{LabEnabled: false}, context.Background(), nil)
+	h := loadTestHandler(config.Config{LabEnabled: false}, context.Background(), nil, discardLog())
 	rec := httptest.NewRecorder()
 	h(rec, httptest.NewRequest("GET", "/api/lab/loadtest", nil))
 	if rec.Code != http.StatusServiceUnavailable {
@@ -133,7 +135,7 @@ func TestLoadTestSingleFlightAndSSE(t *testing.T) {
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
 	defer target.Close()
 	cfg := config.Config{LabEnabled: true, LoadTargetURL: target.URL, LoadMaxConcurrency: 4, LoadMaxSeconds: 10, LoadMaxRuns: 4}
-	h := loadTestHandler(cfg, context.Background(), nil)
+	h := loadTestHandler(cfg, context.Background(), nil, discardLog())
 
 	req := func() *http.Request {
 		r := httptest.NewRequest("GET", "/api/lab/loadtest?c=2&s=1", nil)

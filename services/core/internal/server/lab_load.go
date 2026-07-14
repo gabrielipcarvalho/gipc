@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"sync"
@@ -112,7 +113,13 @@ func runLoad(ctx context.Context, target string, concurrency int, h *histogram) 
 	// dedicated transport so the run's keep-alive connections are OURS to close at the end — otherwise
 	// idle persistConn goroutines linger ~90s (IdleConnTimeout) past the run.
 	tr := &http.Transport{MaxIdleConns: concurrency, MaxIdleConnsPerHost: concurrency}
-	client := &http.Client{Timeout: 2 * time.Second, Transport: tr}
+	client := &http.Client{
+		Timeout:   2 * time.Second,
+		Transport: tr,
+		// never follow redirects — keeps the "target is fixed" guarantee even if the target ever 3xx'd
+		// somewhere else (defense-in-depth against SSRF via a redirect).
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
 	defer tr.CloseIdleConnections()
 	var wg sync.WaitGroup
 	for i := 0; i < concurrency; i++ {
@@ -147,7 +154,7 @@ func atoiOr(s string, def int) int {
 
 // loadTestHandler runs a bounded load test against the FIXED demo target and streams a live histogram (SSE).
 // The run lives exactly as long as the connection (bounded by the duration cap) — disconnect cancels it.
-func loadTestHandler(cfg config.Config, srvCtx context.Context, labHub *hub) http.HandlerFunc {
+func loadTestHandler(cfg config.Config, srvCtx context.Context, labHub *hub, log *slog.Logger) http.HandlerFunc {
 	var activeRuns atomic.Int64
 	var inflight sync.Map // per-IP single-flight
 	maxRuns := int64(cfg.LoadMaxRuns)
@@ -195,6 +202,7 @@ func loadTestHandler(cfg config.Config, srvCtx context.Context, labHub *hub) htt
 
 		h := newHistogram()
 		start := time.Now()
+		log.Info("loadtest_start", "c", c, "s", s) // audit: params only — no ip, no content, no token (parity with chaos_kill)
 		publishLabEvent(labHub, "loadtest", fmt.Sprintf("start c=%d s=%d", c, s))
 		// done fires on EVERY termination path (ctx.Done + client-gone) — a CLOSURE so the snapshot is read
 		// at defer-time, not at registration (a direct defer would capture total=0).
