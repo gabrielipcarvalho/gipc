@@ -116,7 +116,7 @@ func Logging(log *slog.Logger) func(http.Handler) http.Handler {
 			log.Info("request",
 				"method", r.Method, "path", r.URL.Path, "status", rec.status,
 				"dur_ms", time.Since(start).Milliseconds(),
-				"ip", clientIP(r), "request_id", RequestID(r.Context()))
+				"ip", ClientIP(r), "request_id", RequestID(r.Context()))
 		})
 	}
 }

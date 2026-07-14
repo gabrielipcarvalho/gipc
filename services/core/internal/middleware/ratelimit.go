@@ -17,7 +17,7 @@ type bucket struct {
 }
 
 // Limiter is a per-client token-bucket rate limiter (stdlib only — no external deps).
-// Clients are keyed by CF-Connecting-IP (see clientIP) so the limit is genuinely per-visitor
+// Clients are keyed by CF-Connecting-IP (see ClientIP) so the limit is genuinely per-visitor
 // behind the Cloudflare → cloudflared → Caddy → core proxy chain, not one global bucket.
 type Limiter struct {
 	mu      sync.Mutex
@@ -83,7 +83,7 @@ func (l *Limiter) sweepLoop() {
 // Middleware enforces the limit, returning 429 + Retry-After on refusal.
 func (l *Limiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !IsHealthPath(r.URL.Path) && !l.allow(clientIP(r), time.Now()) {
+		if !IsHealthPath(r.URL.Path) && !l.allow(ClientIP(r), time.Now()) {
 			retry := 1
 			if l.rps > 0 {
 				retry = int(1.0/l.rps) + 1
@@ -96,9 +96,9 @@ func (l *Limiter) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// clientIP resolves the real client address behind the proxy chain:
+// ClientIP resolves the real client address behind the proxy chain:
 // CF-Connecting-IP (injected by Cloudflare, survives cloudflared→Caddy) → leftmost X-Forwarded-For → RemoteAddr.
-func clientIP(r *http.Request) string {
+func ClientIP(r *http.Request) string {
 	if ip := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); ip != "" {
 		return ip
 	}

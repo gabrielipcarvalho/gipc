@@ -44,6 +44,7 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 		killer = k8sc
 	}
 	chaosLimiter := middleware.NewLimiter(cfg.ChaosRPS, cfg.ChaosBurst) // per-IP cooldown ≈ 1 kill / 10s
+	loadLimiter := middleware.NewLimiter(cfg.LoadRPS, cfg.LoadBurst)    // per-IP cooldown ≈ 1 run / 5s
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/healthz", healthz)
@@ -60,6 +61,7 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	// M5 Lab — chaos: kill is cooldown-limited per IP; status is a plain read.
 	mux.Handle("POST /api/lab/chaos", chaosLimiter.Middleware(http.HandlerFunc(chaosKillHandler(killer, cfg, log))))
 	mux.HandleFunc("GET /api/lab/chaos/status", chaosStatusHandler(prom, killer, cfg))
+	mux.Handle("GET /api/lab/loadtest", loadLimiter.Middleware(http.HandlerFunc(loadTestHandler(cfg, srvCtx)))) // bounded SSE load
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never
