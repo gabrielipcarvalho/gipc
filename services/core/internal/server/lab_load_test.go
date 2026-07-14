@@ -101,7 +101,7 @@ func TestLoadTestNoGoroutineLeak(t *testing.T) {
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
 	defer target.Close()
 	cfg := config.Config{LabEnabled: true, LoadTargetURL: target.URL, LoadMaxConcurrency: 2, LoadMaxSeconds: 10, LoadMaxRuns: 4}
-	h := loadTestHandler(cfg, context.Background()) // Background never cancels → a parked watcher would leak
+	h := loadTestHandler(cfg, context.Background(), nil) // Background never cancels → a parked watcher would leak
 
 	time.Sleep(50 * time.Millisecond)
 	runtime.GC()
@@ -121,7 +121,7 @@ func TestLoadTestNoGoroutineLeak(t *testing.T) {
 }
 
 func TestLoadTestDisabled(t *testing.T) {
-	h := loadTestHandler(config.Config{LabEnabled: false}, context.Background())
+	h := loadTestHandler(config.Config{LabEnabled: false}, context.Background(), nil)
 	rec := httptest.NewRecorder()
 	h(rec, httptest.NewRequest("GET", "/api/lab/loadtest", nil))
 	if rec.Code != http.StatusServiceUnavailable {
@@ -133,7 +133,7 @@ func TestLoadTestSingleFlightAndSSE(t *testing.T) {
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
 	defer target.Close()
 	cfg := config.Config{LabEnabled: true, LoadTargetURL: target.URL, LoadMaxConcurrency: 4, LoadMaxSeconds: 10, LoadMaxRuns: 4}
-	h := loadTestHandler(cfg, context.Background())
+	h := loadTestHandler(cfg, context.Background(), nil)
 
 	req := func() *http.Request {
 		r := httptest.NewRequest("GET", "/api/lab/loadtest?c=2&s=1", nil)

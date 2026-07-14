@@ -45,7 +45,7 @@ func doKill(h http.HandlerFunc) *httptest.ResponseRecorder {
 }
 
 func TestChaosKillDisabled(t *testing.T) {
-	rec := doKill(chaosKillHandler(nil, testCfg, discardLog())) // untyped-nil podKiller
+	rec := doKill(chaosKillHandler(nil, testCfg, discardLog(), nil)) // untyped-nil podKiller
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("code = %d, want 503", rec.Code)
 	}
@@ -57,7 +57,7 @@ func TestChaosKillHappy(t *testing.T) {
 		{Name: "chaos-target-b", Phase: "Pending"}, // must NOT be picked
 		{Name: "chaos-target-c", Phase: "Running"},
 	}}
-	rec := doKill(chaosKillHandler(fk, testCfg, discardLog()))
+	rec := doKill(chaosKillHandler(fk, testCfg, discardLog(), nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("code = %d, want 200", rec.Code)
 	}
@@ -77,7 +77,7 @@ func TestChaosKillHappy(t *testing.T) {
 
 func TestChaosKillNoRunning(t *testing.T) {
 	fk := &fakeKiller{pods: []k8s.Pod{{Name: "x", Phase: "Pending"}}}
-	rec := doKill(chaosKillHandler(fk, testCfg, discardLog()))
+	rec := doKill(chaosKillHandler(fk, testCfg, discardLog(), nil))
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("code = %d, want 409", rec.Code)
 	}
@@ -88,7 +88,7 @@ func TestChaosKillNoRunning(t *testing.T) {
 
 func TestChaosKillListErr(t *testing.T) {
 	fk := &fakeKiller{listErr: context.DeadlineExceeded}
-	rec := doKill(chaosKillHandler(fk, testCfg, discardLog()))
+	rec := doKill(chaosKillHandler(fk, testCfg, discardLog(), nil))
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("code = %d, want 503", rec.Code)
 	}
@@ -96,7 +96,7 @@ func TestChaosKillListErr(t *testing.T) {
 
 func TestChaosKillDeleteErr(t *testing.T) {
 	fk := &fakeKiller{pods: []k8s.Pod{{Name: "chaos-target-a", Phase: "Running"}}, delErr: context.DeadlineExceeded}
-	rec := doKill(chaosKillHandler(fk, testCfg, discardLog()))
+	rec := doKill(chaosKillHandler(fk, testCfg, discardLog(), nil))
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("code = %d, want 502", rec.Code)
 	}
