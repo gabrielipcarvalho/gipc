@@ -1,0 +1,48 @@
+# A disposable, self-healing workload. Killing one of its pods triggers the ReplicaSet to recreate it —
+# the chaos demo. Public unprivileged image (no new GHCR). RO rootfs with emptyDir scratch.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chaos-target
+  namespace: demo
+  labels: { app: chaos-target }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: chaos-target }
+  template:
+    metadata:
+      labels: { app: chaos-target }
+    spec:
+      securityContext:
+        runAsNonRoot: true          # image default uid 101
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: echo
+          image: nginxinc/nginx-unprivileged:1.27-alpine   # listens on :8080, non-root
+          ports:
+            - { containerPort: 8080, name: http }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 64Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: cache, mountPath: /var/cache/nginx }   # nginx temp paths
+            - { name: tmp, mountPath: /tmp }                 # nginx pid → /tmp/nginx.pid
+      volumes:
+        - { name: cache, emptyDir: {} }
+        - { name: tmp, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chaos-target
+  namespace: demo
+  labels: { app: chaos-target }
+spec:
+  selector: { app: chaos-target }
+  ports:
+    - { port: 80, targetPort: 8080, name: http }

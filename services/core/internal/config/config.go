@@ -22,6 +22,10 @@ type Config struct {
 	StreamInterval  time.Duration // SSE metric tick cadence (P4)
 	MaxStreams      int           // concurrent SSE connection cap (P4)
 	DeployHookKey   string        // HMAC key for POST /api/hooks/deploy (P5; empty ⇒ endpoint 503)
+	// M5 Lab
+	LabEnabled          bool   // master switch — false ⇒ k8s.New returns nil ⇒ lab handlers 503
+	LabNamespace        string // the ONLY namespace core's k8s client ever touches (default demo)
+	ChaosTargetSelector string // label selector for the chaos target (default app=chaos-target)
 }
 
 // Load reads the environment and applies defaults. It never returns an error today, but keeps the
@@ -40,7 +44,20 @@ func Load() (Config, error) {
 		StreamInterval:  envDuration("STREAM_INTERVAL", 5*time.Second),
 		MaxStreams:      envInt("MAX_STREAMS", 64),
 		DeployHookKey:   env("DEPLOY_HOOK_KEY", ""),
+
+		LabEnabled:          envBool("LAB_ENABLED", false),
+		LabNamespace:        env("LAB_NAMESPACE", "demo"),
+		ChaosTargetSelector: env("CHAOS_TARGET_SELECTOR", "app=chaos-target"),
 	}, nil
+}
+
+func envBool(key string, def bool) bool {
+	if v := os.Getenv(key); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			return b
+		}
+	}
+	return def
 }
 
 func env(key, def string) string {
