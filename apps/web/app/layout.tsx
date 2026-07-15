@@ -30,13 +30,12 @@ export const metadata: Metadata = {
     url: "https://gipc.dev",
     siteName: "gipc.dev",
     locale: "en_AU",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "arcane — the gipc.dev operator console" }],
+    // og:image comes from the root app/opengraph-image.tsx (file convention overrides config).
   },
   twitter: {
     card: "summary_large_image",
     title: "gipc.dev — the arcane operator console",
     description: "A real, self-hosted operator console. It's all live.",
-    images: ["/og.png"],
   },
 };
 
