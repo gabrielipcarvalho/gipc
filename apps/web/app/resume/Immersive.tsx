@@ -18,6 +18,88 @@ const FS = [
   { fs: 9, speed: 0.5 },
 ];
 
+/* Device-tier budgets (AT-style). A cheap-signal detector picks T0 (lowest) → T3 (highest); the tier
+   sets the PROACTIVE starting budget. The reactive per-frame loop (uniform 2ms / 0.3 floor) stays as a
+   universal guardrail on top. T3 == the shipped constants exactly (density 1, 3 layers, dpr 2, rune
+   0.015) → a true no-op on capable devices. `?gpu=t0..t3|high|low` overrides detection (testing). */
+type Tier = 0 | 1 | 2 | 3;
+type TierBudget = {
+  layers: number; // how many FS[] rain layers to render (1..3)
+  density: number; // STARTING active-column fraction; the adaptive loop only tunes DOWN from here
+  dprCap: number; // devicePixelRatio ceiling for the canvas backing store
+  runeRate: number; // per-cell probability of a sigil rune vs a glyph
+};
+const TIERS: Record<Tier, TierBudget> = {
+  0: { layers: 1, density: 0.4, dprCap: 1, runeRate: 0 },
+  1: { layers: 2, density: 0.6, dprCap: 1.5, runeRate: 0.008 },
+  2: { layers: 3, density: 0.85, dprCap: 2, runeRate: 0.012 },
+  3: { layers: 3, density: 1, dprCap: 2, runeRate: 0.015 },
+};
+
+/* Coarse GPU-capability proxy: MAX_TEXTURE_SIZE only (low-entropy, NOT UNMASKED_RENDERER → no
+   fingerprint). One detached context, read then freed immediately; any failure → 0. */
+function sniffGpu(): number {
+  try {
+    const c = document.createElement("canvas");
+    const gl = (c.getContext("webgl") || c.getContext("experimental-webgl")) as WebGLRenderingContext | null;
+    if (!gl) return 0;
+    const max = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    if (max >= 16384) return 2;
+    if (max >= 8192) return 1;
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+/* Detect a device tier from cheap signals. Client-only (touches navigator/window) — call inside an
+   effect, never at render. Missing signals contribute 0 → an unknown device lands at a safe middle. */
+function detectTier(): Tier {
+  try {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return 0;
+  } catch {
+    /* ignore */
+  }
+  const cores = navigator.hardwareConcurrency || 0;
+  const mem = (navigator as unknown as { deviceMemory?: number }).deviceMemory || 0;
+  let coarse = false;
+  try {
+    coarse = window.matchMedia("(pointer: coarse)").matches;
+  } catch {
+    /* ignore */
+  }
+  let score = 0;
+  // Touch/mobile bias down: big.LITTLE SoCs inflate logical-core count and report a large
+  // MAX_TEXTURE_SIZE yet are weak; the dpr²-fill + layer cost of a high tier is what the density-only
+  // adaptive guardrail can't claw back. So the cores≥8 bonus is desktop-only and coarse costs −2.
+  if (!coarse && cores >= 8) score += 2;
+  else if (cores >= 4) score += 1;
+  if (mem >= 8) score += 2;
+  else if (mem >= 4) score += 1;
+  if (coarse) score -= 2;
+  score += sniffGpu(); // 0..2
+  if (score >= 5) return 3;
+  if (score >= 3) return 2;
+  if (score >= 1) return 1;
+  return 0;
+}
+
+/* `?gpu=t0..t3` (or `high`/`low`) test override → a fixed tier, else null (fall back to detection). */
+function readGpuOverride(): Tier | null {
+  try {
+    const v = new URLSearchParams(window.location.search).get("gpu");
+    if (!v) return null;
+    const s = v.toLowerCase();
+    if (s === "high") return 3;
+    if (s === "low") return 0;
+    const m = /^t([0-3])$/.exec(s);
+    return m ? (Number(m[1]) as Tier) : null;
+  } catch {
+    return null;
+  }
+}
+
 /* Rain colours per tint — JS literal strings (canvas fillStyle can't read CSS vars; the green
    precedent already hardcodes rgba). Violet mirrors the arcane --violet/--cyan values. */
 type Tint = "green" | "violet";
@@ -246,6 +328,12 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     const stations = cards.length;
     if (!stations) return;
 
+    // device-tier budget: `?gpu` override wins, else detect. Proactive start; the adaptive loop below
+    // still tunes density DOWN. `data-cst-tier` is a QA/verify signal (removed on unmount).
+    const tier = readGpuOverride() ?? detectTier();
+    const budget = TIERS[tier];
+    root.setAttribute("data-cst-tier", String(tier));
+
     let vh = window.innerHeight;
     const lerp = window.matchMedia("(pointer: coarse)").matches ? LERP_COARSE : LERP_FINE;
     let cam = window.scrollY;
@@ -259,7 +347,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       lastH = window.innerHeight;
       vh = window.innerHeight;
       spacer.style.height = `${stations * vh}px`;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, budget.dprCap);
       canvas.width = Math.floor(window.innerWidth * dpr);
       canvas.height = Math.floor(vh * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -332,11 +420,11 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     /* ---- glyph rain ---- */
     type Layer = { fs: number; speed: number; color: string; head: string; drops: number[]; cols: number; rune: HTMLCanvasElement };
     let layers: Layer[] = [];
-    let density = 1;
+    let density = budget.density;
     const buildRain = () => {
       const w = window.innerWidth;
       const palette = TINTS[tintRef.current];
-      layers = palette.map((p, i) => {
+      layers = palette.slice(0, budget.layers).map((p, i) => {
         const { fs, speed } = FS[i];
         const cols = Math.ceil(w / fs);
         return {
@@ -357,10 +445,17 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       ctx.fillRect(0, 0, window.innerWidth, vh);
       for (const l of layers) {
         ctx.font = `${l.fs}px ui-monospace, monospace`;
-        const active = Math.floor(l.cols * density);
-        for (let c = 0; c < active; c++) {
+        // Uniform column thinning (Bresenham accumulator): spread the `density` fraction of columns
+        // ACROSS THE FULL WIDTH — never truncate to the left band (density<1 must not empty the right).
+        // Seeded at 1-density/2 to centre the dither so column 0 can draw (no far-left blank strip).
+        // At density 1 every column draws (identical to the shipped full-width rain).
+        let sel = 1 - density / 2;
+        for (let c = 0; c < l.cols; c++) {
+          sel += density;
+          if (sel < 1) continue;
+          sel -= 1;
           const y = l.drops[c] * l.fs;
-          const isRune = Math.random() < 0.015;
+          const isRune = Math.random() < budget.runeRate;
           if (isRune) {
             ctx.drawImage(l.rune, c * l.fs, y - l.fs, l.fs, l.fs); // 2× rune → scaled down
           } else {
@@ -447,6 +542,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
         c.style.transform = "";
         c.style.visibility = ""; // clear the CLS-guard in case unmount raced the first frame()
       });
+      root.removeAttribute("data-cst-tier");
       apiRef.current = null;
     };
   }, [rootRef]);
