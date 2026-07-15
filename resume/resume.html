@@ -109,6 +109,7 @@ li b{ font-weight:600; }
       <li>Delivered a production <b>WhatsApp financial-qualification chatbot</b> (FastAPI + GPT-4o-mini, 25-step conversation engine) in <b>three days</b>, with idempotent HMAC-validated webhooks, atomic opt-out compliance and a single-call prompt design that <b>cut response latency ~50%</b>.</li>
       <li>Migrated two production servers to new AWS accounts with row-parity-verified database cutovers, and executed the corporate infrastructure separation of the two companies — vhosts, three Cloudflare zones and registrar EPP domain transfers.</li>
       <li>Owned the AWS environment — WAF, three CloudFront distributions, ACM, GuardDuty and IAM — <b>decommissioned a legacy stack saving ~US$18k/year</b>, and rebuilt backups on EBS/DLM snapshots after finding the prior policy silently capturing none.</li>
+      <li>Designed and built a <b>WireGuard site-to-cloud VPN</b> linking an office QNAP NAS to AWS with an <b>NFSv4.1 / FileRun</b> private-cloud share for the marketing team; after an outage broke it, <b>root-caused the failure to CloudLinux CageFS/LVE namespace isolation</b> and restored service.</li>
       <li>Led estate-wide security hardening and incident response — a CSRF/SSRF/security-headers sprint across three servers (five adversarial QA rounds), a same-day SQL-injection scanner response, and an authorisation-gate content leak fixed across <b>163 files / 422 sites</b> — alongside cPanel/WHM/Imunify360 and Exim/SES mail operations.</li>
     </ul>
   </div>

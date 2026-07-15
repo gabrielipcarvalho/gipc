@@ -204,6 +204,23 @@
           ]
         },
         {
+          "text": "Designed and built a WireGuard site-to-cloud VPN linking an office QNAP NAS to AWS with an NFSv4.1/FileRun private-cloud share for the marketing team; after an outage broke it, root-caused the failure to CloudLinux CageFS/LVE namespace isolation and restored service.",
+          "evidence": [
+            "CGX-DW-16",
+            "CGX-DW-17",
+            "CGX-DW-23"
+          ],
+          "keywords": [
+            "WireGuard",
+            "NFS",
+            "AWS",
+            "CloudLinux",
+            "QNAP",
+            "Linux",
+            "incident response"
+          ]
+        },
+        {
           "text": "Led estate-wide security hardening and incident response — a CSRF/SSRF/security-headers sprint across three servers (five adversarial QA rounds), a same-day SQL-injection scanner response, and an authorisation-gate content leak fixed across 163 files / 422 sites — alongside cPanel/WHM/Imunify360 and Exim/SES mail operations.",
           "evidence": [
             "JDL-23",

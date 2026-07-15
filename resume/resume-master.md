@@ -54,6 +54,9 @@ working rights (HDR student visa to 2029); open to Melbourne relocation.
 - Owned the AWS environment — WAF, three CloudFront distributions, ACM, GuardDuty and IAM —
   **decommissioned a legacy stack saving ~US$18k/year**, and rebuilt backups on EBS/DLM snapshots
   after finding the prior policy silently capturing none.
+- Designed and built a **WireGuard site-to-cloud VPN** linking an office QNAP NAS to AWS with an
+  **NFSv4.1 / FileRun** private-cloud share for the marketing team; after an outage broke it,
+  **root-caused the failure to CloudLinux CageFS/LVE namespace isolation** and restored service.
 - Led estate-wide security hardening and incident response — a CSRF/SSRF/security-headers sprint
   across three servers (five adversarial QA rounds), a same-day SQL-injection scanner response,
   and an authorisation-gate content leak fixed across **163 files / 422 sites** — alongside
