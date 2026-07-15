@@ -10,6 +10,7 @@ export const ROUTES: readonly Route[] = [
   { href: "/status", label: "status" },
   { href: "/infra", label: "infra" },
   { href: "/work", label: "work" },
+  { href: "/writeups", label: "writeups" },
   { href: "/timeline", label: "timeline" },
   { href: "/resume", label: "resume" },
   { href: "/connect", label: "connect" },

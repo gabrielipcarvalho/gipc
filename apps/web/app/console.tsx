@@ -38,7 +38,7 @@ type OutLine = { id: number; kind: "cmd" | "out"; text: React.ReactNode };
 
 // every command + alias the switch below understands — drives tab-completion + did-you-mean
 export const KNOWN_COMMANDS = [
-  "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "timeline",
+  "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "writeups", "blog", "timeline",
   "experience", "resume", "lab", "operator", "oracle", "ward", "summon", "connect",
   "contact", "social", "theme", "history", "restore", "clear", "exit",
 ]; // .hidden / cat kept OUT — the CTF trailhead stays off tab-complete + did-you-mean
@@ -111,6 +111,12 @@ function runCommand(
     case "work":
     case "grimoire":
       return { out: [<>selected work → <b>/work</b>: gipc.dev (this) · Nina Nails · seismic U-Net · transformer market platform · drowning-detection (IEEE Access).</>], nav: "/work" };
+    case "writeups":
+    case "blog":
+      return {
+        out: [<>technical writeups → <b>/writeups</b>: how the Lab, the self-hosted infra, and the Construct are built.</>],
+        nav: "/writeups",
+      };
     case "timeline":
     case "experience":
       return { out: [<>career history → <b>/timeline</b>: roles + study, newest first.</>], nav: "/timeline" };
