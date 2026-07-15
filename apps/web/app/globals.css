@@ -374,8 +374,18 @@ a{ color:inherit; text-decoration:none; }
 }
 .connect-k{ min-width:6.5rem; color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; }
 .connect-rows a{ color:var(--cyan); text-decoration:underline; text-underline-offset:2px; overflow-wrap:anywhere; }
-.connect-hint{ color:var(--text-faint); font-size:var(--fs-xs); }
-.connect-soon{ color:var(--text-faint); }
+/* ── Book-a-call /meet ────────────────────────────────────────────────────── */
+.meet-form{ margin-top:1.3rem; display:flex; flex-direction:column; gap:.9rem; max-width:38rem; }
+.meet-field{ display:flex; flex-direction:column; gap:.3rem; }
+.meet-field > span{ color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.04em; }
+.meet-input, .meet-select, .meet-textarea{ width:100%; background:var(--bg-elev); border:1px solid var(--border); border-radius:6px; padding:.6rem .7rem; color:var(--text); font:inherit; font-size:var(--fs-body); }
+.meet-textarea{ line-height:1.5; resize:vertical; min-height:5rem; }
+.meet-select{ cursor:pointer; } /* keep the native chevron affordance */
+.meet-input:focus-visible, .meet-select:focus-visible, .meet-textarea:focus-visible{ outline:2px solid var(--cyan); outline-offset:1px; border-color:var(--border-cyan); }
+.meet-count{ align-self:flex-end; color:var(--text-faint); font-size:var(--fs-xs); }
+.meet-send{ align-self:flex-start; margin-top:.3rem; background:none; border:1px solid var(--border-cyan); border-radius:6px; padding:.5rem 1rem; color:var(--cyan); font-size:var(--fs-sm); text-decoration:none; }
+.meet-send:hover{ color:var(--cyan-bright); border-color:var(--cyan-bright); }
+.meet-note{ margin:.2rem 0 0; color:var(--text-muted); font-size:var(--fs-xs); line-height:1.5; }
 .connect-note{ margin-top:1.2rem; color:var(--text-muted); font-size:var(--fs-sm); }
 .connect-note a{ color:var(--violet-bright); text-decoration:underline; text-underline-offset:2px; }
 

@@ -40,9 +40,9 @@ export default function ConnectPage() {
               </a>
             </li>
           ))}
-          <li className="connect-soon">
+          <li>
             <span className="connect-k">book a call</span>
-            <span className="connect-hint">scrying window — coming soon</span>
+            <a href="/meet">request a time →</a>
           </li>
         </ul>
 

@@ -40,7 +40,7 @@ type OutLine = { id: number; kind: "cmd" | "out"; text: React.ReactNode };
 export const KNOWN_COMMANDS = [
   "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "writeups", "blog", "timeline",
   "experience", "resume", "lab", "operator", "oracle", "ward", "summon", "connect",
-  "contact", "social", "theme", "history", "restore", "clear", "exit",
+  "contact", "social", "meet", "call", "theme", "history", "restore", "clear", "exit",
 ]; // .hidden / cat kept OUT — the CTF trailhead stays off tab-complete + did-you-mean
 
 // bounded Levenshtein (early-out above 2) for the did-you-mean hint
@@ -142,6 +142,9 @@ function runCommand(
     case "connect":
     case "contact":
       return { out: [<>arcan.e@gipc.dev · <a href="https://github.com/gabrielipcarvalho">github</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin</a> → <b>/connect</b></>], nav: "/connect" };
+    case "meet":
+    case "call":
+      return { out: [<>book a call → <b>/meet</b>: request a time (async-first, AEST). I&apos;ll confirm.</>], nav: "/meet" };
     case "social":
       return { out: [<><a href="https://github.com/gabrielipcarvalho">github.com/gabrielipcarvalho</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin.com/in/gabriel-ipcarvalho</a></>] };
     case "theme": {

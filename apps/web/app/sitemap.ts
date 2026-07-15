@@ -5,7 +5,7 @@ import { writeups } from "../data/writeups";
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://gipc.dev";
   const routes = [
-    "/", "/system", "/oracle", "/lab", "/status", "/infra", "/work", "/writeups", "/timeline", "/resume", "/connect",
+    "/", "/system", "/oracle", "/lab", "/status", "/infra", "/work", "/writeups", "/timeline", "/resume", "/connect", "/meet",
     ...writeups.map((w) => `/writeups/${w.slug}`),
   ];
   return routes.map((p) => ({ url: `${base}${p === "/" ? "" : p}` }));

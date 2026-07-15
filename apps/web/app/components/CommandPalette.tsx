@@ -47,6 +47,8 @@ export function CommandPalette() {
     return [
       { id: "goto:/", label: "goto home", hint: "/", run: go("/") },
       ...routeCmds,
+      // /meet is a CTA sub-action of /connect (not a top-nav section), so it's palette-only, not in ROUTES.
+      { id: "goto:/meet", label: "goto meet", hint: "book a call", run: go("/meet") },
       {
         id: "open-console",
         label: "open console",
