@@ -9,12 +9,10 @@ import { tiltHandlers } from "./motion";
    NOT useSearchParams — keeps /work statically generated), and the per-card blurb
    disclosure are all client-only. */
 const tilt = tiltHandlers();
-const MORE_THRESHOLD = 130; // blurbs longer than this get a clamp + "more" toggle
-
 function WorkCard({ p }: { p: Project }) {
   const [open, setOpen] = useState(false);
-  const clampable = p.blurb.length > MORE_THRESHOLD;
-  const blurbId = `blurb-${p.slug}`;
+  const hasDetail = !!(p.detail || p.stack?.length || p.highlights?.length);
+  const detailId = `detail-${p.slug}`;
   return (
     <article
       className={`card${p.featured ? " featured" : ""}`}
@@ -24,19 +22,40 @@ function WorkCard({ p }: { p: Project }) {
       {p.featured && <span className="card-live">you&apos;re looking at it</span>}
       <h2 className="card-name">{p.name}</h2>
       <p className="card-year">{p.year}</p>
-      <p id={blurbId} className={`card-blurb${clampable && !open ? " clamp" : ""}`}>
-        {p.blurb}
-      </p>
-      {clampable && (
+      <p className="card-blurb">{p.blurb}</p>
+      {hasDetail && (
         <button
           type="button"
           className="card-more"
           aria-expanded={open}
-          aria-controls={blurbId}
+          aria-controls={detailId}
           onClick={() => setOpen((o) => !o)}
         >
-          {open ? "less ▴" : "more ▾"}
+          {open ? "less ▴" : "details ▾"}
         </button>
+      )}
+      {/* always rendered so aria-controls resolves; hidden={!open} => display:none removes it from
+          the a11y tree + tab order (no CSS-only collapse, AT-correct, reduced-motion-safe) */}
+      {hasDetail && (
+        <div id={detailId} className="card-detail" hidden={!open}>
+          {p.detail && <p className="card-detail-text">{p.detail}</p>}
+          {p.stack && p.stack.length > 0 && (
+            <p className="card-stack" aria-label="tech stack">
+              {p.stack.map((s) => (
+                <span key={s} className="card-chip">
+                  {s}
+                </span>
+              ))}
+            </p>
+          )}
+          {p.highlights && p.highlights.length > 0 && (
+            <ul className="card-highlights">
+              {p.highlights.map((h) => (
+                <li key={h}>{h}</li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
       <p className="card-tags">
         {p.tags.map((t) => (
