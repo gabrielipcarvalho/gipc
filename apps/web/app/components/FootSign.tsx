@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Greeter } from "./Greeter";
 
 /* Home footer sign-off + (if earned) the Konami "last login" stamp and CTF badge. The base
    strip keeps the .footstrip class (print + base styles depend on it); the stamp/badge are added
@@ -25,6 +26,7 @@ export function FootSign() {
       <p className="foot-sign">
         // you&apos;ve reached the end of the console — <b>exit</b> won&apos;t save you
       </p>
+      <Greeter />
       {(lastLogin || ctf) && (
         <p className="foot-meta">
           {lastLogin && <span>last login: {lastLogin}</span>}

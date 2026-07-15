@@ -1,6 +1,7 @@
 import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
 import { ResumePanel } from "../components/ResumePanel";
+import { Signature } from "../components/Signature";
 import { pageMeta } from "../og";
 import { resume } from "../../data/resume";
 
@@ -54,6 +55,7 @@ export default function ConnectPage() {
         <p className="connect-note">
           The living version of that résumé is <a href="/resume">the Construct</a>.
         </p>
+        <Signature />
       </TerminalWindow>
     </main>
   );
