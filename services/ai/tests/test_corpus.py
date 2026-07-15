@@ -10,7 +10,9 @@ from app.corpus import BASICS_PUBLIC_FIELDS, load_corpus, resume_chunks, site_ch
 
 REPO = Path(__file__).resolve().parents[3]
 RESUME = json.loads((REPO / "resume" / "resume.json").read_text())
-PHONE_DIGITS = re.sub(r"\D", "", RESUME["basics"].get("phone", "") or "NONE")
+# Empty when no phone is configured in resume.json (the public build carries none) — the phone-digit
+# assertions below are then vacuous and skipped; the always-on AU_MOBILE regex still guards any leak.
+PHONE_DIGITS = re.sub(r"\D", "", RESUME["basics"].get("phone", "") or "")
 PRIVATE_TEXT = str(RESUME["basics"].get("private", "") or "\x00none")
 AU_MOBILE = re.compile(r"(\+?61|0)[\s-]?4\d{2}[\s-]?\d{3}[\s-]?\d{3}")
 
@@ -41,9 +43,10 @@ def test_chunks_never_contain_phone_or_private(tmp_path: Path) -> None:
     assert len(chunks) > 10
     for c in chunks:
         digits = re.sub(r"\D", "", c.content)
-        assert PHONE_DIGITS not in digits, f"phone digits leaked in: {c.title}"
-        local = PHONE_DIGITS.removeprefix("61")  # national digits, country code stripped
-        assert local not in digits, f"local phone digits leaked in: {c.title}"
+        if PHONE_DIGITS:  # only assert when a phone is configured (public build carries none)
+            assert PHONE_DIGITS not in digits, f"phone digits leaked in: {c.title}"
+            local = PHONE_DIGITS.removeprefix("61")  # national digits, country code stripped
+            assert local not in digits, f"local phone digits leaked in: {c.title}"
         assert not AU_MOBILE.search(c.content), f"AU mobile pattern in: {c.title}"
         assert PRIVATE_TEXT not in c.content, f"basics.private leaked in: {c.title}"
         assert "career/" not in c.content, f"career path leaked in: {c.title}"

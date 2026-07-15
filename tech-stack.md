@@ -6,7 +6,7 @@
 ## Locked choices
 | Concern | Choice |
 |---|---|
-| Frontend | **Next.js** (React, App Router) · Tailwind CSS · Framer Motion |
+| Frontend | **Next.js 15** (React 19, App Router, TypeScript) · vanilla CSS + `@gipc/tokens` design tokens · hand-rolled motion (`motion.ts`) — see `docs/adr/0001-vanilla-css-hand-motion.md` (supersedes the earlier Tailwind/Framer entry) |
 | Core backend | **Go** — systems/realtime/orchestration |
 | AI backend | **Python** (FastAPI) — agent, RAG, JD-tailoring |
 | Datastores | **Postgres** (+ **pgvector**), **Redis** |

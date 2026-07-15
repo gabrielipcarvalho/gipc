@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { stationKeysOf, stationOffsets } from "../../data/construct-stations";
 
 /* The Construct's mode switch. Server/static first: children (the full résumé DOM)
    render stacked; if motion is allowed, the immersive layer lazy-loads and the SAME
@@ -60,8 +61,9 @@ export function ConstructShell({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   // Oracle → Construct deep-link: /resume?station=<key> brings the matching station to view. Immersive
-  // positions station i at `i*vh` (the camera model Immersive's own focusin scroll uses), so we scroll by
-  // index there — the cards are visibility-hidden pre-paint, so focus() wouldn't land. Static/reduced-motion
+  // positions station i at its hand-authored `offsets[i]*vh` (the same camera model its focusin nav uses),
+  // so we scroll to that offset — the cards are visibility-hidden pre-paint, so focus() wouldn't land.
+  // Static/reduced-motion
   // focuses + scrolls the card directly (the a11y path — reduced-motion users never get immersive). Re-runs
   // on the static→immersive flip; never throws on an unknown station.
   useEffect(() => {
@@ -79,9 +81,10 @@ export function ConstructShell({ children }: { children: React.ReactNode }) {
           const scope = rootRef.current ?? document;
           const cards = Array.from(scope.querySelectorAll<HTMLElement>("[data-station]"));
           const idx = cards.indexOf(target);
+          const offsets = stationOffsets(stationKeysOf(cards)); // same helper Immersive uses → indices align
           // instant scroll (like Immersive's own focusin nav) — the camera lerp animates the descent;
           // "smooth" fights the rAF loop and gets cancelled
-          if (idx >= 0) window.scrollTo({ top: idx * window.innerHeight });
+          if (idx >= 0) window.scrollTo({ top: offsets[idx] * window.innerHeight });
         } else {
           target.setAttribute("tabindex", "-1");
           target.focus({ preventScroll: true });

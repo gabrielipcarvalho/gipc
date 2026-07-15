@@ -1,6 +1,7 @@
 import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
 import { ResumePanel } from "../components/ResumePanel";
+import { Signature } from "../components/Signature";
 import { pageMeta } from "../og";
 import { resume } from "../../data/resume";
 
@@ -40,9 +41,9 @@ export default function ConnectPage() {
               </a>
             </li>
           ))}
-          <li className="connect-soon">
+          <li>
             <span className="connect-k">book a call</span>
-            <span className="connect-hint">scrying window — coming soon</span>
+            <a href="/meet">request a time →</a>
           </li>
         </ul>
 
@@ -54,6 +55,7 @@ export default function ConnectPage() {
         <p className="connect-note">
           The living version of that résumé is <a href="/resume">the Construct</a>.
         </p>
+        <Signature />
       </TerminalWindow>
     </main>
   );

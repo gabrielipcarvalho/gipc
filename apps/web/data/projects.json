@@ -5,9 +5,36 @@
     "name": "gipc.dev — self-hosted operator platform",
     "year": "2026",
     "blurb": "Live-demo platform on bare-metal k3s behind a Cloudflare Tunnel (zero inbound ports), infrastructure-as-code in-repo; migrated the full domain + mail estate solo.",
-    "tags": ["Kubernetes", "Cloudflare Tunnel", "IaC", "Linux"],
+    "tags": [
+      "Kubernetes",
+      "Cloudflare Tunnel",
+      "IaC",
+      "Linux"
+    ],
     "featured": true,
-    "links": [{ "label": "visit live site", "href": "https://gipc.dev" }]
+    "links": [
+      {
+        "label": "visit live site",
+        "href": "https://gipc.dev"
+      }
+    ],
+    "detail": "The platform serving this page: a self-hosted operator site on bare-metal k3s behind a Cloudflare Tunnel (zero inbound ports), fully IaC + GitOps (CI → GHCR → ArgoCD). A Go core + Python/FastAPI AI service + Next.js web, with Prometheus/Grafana/Loki telemetry, a safe-by-construction infra-demo /lab, and an AI operator at /oracle.",
+    "stack": [
+      "Next.js 15",
+      "Go",
+      "Python/FastAPI",
+      "k3s",
+      "Cloudflare Tunnel",
+      "ArgoCD",
+      "Prometheus",
+      "Caddy"
+    ],
+    "highlights": [
+      "Zero inbound ports (Cloudflare Tunnel)",
+      "IaC in-repo + GitOps deploy pipeline",
+      "Live telemetry + AI operator + isolated infra-demo lab",
+      "Full domain + mail estate migrated solo"
+    ]
   },
   {
     "slug": "nina-nails",
@@ -15,7 +42,29 @@
     "name": "Nina Nails — booking platform (client)",
     "year": "2026",
     "blurb": "Full-stack Next.js 15 / React 19 / Supabase product on Vercel (~15k LOC) with a three-tier test suite (Vitest, Playwright e2e, axe) and Google Calendar + email integration.",
-    "tags": ["Next.js", "React", "TypeScript", "testing"]
+    "tags": [
+      "Next.js",
+      "React",
+      "TypeScript",
+      "testing"
+    ],
+    "detail": "A full-stack booking product built for a real nail salon: Next.js 15 / React 19 / TypeScript on Supabase + Vercel, with Google Calendar sync and transactional email (Resend), backed by a three-tier automated test suite.",
+    "stack": [
+      "Next.js 15",
+      "React 19",
+      "TypeScript",
+      "Supabase",
+      "Vercel",
+      "Vitest",
+      "Playwright",
+      "axe"
+    ],
+    "highlights": [
+      "~15.1k LOC across 86 commits",
+      "Google Calendar + transactional email (Resend)",
+      "Three-tier tests (Vitest + Playwright e2e + axe a11y)",
+      "Live for a real salon"
+    ]
   },
   {
     "slug": "seismic-unet",
@@ -23,23 +72,83 @@
     "name": "Seismic inversion (PyTorch U-Net)",
     "year": "2026",
     "blurb": "Reproducible U-Net (12.5M parameters) inverting 2,000 synthetic seismograms via a differentiable wave simulation; functional-core design, 27 deterministic tests.",
-    "tags": ["PyTorch", "deep learning", "testing"]
+    "tags": [
+      "PyTorch",
+      "deep learning",
+      "testing"
+    ],
+    "detail": "A reproducible PyTorch U-Net inverting synthetic seismograms via a Deepwave differentiable wave simulation, built functional-core with deterministic tests and CUDA/MPS/CPU support.",
+    "stack": [
+      "PyTorch",
+      "Deepwave",
+      "NumPy",
+      "CUDA/MPS"
+    ],
+    "highlights": [
+      "12.5M-parameter U-Net",
+      "2,000 shot gathers via a differentiable wave simulation",
+      "L1 + SSIM loss",
+      "27 deterministic unit tests"
+    ]
   },
   {
     "slug": "transformer-fin",
-    "accent": "warn",
-    "name": "Transformer financial-prediction platform",
-    "year": "2023-2024",
-    "blurb": "Node.js + Python orchestration to Azure Kubernetes; ETL over 3M+ records/day, sub-200 ms per query, ~12% MAE reduction, IaC (Bicep/Terraform), >90% coverage.",
-    "tags": ["Transformers", "Azure", "Kubernetes", "ETL", "IaC"]
+    "accent": "cyan",
+    "name": "Transformer financial-prediction platform (Master's dissertation)",
+    "year": "2023–2024",
+    "blurb": "Node.js orchestration of four fine-tuned OpenAI GPT adaptors (news-sentiment, sentiment+price, price-only and a fusion model) predicting daily S&P 500 (SPY) direction across 14 iterative fine-tuning cycles; risk-aware confusion-matrix evaluation; LaTeX manuscript.",
+    "tags": [
+      "OpenAI fine-tuning",
+      "transformers",
+      "LLM",
+      "Node.js",
+      "Python"
+    ],
+    "detail": "His Master's dissertation (dissertation pathway): a Node.js orchestrator coordinating four fine-tuned OpenAI GPT adaptors over a real-world S&P 500 (SPY) dataset of 131 trading days, evaluated with a purpose-built rise/fall confusion matrix that separates missed-opportunity from capital-loss errors; results written up in a LaTeX manuscript.",
+    "stack": [
+      "Node.js",
+      "Python",
+      "OpenAI fine-tuning API",
+      "LaTeX"
+    ],
+    "highlights": [
+      "Four-adaptor orchestration (news-sentiment / sentiment+price / price-only / fusion)",
+      "14 iterative fine-tuning cycles",
+      "Sentiment+price adaptor: 48%→60% peak directional accuracy",
+      "Risk-aware confusion-matrix evaluation (missed-opportunity vs capital-loss)"
+    ]
   },
   {
     "slug": "drowning-detection",
     "accent": "cyan",
-    "name": "Real-time drowning detection (Griffith × Huizhou)",
-    "year": "2024-2026",
-    "blurb": "Edge computer-vision on Raspberry Pi/ARM at >=20 fps and 95%+ accuracy, with sub-100 ms multi-sensor fusion; published in IEEE Access.",
-    "tags": ["computer vision", "edge AI", "Docker/Kubernetes"],
-    "links": [{ "label": "read the paper (IEEE Access)", "href": "https://doi.org/10.1109/ACCESS.2026.3701060" }]
+    "name": "AI drowning-detection research (Griffith × Huizhou)",
+    "year": "2024–2026",
+    "blurb": "First-author IEEE Access paper establishing the technical feasibility of AI drowning detection; now developing the on-device (Raspberry Pi/ARM) edge computer-vision system as the core of his PhD — targeting real-time inference — informed by a funded cross-site systematic review.",
+    "tags": [
+      "IEEE Access",
+      "systematic review",
+      "computer vision",
+      "edge AI"
+    ],
+    "links": [
+      {
+        "label": "read the paper (IEEE Access)",
+        "href": "https://doi.org/10.1109/ACCESS.2026.3701060"
+      }
+    ],
+    "detail": "A funded Griffith × Huizhou University (China) cross-site research project: a six-database systematic review of ~82 papers with an original seven-dimension classification framework and a 13-gap research taxonomy, published first-author in IEEE Access as a feasibility study. The on-device Raspberry Pi/ARM edge-CV detection system is in-development PhD research, targeting real-time inference.",
+    "stack": [
+      "IEEE Access",
+      "systematic review",
+      "computer vision",
+      "Raspberry Pi/ARM",
+      "PyTorch"
+    ],
+    "highlights": [
+      "First-author IEEE Access paper (feasibility established)",
+      "Funded Griffith × Huizhou cross-site seed project",
+      "~82-paper SLR + original 13-gap taxonomy",
+      "In-development on-device edge-CV system (PhD core)"
+    ]
   }
 ]
