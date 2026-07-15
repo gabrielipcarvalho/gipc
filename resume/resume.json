@@ -19,7 +19,6 @@
       "country": "AU",
       "relocation": "Melbourne (open)"
     },
-    "phone": "+61 *** *** ***",
     "email": "gabriel@gipc.dev",
     "site": "https://gipc.dev",
     "profiles": [
@@ -33,7 +32,7 @@
       }
     ],
     "private": {
-      "note": "street address kept out of resume.json public build; phone included on the application PDF (standard)"
+      "note": "phone + street address kept OUT of the public repo/site; add phone locally to the PDF you attach to direct applications."
     },
     "workRights": "Full Australian working rights (HDR student visa, subclass 500, to 2029); ACS-assessed (261313/261312/261316); PR pathway (subclass 189) in progress",
     "summary": "Software, DevOps and AI Engineer who ships production systems end to end. Sole engineer on a multi-server financial-services CRM estate (migrations, security, incident response, production AI). PhD candidate in adaptive, agentic multi-agent AI and first-author IEEE Access publication."

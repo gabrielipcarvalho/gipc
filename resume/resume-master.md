@@ -1,7 +1,7 @@
 # Gabriel Isaias Padua Carvalho
 **Software · DevOps · AI Engineer**
 
-Gold Coast, QLD · +61 *** *** *** · gabriel@gipc.dev · gipc.dev · linkedin.com/in/gabriel-ipcarvalho · github.com/gabrielipcarvalho
+Gold Coast, QLD · gabriel@gipc.dev · gipc.dev · linkedin.com/in/gabriel-ipcarvalho · github.com/gabrielipcarvalho
 
 ---
 
