@@ -78,12 +78,15 @@ working rights (HDR student visa to 2029); open to Melbourne relocation.
 - **Seismic inversion (PyTorch U-Net)** (2026) — Reproducible U-Net (12.5M parameters) inverting
   2,000 synthetic seismograms via a differentiable wave simulation; functional-core design, 27
   deterministic tests.
-- **Transformer financial-prediction platform** (2023–2024) — Node.js + Python orchestration to
-  Azure Kubernetes; ETL over 3M+ records/day, sub-200 ms per query, ~12% MAE reduction, IaC
-  (Bicep/Terraform), >90% coverage.
-- **Real-time drowning detection (Griffith × Huizhou)** (2024–2026) — Edge computer-vision on
-  Raspberry Pi/ARM at ≥20 fps and 95%+ accuracy, with sub-100 ms multi-sensor fusion; published in
-  IEEE Access.
+- **Transformer financial-prediction platform (Master's dissertation)** (2023–2024) — Node.js
+  orchestration of four fine-tuned OpenAI GPT adaptors (news-sentiment, sentiment+price, price-only
+  and a fusion model) predicting daily S&P 500 (SPY) direction across 14 iterative fine-tuning
+  cycles; lifted the sentiment+price adaptor from 48% to a peak 60% directional accuracy, evaluated
+  with a purpose-built risk-aware confusion matrix; Python data pipeline and LaTeX manuscript.
+- **AI drowning-detection research (Griffith × Huizhou)** (2024–2026) — First-author IEEE Access
+  paper establishing the technical feasibility of AI drowning detection; now developing the on-device
+  (Raspberry Pi/ARM) edge computer-vision system as the core of my PhD — targeting real-time
+  inference — informed by a funded cross-site systematic review (~82 papers across six databases).
 
 ---
 

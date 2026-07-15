@@ -76,3 +76,6 @@ __pycache__/
 !*.tfvars.example
 crash.log
 .terraform.lock.hcl
+
+# Private career-tooling workspace — dossier + PII, never in the repo
+career/
