@@ -222,7 +222,7 @@ a{ color:inherit; text-decoration:none; }
 }
 .dots{ display:flex; gap:.45rem; }
 .dot{ width:.72rem; height:.72rem; border-radius:50%; }
-.dot.r{ background:#ff6f93; } .dot.y{ background:#ffce6b; } .dot.g{ background:#57e6a8; }
+.dot.r{ background:var(--err); } .dot.y{ background:var(--warn); } .dot.g{ background:var(--ok); }
 .sigil{ width:1.35rem; height:1.35rem; margin-left:.4rem; filter:drop-shadow(0 0 8px var(--glow-violet)); }
 .bar-path{ color:var(--text-muted); font-size:var(--fs-sm); letter-spacing:.04em; }
 .bar-meta{ margin-left:auto; display:flex; align-items:center; gap:.9rem; color:var(--text-muted); font-size:var(--fs-sm); }
@@ -276,7 +276,7 @@ a{ color:inherit; text-decoration:none; }
 /* ---- actions ---- */
 .actions{ margin-top:1.9rem; display:flex; flex-wrap:wrap; align-items:center; gap:1rem; }
 .btn{ font:inherit; cursor:pointer; border-radius:var(--r-pill); padding:.8rem 1.4rem; font-size:var(--fs-sm); font-weight:600; transition:transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
-.btn-primary{ position:relative; border:none; background:var(--grad-accent); color:#0a0a12; box-shadow:var(--glow-soft); }
+.btn-primary{ position:relative; border:none; background:var(--grad-accent); color:var(--bg); box-shadow:var(--glow-soft); }
 
 /* cast-ripple — imperative spans appended into the host (see components/motion.ts) */
 .ripple-host{
