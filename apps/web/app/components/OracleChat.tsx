@@ -74,6 +74,7 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   citations?: OracleCitation[];
+  uiStation?: string; // agent-offered Construct descent (validated against CTX_STATIONS)
 };
 
 export function OracleChat() {
@@ -126,6 +127,7 @@ export function OracleChat() {
     abortRef.current = ctrl;
     let acc = "";
     let cites: OracleCitation[] = [];
+    let uiStation: string | null = null; // first-wins — the "at most once" tool contract
     let hadError = false;
     try {
       const res = await fetch("/api/ai/oracle", {
@@ -168,6 +170,9 @@ export function OracleChat() {
           } else if (f.type === "trace") {
             if (f.kind === "retrieval") cites = f.chunks;
             if (!disposed.current) setTrace((t) => [...t, f]);
+          } else if (f.type === "ui") {
+            // client re-validation (defense in depth) — junk/unknown station ids are dropped
+            if (f.action === "station" && CTX_STATIONS.has(f.id) && !uiStation) uiStation = f.id;
           } else if (f.type === "done") {
             // tokens/cost are recorded server-side (audit) — never surfaced in the UI
           } else if (f.type === "error") {
@@ -181,7 +186,10 @@ export function OracleChat() {
       }
       if (disposed.current) return;
       if (acc.trim() && !hadError) {
-        setMessages((m) => [...m, { role: "assistant", content: acc, citations: cites }]);
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: acc, citations: cites, ...(uiStation ? { uiStation } : {}) },
+        ]);
       }
       if (!hadError) setPhase("idle");
     } catch (err) {
@@ -222,12 +230,21 @@ export function OracleChat() {
                 )}
                 {m.role === "assistant" &&
                   (() => {
-                    const station = firstStation(m.citations);
-                    return station ? (
-                      <a className="oracle-construct" href={`/resume?station=${station}`}>
-                        view in the Construct →
-                      </a>
-                    ) : null;
+                    const cite = firstStation(m.citations);
+                    return (
+                      <>
+                        {m.uiStation && (
+                          <a className="oracle-descend" href={`/resume?station=${m.uiStation}`}>
+                            <span aria-hidden>▾ </span>descend to {m.uiStation} in the Construct →
+                          </a>
+                        )}
+                        {cite && cite !== m.uiStation && (
+                          <a className="oracle-construct" href={`/resume?station=${cite}`}>
+                            view in the Construct →
+                          </a>
+                        )}
+                      </>
+                    );
                   })()}
               </div>
             </li>

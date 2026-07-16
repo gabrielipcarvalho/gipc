@@ -21,6 +21,7 @@ export type OracleFrame =
   | { type: "trace"; kind: "tool_call"; name: string; args: Record<string, unknown> }
   | { type: "trace"; kind: "tool_result"; name: string; summary: string }
   | { type: "done"; tokens_in: number; tokens_out: number; est_cost: number }
+  | { type: "ui"; action: "station"; id: string }
   | { type: "error"; message: string };
 
 // ── Paste-a-JD (POST /api/ai/jd) — mirrors services/ai/app/jd.py ─────────────

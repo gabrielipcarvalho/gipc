@@ -75,3 +75,30 @@ async def test_search_corpus(monkeypatch) -> None:
 async def test_search_corpus_empty_query() -> None:
     out = await tools.dispatch("search_corpus", {"query": "  "}, FakeHTTP(), CFG)
     assert out == {"error": "empty query"}
+
+# ---- show_station (Sprint I P2) ----------------------------------------------------------
+
+# Pinned verbatim: must mirror the web client's CTX_STATIONS keys (OracleChat.tsx). Drift = loud.
+EXPECTED_STATIONS = {"profile", "skills", "experience", "projects", "publications", "education", "honours"}
+
+
+def test_show_station_registered_with_closed_enum():
+    tool = next(t for t in tools.TOOLS if t["name"] == "show_station")
+    schema = tool["input_schema"]
+    assert schema["properties"]["station"]["enum"] == sorted(EXPECTED_STATIONS)
+    assert schema["required"] == ["station"]
+
+
+def test_allowed_stations_pinned():
+    assert frozenset(EXPECTED_STATIONS) == tools.ALLOWED_STATIONS
+
+
+async def test_show_station_dispatch_valid():
+    result = await tools.dispatch("show_station", {"station": "skills"}, None, None)
+    assert result == {"ok": True, "station": "skills"}
+
+
+async def test_show_station_dispatch_junk_never_raises():
+    for bad in ({"station": "kitchen"}, {"station": ""}, {}, {"station": 42}):
+        result = await tools.dispatch("show_station", bad, None, None)
+        assert result == {"error": "unknown station"}

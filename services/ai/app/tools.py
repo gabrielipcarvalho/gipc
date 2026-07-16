@@ -43,6 +43,27 @@ TOOLS: list[dict[str, Any]] = [
     },
 ]
 
+# Mirrors the web client's CTX_STATIONS keys (OracleChat.tsx) — the pinned-set test makes any
+# drift loud. The tool NEVER navigates; it only lets the UI offer a one-click descent.
+ALLOWED_STATIONS = frozenset(
+    {"profile", "skills", "experience", "projects", "publications", "education", "honours"}
+)
+
+TOOLS.append(
+    {
+        "name": "show_station",
+        "description": "Offer the visitor a one-click descent to a section of the interactive "
+        "résumé (the Construct) when they explicitly ask to SEE or BE SHOWN experience/skills/"
+        "projects/etc. The UI shows a link; it NEVER navigates automatically — never claim "
+        "navigation has happened. Use at most once per answer.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"station": {"type": "string", "enum": sorted(ALLOWED_STATIONS)}},
+            "required": ["station"],
+        },
+    }
+)
+
 TOOL_NAMES = frozenset(t["name"] for t in TOOLS)
 
 _FIXED_PATHS = {"get_status": "/api/status", "get_uptime": "/api/uptime", "get_deploys": "/api/deploys"}
@@ -51,6 +72,12 @@ _FIXED_PATHS = {"get_status": "/api/status", "get_uptime": "/api/uptime", "get_d
 async def dispatch(name: str, args: dict, http: httpx.AsyncClient, cfg: Settings) -> dict:
     if name in _FIXED_PATHS:
         return await _get_json(http, f"{cfg.core_base}{_FIXED_PATHS[name]}")
+    if name == "show_station":
+        station = str(args.get("station", ""))
+        # server re-validation — the input_schema enum is advisory to the model, never trusted
+        if station not in ALLOWED_STATIONS:
+            return {"error": "unknown station"}
+        return {"ok": True, "station": station}
     if name == "search_corpus":
         q = str(args.get("query", ""))[:200]
         if not q.strip():
