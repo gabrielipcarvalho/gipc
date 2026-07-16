@@ -10,11 +10,16 @@ export function mapOracleError(status: number, code?: string): string {
       return `${code}.`;
     case "the oracle is busy":
       return "the oracle is busy — try again in a moment.";
+    case "local model offline":
+      return "local model offline — the self-hosted engine isn't rolled out yet, or is down.";
+    case "local model busy":
+      return "the local model is mid-generation for someone else — try again in a moment.";
     case "couldn't analyze that JD — try again":
       return "couldn't analyze that JD — try again.";
     case "empty job description":
       return "paste a job description first.";
   }
+  if (status === 404) return "local model offline — the self-hosted engine isn't rolled out yet, or is down.";
   if (status === 403 || code === "turnstile") return "verification failed — solve the check and retry.";
   if (status === 429 || code === "rate limited") return "too many requests — slow down a moment.";
   return "the oracle faltered.";

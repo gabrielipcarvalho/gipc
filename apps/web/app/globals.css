@@ -947,3 +947,21 @@ a{ color:inherit; text-decoration:none; }
 .cst-ask a{ color:var(--cyan); text-decoration:none; }
 .cst-ask a:hover{ color:var(--violet-bright); }
 .construct[data-mode="immersive"] ~ .cst-ask{ display:none; }
+
+/* local-inference demo tab (/oracle → Local model) */
+.infer-lead{ margin-top:1rem; color:var(--text-muted); font-size:var(--fs-sm); }
+.infer-out{
+  margin-top:1.2rem; padding:.8rem 1rem; border:1px solid var(--border);
+  border-radius:8px; background:var(--bg-elev);
+}
+.infer-model{ color:var(--text-muted); font-size:var(--fs-xs); margin-bottom:.4rem; }
+.infer-text{ white-space:pre-wrap; word-break:break-word; color:var(--text); font-size:var(--fs-sm); }
+.infer-stats{
+  margin-top:1rem; display:flex; flex-wrap:wrap; gap:.6rem 1.6rem;
+  padding:.6rem .9rem; border:1px solid var(--border-cyan); border-radius:8px;
+  font-size:var(--fs-xs);
+}
+.infer-stats dt{ color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; }
+.infer-stats dd{ color:var(--cyan); margin:0; }
+.infer-cost{ flex-basis:100%; }
+.infer-cost dd{ color:var(--text-muted); }
