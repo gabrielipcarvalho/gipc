@@ -1,0 +1,131 @@
+{
+ "run_at": "2026-07-16T07:52:24Z",
+ "model": "claude-haiku-4-5",
+ "embedder": "BAAI/bge-small-en-v1.5",
+ "params": {
+  "k": 6,
+  "code_cap": 2,
+  "answer_temp": 0,
+  "judge_temp": 0,
+  "jd_path": "production analyze_jd params"
+ },
+ "corpus_hash": "03de0d329873406afdb54f1787070931630d06e0afe4f6ac80925880a3101984",
+ "evals": {
+  "retrieval": {
+   "hit_at_6": 0.812,
+   "mrr": 0.565,
+   "n": 16,
+   "misses": [
+    {
+     "q": "Has Gabriel published any research papers?",
+     "top": [
+      "Gabriel Carvalho — profile",
+      "Experience — Software & DevOps Engineer · WealthGoal Software (formerly part of JDL Strategies)",
+      "Work — AI drowning-detection research (Griffith × Huizhou)"
+     ]
+    },
+    {
+     "q": "What was Gabriel's Master's dissertation about?",
+     "top": [
+      "Gabriel Carvalho — profile",
+      "Education",
+      "Experience — Casual Academic · Griffith University"
+     ]
+    },
+    {
+     "q": "How does this site protect its AI endpoints from abuse?",
+     "top": [
+      "The AI Operator — this service",
+      "services/ai/app/oracle.py",
+      "infra/k8s/ai/ai.yaml"
+     ]
+    }
+   ]
+  },
+  "faithfulness": {
+   "supported_ratio": 0.972,
+   "n_claims": 144,
+   "n": 16,
+   "ungraded": 0,
+   "unsupported_examples": [
+    "That work emerged from his PhD research in adaptive, agentic multi-agent AI",
+    "Queries are embedded client-side using bge-small-en-v1.5 (ONNX, runs locally)",
+    "Generation is gated by the same cost meter"
+   ]
+  },
+  "jd_mapping": {
+   "label_accuracy": 0.812,
+   "n": 16,
+   "jds": [
+    {
+     "name": "platform",
+     "label_accuracy": 0.778,
+     "correct": 7,
+     "n": 9,
+     "unmatched_labels": [],
+     "wrong_labels": [
+      {
+       "match": "Docker",
+       "expected": "strong",
+       "got": "partial"
+      },
+      {
+       "match": "PostgreSQL",
+       "expected": "strong",
+       "got": "partial"
+      }
+     ]
+    },
+    {
+     "name": "ai",
+     "label_accuracy": 0.857,
+     "correct": 6,
+     "n": 7,
+     "unmatched_labels": [],
+     "wrong_labels": [
+      {
+       "match": "RAG",
+       "expected": "strong",
+       "got": "partial"
+      }
+     ]
+    }
+   ],
+   "evidence_grounded_ratio": 0.525,
+   "n_evidence": 40,
+   "ungrounded_examples": [
+    {
+     "evidence": "Deployed and operates a live k3s cluster behind Cloudflare Tunnel with infrastructure-as-code",
+     "tokens": [
+      "cluster"
+     ]
+    },
+    {
+     "evidence": "Azure AKS listed in Cloud & Infrastructure skills",
+     "tokens": [
+      "listed"
+     ]
+    },
+    {
+     "evidence": "Python listed as primary language",
+     "tokens": [
+      "listed",
+      "primary"
+     ]
+    },
+    {
+     "evidence": "CI/CD & git-driven deploys listed in DevOps & Platform skills",
+     "tokens": [
+      "listed"
+     ]
+    },
+    {
+     "evidence": "Docker listed in DevOps & Platform skills",
+     "tokens": [
+      "listed"
+     ]
+    }
+   ]
+  }
+ }
+}

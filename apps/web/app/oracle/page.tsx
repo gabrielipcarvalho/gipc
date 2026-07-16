@@ -1,6 +1,7 @@
 import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
 import { OracleTabs } from "../components/OracleTabs";
+import { EvalsPanel } from "../components/EvalsPanel";
 import { pageMeta } from "../og";
 
 export const metadata = pageMeta(
@@ -34,6 +35,7 @@ export default function OraclePage() {
           </p>
         </noscript>
         <OracleTabs />
+        <EvalsPanel />
       </TerminalWindow>
     </main>
   );
