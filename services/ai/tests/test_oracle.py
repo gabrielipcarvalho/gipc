@@ -337,3 +337,46 @@ async def test_context_injection_valid_slug_yields_server_phrase(monkeypatch, tm
     assert "<user_context>The visitor is currently looking at" in user_turn
     assert "the Lab" in user_turn
     assert "page:lab" not in user_turn  # the raw slug string itself never enters
+
+# ---- show_station → ui frame (Sprint I P2) -----------------------------------------------
+# NOTE: real dispatch (NOT the _fake_dispatch monkeypatch) — the show_station branch is pure
+# and the ui-frame gate is result.get("ok"), which the fake never returns.
+
+
+async def test_loop_show_station_emits_ui_frame(monkeypatch) -> None:
+    monkeypatch.setattr(oracle_mod, "retrieve", _fake_retrieve)
+    llm = ScriptedLLM(
+        [
+            (["…"], FakeMessage(
+                [FakeToolUse("t1", "show_station", {"station": "skills"})], "tool_use", FakeUsage(100, 20))),
+            (["Here is the skills section."], FakeMessage(
+                [FakeText("Here is the skills section.")], "end_turn", FakeUsage(200, 50))),
+        ]
+    )
+    req = OracleRequest(message="show me your skills", turnstileToken="x")
+    out = [f async for f in oracle_mod.run_oracle(req, "1.2.3.4", None, None, llm, CFG)]
+    frames = _frames(out)
+    ui = [f for f in frames if f["type"] == "ui"]
+    assert ui == [{"type": "ui", "action": "station", "id": "skills"}]
+    assert "".join(f["text"] for f in frames if f["type"] == "token") == "Here is the skills section."
+    assert [f for f in frames if f["type"] == "done"]
+
+
+async def test_loop_show_station_junk_no_ui_frame(monkeypatch) -> None:
+    monkeypatch.setattr(oracle_mod, "retrieve", _fake_retrieve)
+    llm = ScriptedLLM(
+        [
+            (["…"], FakeMessage(
+                [FakeToolUse("t1", "show_station", {"station": "kitchen"})], "tool_use", FakeUsage(100, 20))),
+            (["No such section."], FakeMessage(
+                [FakeText("No such section.")], "end_turn", FakeUsage(200, 50))),
+        ]
+    )
+    req = OracleRequest(message="show me the kitchen", turnstileToken="x")
+    out = [f async for f in oracle_mod.run_oracle(req, "1.2.3.4", None, None, llm, CFG)]
+    frames = _frames(out)
+    assert [f for f in frames if f["type"] == "ui"] == []
+    # the error dict still flowed back as a tool_result (the loop continued honestly)
+    assert ("trace", "tool_result") in [(f["type"], f.get("kind")) for f in frames]
+    assert '"error": "unknown station"' in llm.calls[1]["messages"][-1]["content"][0]["content"]
+    assert [f for f in frames if f["type"] == "done"]

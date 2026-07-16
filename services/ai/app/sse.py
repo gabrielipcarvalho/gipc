@@ -1,5 +1,5 @@
 """Server-Sent Events frame formatting. One JSON object per frame; json.dumps escapes embedded
-newlines so a frame can never be split. Frame types: token | trace | done | error | meta | stats."""
+newlines so a frame can never be split. Frame types: token | trace | ui | done | error | meta | stats."""
 
 import json
 

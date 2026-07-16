@@ -191,7 +191,7 @@ supported=true ONLY if the claim is directly supported by the chunks; anything n
 Respond with ONLY JSON: {"claims":[{"claim":"...","supported":true|false}]}"""
 
 
-async def eval_faithfulness(gold: dict, chunks, vecs, embedder, llm, cfg) -> dict:
+async def eval_faithfulness(gold: dict, chunks, vecs, embedder, llm, cfg, judge: str | None = None) -> dict:
     from .oracle import SYSTEM_PROMPT, _build_user_turn, _esc
 
     supported = 0
@@ -200,6 +200,15 @@ async def eval_faithfulness(gold: dict, chunks, vecs, embedder, llm, cfg) -> dic
     ungraded = 0
     unsupported_examples: list[str] = []
     questions = [q for q in gold["questions"] if q.get("static")]
+    judge_model = judge or cfg.anthropic_model
+    # Cross-model judge kwargs: 5-gen judges (the != condition is a 5-gen proxy) reject
+    # non-default temperature and run adaptive thinking by default — omit temperature,
+    # disable thinking, and give the strict-JSON verdict more headroom (Sonnet 5's
+    # tokenizer emits ~30% more tokens for the same text).
+    if judge_model != cfg.anthropic_model:
+        judge_kwargs: dict = {"max_tokens": 2500, "thinking": {"type": "disabled"}}
+    else:
+        judge_kwargs = {"max_tokens": 1500, "temperature": 0}
     for q in questions:
         top = _top_chunks(q["q"], chunks, vecs, embedder)
         user_turn = _build_user_turn(q["q"], None, top)
@@ -215,11 +224,10 @@ async def eval_faithfulness(gold: dict, chunks, vecs, embedder, llm, cfg) -> dic
         verdict = None
         for _ in range(2):  # one retry on malformed judge output
             j = await llm.create(
-                model=cfg.anthropic_model,
-                max_tokens=1500,
+                model=judge_model,
                 system=JUDGE_PROMPT,
                 messages=[{"role": "user", "content": f"{ctx}\n\n<answer>{_esc(answer_text)}</answer>"}],
-                temperature=0,
+                **judge_kwargs,
             )
             jt = "".join(b.text for b in j.content if getattr(b, "type", "") == "text")
             try:
@@ -316,12 +324,17 @@ async def main(offline_only: bool, out_dir: Path) -> dict:
     gold_r = json.loads((EVALS_DIR / "gold-retrieval.json").read_text())
     gold_j = json.loads((EVALS_DIR / "gold-jd.json").read_text())
     cfg = get_settings()
+    judge = cfg.judge_model or cfg.anthropic_model
 
     results: dict = {
         "run_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "model": cfg.anthropic_model,
         "embedder": "BAAI/bge-small-en-v1.5",
-        "params": {"k": 6, "code_cap": 2, "answer_temp": 0, "judge_temp": 0,
+        # judge_temp records what the judge request ACTUALLY carried — cross-model judges omit
+        # temperature (the API default), so recording 0 there would fabricate the methodology.
+        "params": {"k": 6, "code_cap": 2, "answer_temp": 0,
+                   "judge_temp": 0 if judge == cfg.anthropic_model else "default",
+                   "judge_model": judge,
                    "jd_path": "production analyze_jd params"},
         "corpus_hash": corpus_hash(chunks),
         "evals": {},
@@ -345,7 +358,7 @@ async def main(offline_only: bool, out_dir: Path) -> dict:
 
         llm = AnthropicLLM(cfg.anthropic_api_key.get_secret_value())
         results["evals"]["faithfulness"] = await eval_faithfulness(
-            gold_r, chunks, vecs, embedder, llm, cfg
+            gold_r, chunks, vecs, embedder, llm, cfg, judge=judge
         )
         results["evals"]["jd_mapping"] = await eval_jd(gold_j, llm, cfg, resume_text)
 

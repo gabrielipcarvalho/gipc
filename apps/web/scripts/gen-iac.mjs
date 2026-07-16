@@ -53,6 +53,13 @@ const FILES = [
     blurb:
       "cloudflared dials out to Cloudflare's edge with zero inbound ports open on the box; gipc.dev ingress lands on the in-cluster Caddy NodePort. The tunnel id is redacted here.",
   },
+  {
+    path: "infra/terraform/cloudflare/cloudflare.tf",
+    lang: "hcl",
+    title: "Terraform — the tunnel + DNS, codified (not yet applied)",
+    blurb:
+      "The migration path off hand-built: the tunnel and its proxied CNAMEs as import-ready resources. Written and validated — deliberately NOT applied; what serves this page today was provisioned by hand, and applying without importing first would risk the live tunnel. The import commands live in the repo README.",
+  },
 ];
 
 // Mirror scripts/verify.sh SECRET_RX (the committed-secret hard-fail). Split the AWS-key literal so THIS

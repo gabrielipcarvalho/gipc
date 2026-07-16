@@ -5,10 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "gen:iac": "node scripts/gen-iac.mjs",
-    "prebuild": "node scripts/gen-iac.mjs",
+    "prebuild": "node scripts/gen-iac.mjs && node scripts/gen-authenticity.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "gen:authenticity": "node scripts/gen-authenticity.mjs"
   },
   "dependencies": {
     "@gipc/tokens": "*",

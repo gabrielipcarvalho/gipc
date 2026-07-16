@@ -1,8 +1,10 @@
 # Terraform — gipc.dev namespace boundary (plan/import only)
 
-Codifies the Kubernetes **namespaces** on garuda's k3s (`gipc`, `observability`). It is the only part of
-the hand-built provisioning that Terraform models cleanly; the host-level bootstrap (k3s, cloudflared,
-packages) is codified by [Ansible](../ansible/) and documented in `bootstrap.tf`.
+Codifies the Kubernetes **namespaces** on garuda's k3s (`gipc`, `observability`). The Cloudflare half
+(the tunnel + the DNS that routes through it) lives in its own root module at
+[`cloudflare/`](cloudflare/) — separate state, separate credentials, both import→plan-clean stories
+independently verifiable — neither demands the other's credentials. The host-level bootstrap (k3s, cloudflared, packages) is codified by
+[Ansible](../ansible/) and documented in `bootstrap.tf`.
 
 ## This is PLAN / CHECK / IMPORT ONLY — never `apply`
 The box is already provisioned and the workloads deploy via **GitOps** (ArgoCD watching `main` →

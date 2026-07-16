@@ -171,3 +171,73 @@ def test_corpus_hash_deterministic(real_titles) -> None:
     b = [FakeChunk("a"), FakeChunk("b")]
     assert corpus_hash(a) == corpus_hash(b)
 
+
+# ---- cross-model judge kwargs (Sprint I P3) ----------------------------------------------
+
+
+class _StubEmbedder:
+    def embed(self, texts):
+        import numpy as np
+
+        return [np.ones(4, dtype="float32") for _ in texts]
+
+
+class _KwargLLM:
+    """Records every create() kwarg; returns a canned answer then a valid judge verdict."""
+
+    def __init__(self):
+        self.calls = []
+
+    async def create(self, **kw):
+        self.calls.append(kw)
+
+        class _B:
+            type = "text"
+
+        b = _B()
+        if kw.get("system", "").startswith("You are grading"):
+            b.text = '{"claims": [{"claim": "x", "supported": true}]}'
+        else:
+            b.text = "An answer."
+
+        class _M:
+            content = [b]
+
+        return _M()
+
+
+async def _run_one_question(judge):
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    from app.config import Settings
+    from app.evals import eval_faithfulness
+
+    gold = {"questions": [{"q": "one?", "static": True, "expect_any": ["x"]}]}
+    chunks = [SimpleNamespace(title="t", url="/resume", content="c", source="resume")]
+    vecs = np.ones((1, 4), dtype="float32")
+    llm = _KwargLLM()
+    cfg = Settings()
+    await eval_faithfulness(gold, chunks, vecs, _StubEmbedder(), llm, cfg, judge=judge)
+    return llm.calls
+
+
+async def test_cross_model_judge_kwargs():
+    calls = await _run_one_question("claude-sonnet-5")
+    judge_calls = [c for c in calls if c.get("system", "").startswith("You are grading")]
+    assert judge_calls, "judge never called"
+    jk = judge_calls[0]
+    assert jk["model"] == "claude-sonnet-5"
+    assert "temperature" not in jk  # 5-gen judges reject non-default sampling params
+    assert jk["thinking"] == {"type": "disabled"}
+    assert jk["max_tokens"] == 2500
+
+
+async def test_same_model_judge_kwargs_unchanged():
+    calls = await _run_one_question(None)
+    judge_calls = [c for c in calls if c.get("system", "").startswith("You are grading")]
+    jk = judge_calls[0]
+    assert jk["temperature"] == 0
+    assert jk["max_tokens"] == 1500
+    assert "thinking" not in jk

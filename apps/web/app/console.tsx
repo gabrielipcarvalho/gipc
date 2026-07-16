@@ -55,7 +55,7 @@ type OutLine = { id: number; kind: "cmd" | "out"; text: React.ReactNode };
 export const KNOWN_COMMANDS = [
   "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "writeups", "blog", "timeline",
   "experience", "resume", "lab", "operator", "oracle", "infer", "evals", "ward", "summon", "connect",
-  "contact", "social", "meet", "call", "theme", "history", "restore", "clear", "exit",
+  "contact", "social", "meet", "call", "authenticity", "verify", "theme", "history", "restore", "clear", "exit",
 ]; // .hidden / cat kept OUT — the CTF trailhead stays off tab-complete + did-you-mean
 
 // bounded Levenshtein (early-out above 2) for the did-you-mean hint
@@ -87,7 +87,7 @@ function runCommand(
       return { out: [
         "navigate:  system · work · timeline · resume · connect",
         "inspect:   whoami · about · ls · theme · history",
-        "arcane:    scry (observe) · summon (deploy) · ward (security) · oracle [slug] · infer (local AI) · evals",
+        "arcane:    scry (observe) · summon (deploy) · ward (security) · oracle [slug] · infer (local AI) · evals · authenticity (verify)",
         "utility:   help · clear · Tab completes · ↑/↓ history",
       ] };
     case "history":
@@ -190,6 +190,9 @@ function runCommand(
     case "meet":
     case "call":
       return { out: [<>book a call → <b>/meet</b>: request a time (async-first, AEST). I&apos;ll confirm.</>], nav: "/meet" };
+    case "authenticity":
+    case "verify":
+      return { out: [<>verify this build — a SHA-256 manifest of the stable assets, re-hashed in YOUR browser; honest about what a green result can&apos;t prove. → <b>/authenticity</b></>], nav: "/authenticity" };
     case "social":
       return { out: [<><a href="https://github.com/gabrielipcarvalho">github.com/gabrielipcarvalho</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin.com/in/gabriel-ipcarvalho</a></>] };
     case "theme": {

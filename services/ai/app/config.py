@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     database_url: SecretStr = SecretStr("")  # empty ⇒ db features degrade, service still boots
     anthropic_api_key: SecretStr = SecretStr("")  # empty ⇒ oracle endpoints 503 honestly (P4)
     anthropic_model: str = "claude-haiku-4-5"
+    # eval-harness only: a DIFFERENT model to judge faithfulness (env JUDGE_MODEL). Empty ⇒
+    # falls back to anthropic_model (self-judge, the pre-Sprint-I behaviour).
+    judge_model: str = ""
     turnstile_secret: SecretStr = SecretStr(TURNSTILE_TEST_SECRET)
     rate_limit_rps: float = 5.0
     rate_limit_burst: int = 10
