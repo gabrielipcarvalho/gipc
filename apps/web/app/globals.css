@@ -862,6 +862,40 @@ a{ color:inherit; text-decoration:none; }
 .load-stats dt{ color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.04em; }
 .load-stats dd{ margin:0; color:var(--cyan); font-size:var(--fs-body); }
 
+/* ── Living architecture diagrams (Sprint H P4) ─────────────────────────────────────── */
+.arch-block{ margin:1.6rem 0 2rem; }
+.arch-h2{ margin-bottom:.3rem; }
+.arch{ margin-top:1.4rem; }
+.arch-h{ font-size:var(--fs-body); color:var(--violet-bright); }
+.arch-caption{ margin:.25rem 0 .6rem; color:var(--text-muted); font-size:var(--fs-sm); }
+.arch-scroll{ overflow-x:auto; border:1px solid var(--border); border-radius:8px; background:var(--bg-elev); }
+.arch-scroll:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+.arch-svg{ display:block; width:100%; height:auto; }
+.arch-lane{ fill:color-mix(in srgb, var(--violet) 4%, transparent); stroke:color-mix(in srgb, var(--border) 60%, transparent); }
+.arch-lanelabel{ fill:var(--text-faint); font-size:11px; letter-spacing:.06em; }
+.arch-edge{ fill:none; stroke:var(--text-faint); stroke-width:1.2; opacity:.75; }
+.arch-edge.hot{ stroke:var(--cyan); stroke-width:2; opacity:1; }
+.arch-edge.cold{ opacity:.22; }
+.arch-arrowhead{ fill:var(--text-faint); }
+.arch-node{ cursor:pointer; }
+.arch-node rect{ fill:var(--bg); stroke:var(--border); stroke-width:1.2; }
+.arch-node.hot rect{ stroke:var(--cyan); stroke-width:2; }
+.arch-node.cold{ opacity:.35; }
+.arch-label{ fill:var(--text); font-size:13px; font-weight:600; }
+.arch-sub{ fill:var(--text-muted); font-size:10.5px; }
+.arch-picker{ display:flex; flex-wrap:wrap; gap:.4rem; margin:.7rem 0 .6rem; }
+.arch-card{ min-height:9rem; border:1px solid var(--border); border-radius:8px; padding:.75rem .9rem; background:var(--bg-elev); }
+.arch-card-title{ margin:0 0 .35rem; color:var(--cyan); font-size:var(--fs-sm); font-weight:600; }
+.arch-card-sub{ color:var(--text-muted); font-weight:400; }
+.arch-card-empty{ color:var(--text-faint); font-weight:400; }
+.arch-facts{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.25rem;
+  color:var(--text-muted); font-size:var(--fs-sm); }
+.arch-edgefact{ color:var(--text-faint); font-size:var(--fs-xs); }
+.arch-text{ margin-top:.6rem; font-size:var(--fs-sm); color:var(--text-muted); }
+.arch-text summary{ cursor:pointer; color:var(--text-faint); font-size:var(--fs-xs); }
+.arch-text ul{ margin:.4rem 0 0 1rem; padding:0; }
+.arch-text li{ margin:.2rem 0; }
+
 /* ── Lab DB explorer (Sprint H) ─────────────────────────────────────────────────────── */
 .dbx-picker{ display:flex; flex-wrap:wrap; gap:.45rem; margin:.5rem 0 .7rem; }
 .dbx-pick{
