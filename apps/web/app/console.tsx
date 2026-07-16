@@ -142,7 +142,8 @@ function runCommand(
         out: [
           <>
             the lab — live, safe-by-construction infra demos: chaos (kill a pod, watch it heal) · load test
-            (isolated target, live histogram) · events · rate-limit · API playground. → <b>/lab</b>
+            (isolated target, live histogram) · DB explorer (real EXPLAIN plans) · events · rate-limit ·
+            API playground. → <b>/lab</b>
           </>,
         ],
         nav: "/lab",
