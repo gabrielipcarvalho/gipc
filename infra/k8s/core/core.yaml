@@ -24,6 +24,8 @@ data:
   LOAD_RPS: "0.2"                                         # per-IP cooldown ≈ 1 run / 5s
   LOAD_BURST: "1"
   LAB_EVENT_HEARTBEAT: "10s"                              # /api/lab/events heartbeat cadence
+  DB_RPS: "0.5"                                           # db-explorer per-IP cooldown ≈ 1 run / 2s
+  DB_BURST: "2"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -60,6 +62,9 @@ spec:
             - name: DEPLOY_HOOK_KEY   # HMAC key for /api/hooks/deploy — imperative Secret, never committed
               valueFrom:
                 secretKeyRef: { name: deploy-hook, key: hmac }
+            - name: DEMO_DB_URL       # Lab DB explorer DSN (demo-ns toy postgres) — imperative Secret;
+              valueFrom:              # optional: a missing Secret must never block boot (explorer 503s)
+                secretKeyRef: { name: demo-db-url, key: url, optional: true }
           readinessProbe:
             httpGet: { path: /api/readyz, port: 8080 }
             initialDelaySeconds: 3

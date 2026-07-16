@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
+import { ArchDiagram } from "../components/ArchDiagram";
 import { pageMeta } from "../og";
 import { IAC_FILES } from "../../data/iac.generated";
+import { REQUEST_PATH, RAG_PIPELINE } from "../../data/architecture";
 
 export const metadata = pageMeta(
   "Infrastructure — how this page is served · gipc.dev",
-  "The real, annotated infrastructure that serves gipc.dev: the CI/CD pipeline, Kubernetes manifests, Caddy and the Cloudflare Tunnel — read straight from the repo.",
+  "The real, annotated infrastructure that serves gipc.dev: interactive architecture diagrams of the request path and the RAG pipeline, plus the CI/CD pipeline, Kubernetes manifests, Caddy and the Cloudflare Tunnel — read straight from the repo.",
   "/infra",
 );
 
@@ -73,6 +75,17 @@ export default function InfraPage() {
           time (no hand-copied snippets, so it can never drift). A single-node k3s box behind a
           Cloudflare Tunnel, GitOps-deployed: push to main, CI builds the image, ArgoCD syncs the cluster.
         </p>
+        <section className="arch-block" aria-labelledby="arch-h2">
+          <h2 id="arch-h2" className="iac-title arch-h2">
+            living diagrams
+          </h2>
+          <p className="iac-blurb">
+            The same system as two interactive maps — every node and edge sourced from the
+            manifests and code below, nothing decorative. Hover to preview, click to pin.
+          </p>
+          <ArchDiagram data={REQUEST_PATH} />
+          <ArchDiagram data={RAG_PIPELINE} />
+        </section>
         <div className="iac">
           {IAC_FILES.map((f) => (
             <section className="iac-file" key={f.path} aria-label={f.path}>

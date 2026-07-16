@@ -133,3 +133,75 @@ func (c *Client) Range(ctx context.Context, q string, start, end time.Time, step
 	}
 	return pts, true, nil
 }
+
+// Series is one labeled range series from a matrix result.
+type Series struct {
+	Labels map[string]string
+	Points []Point
+}
+
+type matrixResp struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string `json:"resultType"` // "matrix"
+		Result     []struct {
+			Metric map[string]string `json:"metric"`
+			Values [][2]any          `json:"values"`
+		} `json:"result"`
+	} `json:"data"`
+}
+
+// RangeMatrix runs a range query and returns ALL series with their label sets. Non-finite/
+// unparseable samples are skipped; series left with zero points are dropped. ok=false (no error)
+// on an empty result. Same contract as Range: err is transport/decoding only.
+func (c *Client) RangeMatrix(ctx context.Context, q string, start, end time.Time, step time.Duration) ([]Series, bool, error) {
+	u := c.base + "/api/v1/query_range?" + url.Values{
+		"query": {q},
+		"start": {strconv.FormatInt(start.Unix(), 10)},
+		"end":   {strconv.FormatInt(end.Unix(), 10)},
+		"step":  {strconv.FormatFloat(step.Seconds(), 'f', -1, 64)},
+	}.Encode()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, false, err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, false, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, false, fmt.Errorf("prometheus status %d", resp.StatusCode)
+	}
+	var mr matrixResp
+	if err := json.NewDecoder(resp.Body).Decode(&mr); err != nil {
+		return nil, false, err
+	}
+	if mr.Status != "success" || len(mr.Data.Result) == 0 {
+		return nil, false, nil
+	}
+	out := make([]Series, 0, len(mr.Data.Result))
+	for _, r := range mr.Data.Result {
+		pts := make([]Point, 0, len(r.Values))
+		for _, val := range r.Values {
+			ts, tok := val[0].(float64)
+			sv, sok := val[1].(string)
+			if !tok || !sok {
+				continue
+			}
+			v, err := strconv.ParseFloat(sv, 64)
+			if err != nil || math.IsNaN(v) || math.IsInf(v, 0) {
+				continue
+			}
+			pts = append(pts, Point{T: int64(ts), V: v})
+		}
+		if len(pts) == 0 {
+			continue
+		}
+		out = append(out, Series{Labels: r.Metric, Points: pts})
+	}
+	if len(out) == 0 {
+		return nil, false, nil
+	}
+	return out, true, nil
+}

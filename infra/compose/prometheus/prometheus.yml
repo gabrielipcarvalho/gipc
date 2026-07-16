@@ -1,0 +1,19 @@
+# Local scrape config — REAL targets only. core/web/ai expose no /metrics (verified Sprint H P5);
+# scraping nonexistent endpoints would fabricate permanently-DOWN targets, so the spec's
+# "scrape configs for the three services" is deliberately narrowed (documented deviation).
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]
+  - job_name: loki
+    static_configs:
+      - targets: ["loki:3100"]
+  - job_name: promtail
+    static_configs:
+      - targets: ["promtail:9080"]

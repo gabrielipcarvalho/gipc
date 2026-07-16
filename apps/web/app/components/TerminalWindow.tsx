@@ -3,8 +3,10 @@ import { Sigil } from "../sigil";
 
 /* Shared terminal chrome — the `.term` window (titlebar traffic-dots + hex-sigil +
    path + live-meta strip, glass body) extracted from the Console so every route
-   reuses it. Server component (no interactivity). The titlebar mirrors console.tsx
-   exactly; `path` is prefixed with the `arcane@prod : ` user@host so pages match. */
+   reuses it. Server component (no interactivity). The titlebar mirrors console.tsx;
+   `path` is prefixed with the `arcane@prod : ` user@host so pages match. The default
+   meta is just the online pulse — no numbers, because a static server component can't
+   know real ones and this site never fabricates data (pages with live stats pass `meta`). */
 export function TerminalWindow({
   path,
   meta,
@@ -28,8 +30,6 @@ export function TerminalWindow({
           {meta ?? (
             <>
               <span className="pulse" aria-hidden /> online
-              <span className="sep">·</span> p99 12ms
-              <span className="sep rps">·</span> <span className="rps">142 rps</span>
             </>
           )}
         </div>

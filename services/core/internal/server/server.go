@@ -36,15 +36,18 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	// interface so the `killer == nil` guard fires (a nil *k8s.Client in an interface is a typed-nil).
 	k8sc, err := k8s.New(cfg)
 	if err != nil {
-		log.Warn("lab k8s client init failed — chaos disabled", "err", err)
+		log.Warn("k8s client init failed — chaos + topology disabled", "err", err)
 		k8sc = nil
 	}
-	var killer podKiller
-	if k8sc != nil {
-		killer = k8sc
-	}
+	// Arming is per-consumer: the chaos killer ONLY when the Lab is enabled — a topology-only
+	// client must never enable pod deletion. Plain *k8s.Client nil checks happen BEFORE interface
+	// assignment, so no typed-nil ever lands in an interface.
+	killer := armKiller(cfg.LabEnabled, k8sc)
+	lister := armLister(cfg.TopologyEnabled, k8sc)
 	chaosLimiter := middleware.NewLimiter(cfg.ChaosRPS, cfg.ChaosBurst) // per-IP cooldown ≈ 1 kill / 10s
 	loadLimiter := middleware.NewLimiter(cfg.LoadRPS, cfg.LoadBurst)    // per-IP cooldown ≈ 1 run / 5s
+	dbLimiter := middleware.NewLimiter(cfg.DBRunRPS, cfg.DBRunBurst)    // per-IP cooldown ≈ 1 run / 2s
+	dbRun := armDBRunner(cfg.LabEnabled, cfg.DemoDBURL)                 // nil without Lab+DSN → honest 503
 	labHub := newHub()                                                  // lab lifecycle events — separate from /api/stream
 
 	mux := http.NewServeMux()
@@ -55,16 +58,22 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	mux.HandleFunc("GET /api/stream", streamHandler(prom, cfg, srvCtx, hub)) // SSE metric ticks + deploy events
 	mux.HandleFunc("POST /api/hooks/deploy", deployHookHandler([]byte(cfg.DeployHookKey), deploys, hub))
 	mux.HandleFunc("GET /api/deploys", deploysHandler(deploys))
-	mux.HandleFunc("GET /api/metrics/history", historyHandler(prom)) // aggregate range series (Grafana-on-display)
-	mux.HandleFunc("GET /api/logs", logsHandler(lk))                 // fixed+redacted log surface (Loki-on-display)
-	mux.HandleFunc("GET /api/trace", traceHandler())                 // per-visitor real request path
-	mux.HandleFunc("GET /api/uptime", uptimeHandler(uptime))         // probe/incident history (loop started in main)
+	mux.HandleFunc("GET /api/metrics/history", historyHandler(prom))           // aggregate range series (Grafana-on-display)
+	mux.HandleFunc("GET /api/logs", logsHandler(lk))                           // fixed+redacted log surface (Loki-on-display)
+	mux.HandleFunc("GET /api/logs/volume", logsVolumeHandler(lk))              // log-volume histogram by container
+	mux.HandleFunc("GET /api/metrics/deep", deepHandler(prom, &deepCache{}))   // deep panels (queries on display)
+	mux.HandleFunc("GET /api/trace", traceHandler())                           // per-visitor real request path
+	mux.HandleFunc("GET /api/uptime", uptimeHandler(uptime))                   // probe/incident history (loop started in main)
+	mux.HandleFunc("GET /api/topology", topologyHandler(lister, &topoCache{})) // real per-service pod truth
 	// M5 Lab — chaos: kill is cooldown-limited per IP; status is a plain read.
 	mux.Handle("POST /api/lab/chaos", chaosLimiter.Middleware(http.HandlerFunc(chaosKillHandler(killer, cfg, log, labHub))))
 	mux.HandleFunc("GET /api/lab/chaos/status", chaosStatusHandler(prom, killer, cfg))
 	mux.Handle("GET /api/lab/loadtest", loadLimiter.Middleware(http.HandlerFunc(loadTestHandler(cfg, srvCtx, labHub, log)))) // bounded SSE load
 	mux.HandleFunc("GET /api/lab/events", labEventsHandler(labHub, srvCtx, cfg))
 	mux.HandleFunc("GET /api/lab/ratelimit", labRateLimitHandler(limiter))
+	// Lab DB explorer — allowlisted queries against the disposable demo-ns toy postgres.
+	mux.HandleFunc("GET /api/lab/db/queries", labDBQueriesHandler())
+	mux.Handle("POST /api/lab/db/run", dbLimiter.Middleware(http.HandlerFunc(labDBRunHandler(dbRun, log, labHub))))
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never
@@ -77,6 +86,23 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 		limiter.Middleware,
 	)(mux)
 	return handler, uptime
+}
+
+// armKiller/armLister keep per-consumer gating pure + unit-testable: a non-nil client with the
+// consumer disabled must yield a nil interface (the QA-guarded regression: topology-only mode
+// silently re-arming chaos).
+func armKiller(labEnabled bool, c *k8s.Client) podKiller {
+	if labEnabled && c != nil {
+		return c
+	}
+	return nil
+}
+
+func armLister(topologyEnabled bool, c *k8s.Client) podLister {
+	if topologyEnabled && c != nil {
+		return c
+	}
+	return nil
 }
 
 func healthz(w http.ResponseWriter, _ *http.Request) {

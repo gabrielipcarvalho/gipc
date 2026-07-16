@@ -6,6 +6,7 @@ kind: Kustomization
 resources:
   - core.yaml
   - core-lab-sa.yaml
+  - core-topology-rbac.yaml
   - ../caddy
 images:
   - name: ghcr.io/gabrielipcarvalho/gipc-core

@@ -1,9 +1,10 @@
 // Package k8s is a tiny STDLIB-ONLY client for the in-cluster Kubernetes API — no client-go, no go.sum.
 // It talks to the API server over net/http using the mounted ServiceAccount token + CA, and is
-// deliberately narrow: it only ever lists/deletes pods in ONE fixed namespace (config.LabNamespace).
-// The namespace is never taken from a request, so there is no namespace-injection surface. When the Lab
-// is disabled (config.LabEnabled=false) New returns a nil *Client, and every method on a nil client
-// returns ErrDisabled — so callers can hold a nil client safely and 503 honestly.
+// deliberately narrow: MUTATIONS (DeletePod) stay fixed to the lab namespace (config.LabNamespace);
+// READS may additionally list pods in a COMPILED namespace allowlist (topologyNamespaces — for
+// /api/topology). No namespace is ever taken from a request, so there is no namespace-injection
+// surface. When both the Lab and topology are disabled New returns a nil *Client, and every method on
+// a nil client returns ErrDisabled — so callers can hold a nil client safely and 503 honestly.
 package k8s
 
 import (
@@ -31,7 +32,7 @@ const (
 )
 
 // ErrDisabled is returned by every method when the client is nil (Lab disabled / no ServiceAccount).
-var ErrDisabled = errors.New("lab: k8s client disabled")
+var ErrDisabled = errors.New("k8s client disabled")
 
 // podNameRe matches a valid k8s pod name (RFC 1123 subdomain-ish). Validating the name BEFORE it enters
 // the URL path is the real traversal defence: url.PathEscape alone doesn't help against a server that
@@ -48,16 +49,25 @@ type Client struct {
 	http  *http.Client
 }
 
-// Pod is the trimmed pod view the Lab needs.
+// Pod is the trimmed pod view the Lab + topology need. NOTE: this struct is a public wire contract
+// (serialized by /api/lab/chaos/status and /api/topology) — fields are additive-only.
 type Pod struct {
 	Name       string `json:"name"`
 	Phase      string `json:"phase"`
 	AgeSeconds int64  `json:"ageSeconds"`
+	Ready      bool   `json:"ready"`    // AND of all containerStatuses; false when none reported (Pending)
+	Restarts   int    `json:"restarts"` // SUM across containerStatuses
+	Image      string `json:"image"`    // spec.containers[0].image — the exact manifest tag, never a resolved ref
+	Requests   string `json:"requests"` // "cpu <v> · mem <v>" from spec.containers[0].resources ("" when unset)
+	Limits     string `json:"limits"`
 }
 
-// New builds the in-cluster client. Returns (nil, nil) when the Lab is disabled — a no-op client.
+// topologyNamespaces is the COMPILED read allowlist for ListPodsNS — never request-supplied.
+var topologyNamespaces = map[string]bool{"gipc": true, "observability": true, "data": true, "demo": true}
+
+// New builds the in-cluster client. Returns (nil, nil) when both consumers are disabled.
 func New(cfg config.Config) (*Client, error) {
-	if !cfg.LabEnabled {
+	if !cfg.LabEnabled && !cfg.TopologyEnabled {
 		return nil, nil
 	}
 	tok, err := os.ReadFile(tokenPath)
@@ -96,24 +106,51 @@ func newWithBase(base, token, ns string, tlsCfg *tls.Config) *Client {
 	}
 }
 
-// ListPods returns the pods in the fixed namespace matching the label selector.
-func (c *Client) ListPods(ctx context.Context, selector string) ([]Pod, error) {
-	if c == nil {
-		return nil, ErrDisabled
+// podList is the trimmed pods-LIST decode shared by ListPods + ListPodsNS.
+type podList struct {
+	Items []struct {
+		Metadata struct {
+			Name              string    `json:"name"`
+			CreationTimestamp time.Time `json:"creationTimestamp"`
+		} `json:"metadata"`
+		Spec struct {
+			Containers []struct {
+				Image     string `json:"image"`
+				Resources struct {
+					Requests map[string]string `json:"requests"`
+					Limits   map[string]string `json:"limits"`
+				} `json:"resources"`
+			} `json:"containers"`
+		} `json:"spec"`
+		Status struct {
+			Phase             string `json:"phase"`
+			ContainerStatuses []struct {
+				Ready        bool `json:"ready"`
+				RestartCount int  `json:"restartCount"`
+			} `json:"containerStatuses"`
+		} `json:"status"`
+	} `json:"items"`
+}
+
+func resourcesLine(m map[string]string) string {
+	if len(m) == 0 {
+		return ""
 	}
+	cpu, mem := m["cpu"], m["memory"]
+	switch {
+	case cpu != "" && mem != "":
+		return "cpu " + cpu + " · mem " + mem
+	case cpu != "":
+		return "cpu " + cpu
+	default:
+		return "mem " + mem
+	}
+}
+
+func (c *Client) listPodsAt(ctx context.Context, ns, selector string) ([]Pod, error) {
 	u := fmt.Sprintf("%s/api/v1/namespaces/%s/pods?labelSelector=%s",
-		c.base, url.PathEscape(c.ns), url.QueryEscape(selector))
-	var raw struct {
-		Items []struct {
-			Metadata struct {
-				Name              string    `json:"name"`
-				CreationTimestamp time.Time `json:"creationTimestamp"`
-			} `json:"metadata"`
-			Status struct {
-				Phase string `json:"phase"`
-			} `json:"status"`
-		} `json:"items"`
-	}
+		c.base, url.PathEscape(ns), url.QueryEscape(selector))
+	var raw podList
 	if err := c.do(ctx, http.MethodGet, u, &raw); err != nil {
 		return nil, err
 	}
@@ -124,9 +161,46 @@ func (c *Client) ListPods(ctx context.Context, selector string) ([]Pod, error) {
 		if !it.Metadata.CreationTimestamp.IsZero() {
 			age = int64(now.Sub(it.Metadata.CreationTimestamp).Seconds())
 		}
-		pods = append(pods, Pod{Name: it.Metadata.Name, Phase: it.Status.Phase, AgeSeconds: age})
+		ready := len(it.Status.ContainerStatuses) > 0
+		restarts := 0
+		for _, cs := range it.Status.ContainerStatuses {
+			if !cs.Ready {
+				ready = false
+			}
+			restarts += cs.RestartCount
+		}
+		image, req, lim := "", "", ""
+		if len(it.Spec.Containers) > 0 {
+			image = it.Spec.Containers[0].Image
+			req = resourcesLine(it.Spec.Containers[0].Resources.Requests)
+			lim = resourcesLine(it.Spec.Containers[0].Resources.Limits)
+		}
+		pods = append(pods, Pod{
+			Name: it.Metadata.Name, Phase: it.Status.Phase, AgeSeconds: age,
+			Ready: ready, Restarts: restarts, Image: image, Requests: req, Limits: lim,
+		})
 	}
 	return pods, nil
+}
+
+// ListPods returns the pods in the LAB namespace matching the label selector.
+func (c *Client) ListPods(ctx context.Context, selector string) ([]Pod, error) {
+	if c == nil {
+		return nil, ErrDisabled
+	}
+	return c.listPodsAt(ctx, c.ns, selector)
+}
+
+// ListPodsNS lists pods in a namespace from the COMPILED topology allowlist. The ns is never
+// request-supplied — handlers iterate a fixed service table.
+func (c *Client) ListPodsNS(ctx context.Context, ns, selector string) ([]Pod, error) {
+	if c == nil {
+		return nil, ErrDisabled
+	}
+	if !topologyNamespaces[ns] {
+		return nil, fmt.Errorf("k8s: namespace %q not in the topology allowlist", ns)
+	}
+	return c.listPodsAt(ctx, ns, selector)
 }
 
 // DeletePod deletes a pod by name in the fixed namespace. The caller must only pass a name it obtained

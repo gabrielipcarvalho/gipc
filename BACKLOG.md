@@ -29,13 +29,17 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
 
 ---
 
-## 1. Real telemetry backend (M3 — `/system` is a stub today)
+## 1. Real telemetry backend (M3 SHIPPED; Sprint H killed the LAST stubs — annotations inline)
 
 - **Real Prometheus metrics off the box** (req/s, p99 latency, error rate, CPU/mem of the very
-  machine serving the page) — current values are server-jittered placeholders, every surface
-  `data-placeholder`-flagged.
+  machine serving the page). ✅ SHIPPED M3; the LAST placeholders (web /api/telemetry topology
+  stub + the fabricated console/titlebar numbers) killed Sprint H P1 — real /api/topology +
+  honest chrome.
 - **Grafana + Loki "on display"** — tech-stack locks observability as *portfolio content*:
   public, arcane-themed Grafana-style panels + a log surface, not just internal tooling.
+  ✅ SHIPPED Sprint H P2 — native deep-dive panels + log volume through core, queries on display
+  (/system "deep scry"). Public Grafana embedding = documented cut (CSP-safe native panels
+  instead; Grafana stays private).
 - **Real deploy/CI feed** — GitHub Actions deploy step → webhook → Go core stores event →
   `GET /api/deploys`; UI animates commit → build → test → deploy → live. Stub list today (real
   commit-subject format already matched).
@@ -52,6 +56,9 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
 - **Missing infra the locked stack names:** Caddy (auto-TLS reverse proxy — tunnel currently hits
   NodePort directly), Terraform + Ansible under `infra/` (provisioning is hand-built),
   `infra/compose/` local-dev stack (web+core+ai+pg+redis+prom+grafana via one `docker compose up`).
+  ✅ compose SHIPPED Sprint H P5 — **sans redis** (user-approved cut: in-process limiter, Redis
+  never deployed); slim + obs + ollama profiles behind a local Caddy at :8088. Caddy shipped M3;
+  Terraform/Ansible skeleton remains open.
 
 ## 2. The AI Operator (M4 — flagship #2; CORE SHIPPED M4, DEPTH SHIPPED Sprint G — annotations inline)
 
@@ -74,7 +81,7 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
 - Python `services/ai` (FastAPI) — dir doesn't exist; Redis also required and absent. ✅ services/ai SHIPPED (M4; 149 tests as of Sprint G). Redis never needed (in-process limiter).
 - Console `oracle`/`operator` commands currently redirect to /system saying "wiring up (M4)". ✅ WIRED (M4 → /oracle; Sprint G adds slugs + infer/evals commands).
 
-## 3. The Lab (M5 — `/lab` route doesn't exist; console `lab` says "coming in a later drop")
+## 3. The Lab (M5 SHIPPED /lab + 5 demos; Sprint H added depth — annotations inline)
 
 - **Real sandbox shell in the browser** — ephemeral gVisor/Firecracker microVM + ttyd, WS-proxied
   by Go core; non-root, read-only rootfs + tmpfs, CPU/mem/PID/time caps, network-isolated,
@@ -85,9 +92,15 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
 - **Chaos button** — kill a replica in a disposable `demo` namespace → watch Prometheus show
   self-healing; blast radius contained by namespace.
 - **Live event stream** (WebSocket/SSE) — event-driven architecture on display.
-- **Read-only DB explorer** — safe queries against a demo DB + the query plan.
-- **Cache/rate-limit visualizer** — Redis hits/misses live.
+- **Read-only DB explorer** — safe queries against a demo DB + the query plan. ✅ SHIPPED
+  Sprint H P3 — disposable demo-ns postgres (150k synthetic rows), 6-query allowlist, real
+  EXPLAIN (ANALYZE) plan trees, SELECT-only role. Free-form SQL = documented cut (allowlist v1).
+- **Cache/rate-limit visualizer** — Redis hits/misses live. NOT shipped — Redis is a documented
+  cut (in-process limiter by design); the M5 rate-limit panel is a different, shipped thing.
 - **Architecture decision records** as interactive sequence/ER diagrams from real projects.
+  ✅ PARTIALLY SHIPPED Sprint H P4, worded honestly: living diagrams of the REAL request path +
+  RAG pipeline on /infra (hand-rolled SVG, fact cards sourced from manifests/code) — not
+  per-project ADR sequence/ER diagrams (those remain open).
 - WAF + rate-limit + abuse monitoring — the security-hardening workstream gating the milestone.
 - `GaussianSplats3D` (AT toolbox) — a future lab toy.
 

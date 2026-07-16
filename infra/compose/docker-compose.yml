@@ -1,0 +1,205 @@
+# gipc local-dev stack — one `docker compose up` and http://localhost:8088 serves the site.
+# Dev-fidelity, not prod-parity: dev servers behind a local Caddy that mirrors prod's route table.
+# Slim default = proxy + web + core + ai + postgres. `--profile obs` adds prometheus/grafana/
+# loki/promtail; `--profile ollama` adds the local model server. See README.md.
+#
+# Works with NO .env (defaults below are LOCAL-ONLY values, not secrets). All host ports bind
+# 127.0.0.1. All bind paths are relative to THIS directory (../../ = repo root).
+name: gipc-local
+
+services:
+  proxy:
+    image: caddy:2.8.4-alpine
+    ports:
+      - "127.0.0.1:8088:8088"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      web: { condition: service_started }
+      core: { condition: service_started }
+      ai: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8088/-/proxy-healthz"]
+      interval: 15s
+      timeout: 3s
+      start_period: 90s
+
+  postgres:
+    image: pgvector/pgvector:pg16 # the prod image (infra/k8s/data/postgres.yaml)
+    environment:
+      POSTGRES_DB: gipc_ai
+      POSTGRES_USER: gipc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localdev}
+    ports:
+      - "127.0.0.1:5433:5432" # 5433 — a Mac often runs its own 5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "gipc", "-d", "gipc_ai"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+
+  core:
+    image: golang:1.22 # the Dockerfile's builder stage image — `go run` = the spec's dev mode
+    working_dir: /src
+    command: ["go", "run", "./cmd/core"]
+    environment:
+      PORT: "8080"
+      CORS_ORIGIN: http://localhost:8088 # the browser origin (the proxy)
+      PROMETHEUS_URL: http://prometheus:9090 # obs profile off → honest source:"unavailable"
+      LOKI_URL: http://loki:3100
+      WEB_URL: http://web:3000 # uptime probe target
+      LAB_ENABLED: "false" # no cluster locally — chaos/db-explorer 503 honestly
+      TOPOLOGY_ENABLED: "false" # no k8s API locally — topology 503 honestly
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ../../services/core:/src
+      - gomod:/go/pkg/mod
+      - gocache:/root/.cache/go-build
+    # deliberately NO depends_on: core's boot independence (healthy with every dependency
+    # down/absent) is the exhibit — the M3 property, provable right here.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/healthz"]
+      interval: 15s
+      timeout: 3s
+      start_period: 60s # first run compiles + fetches lib/pq into the gomod volume
+
+  ai:
+    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+    working_dir: /app
+    # --no-install-project mirrors services/ai/Dockerfile (pyproject has no [build-system]);
+    # uv syncs into /venv (named volume) so nothing lands on the host bind.
+    command: >-
+      sh -c "uv sync --frozen --no-dev --no-install-project
+      && exec uv run --no-sync uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+    environment:
+      UV_PROJECT_ENVIRONMENT: /venv
+      UV_CACHE_DIR: /uvcache
+      FASTEMBED_CACHE_PATH: /fastembed # bge-small downloads here on first use (network needed once)
+      WATCHFILES_FORCE_POLLING: "true" # colima/virtiofs inotify is unreliable
+      CORPUS_DIR: /corpus
+      DATABASE_URL: postgresql://gipc:${POSTGRES_PASSWORD:-localdev}@postgres:5432/gipc_ai
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-} # empty ⇒ oracle endpoints 503 honestly
+      CORE_BASE: http://core:8080 # the oracle's tools must query LOCAL core, never prod
+      CORS_ORIGIN: http://localhost:8088 # symmetry with core (Starlette only withholds headers)
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ../../services/ai:/app
+      - ../../resume/resume.json:/corpus/resume.json:ro
+      - ../../apps/web/data/projects.json:/corpus/projects.json:ro
+      - ../../services/ai/corpus/site.md:/corpus/site.md:ro
+      - venv:/venv
+      - uvcache:/uvcache
+      - fastembed:/fastembed
+    depends_on:
+      postgres: { condition: service_healthy } # ergonomics only — ai boots DB-less by design
+    healthcheck:
+      # readyz is the dependency-independent probe (prod kubelet parity); slim has no curl/wget
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/ai/readyz')"]
+      interval: 15s
+      timeout: 5s
+      start_period: 120s
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    # Sentinel keyed on the lockfile hash: npm ci re-runs only when deps change (npm ci wipes
+    # node_modules by design — an unguarded run would reinstall on every `up`).
+    command: >-
+      sh -c "LOCK=$$(md5sum package-lock.json | cut -c1-32);
+      test \"$$(cat node_modules/.compose-ok 2>/dev/null)\" = \"$$LOCK\"
+      || (npm ci && echo \"$$LOCK\" > node_modules/.compose-ok);
+      exec npm run dev --workspace apps/web"
+    environment:
+      CORE_URL: http://core:8080 # SSR seeds (system/status pages)
+      NEXT_TELEMETRY_DISABLED: "1"
+      WATCHPACK_POLLING: "true" # colima file-watching
+    ports:
+      - "127.0.0.1:3000:3000" # next dev direct — /api/* is DEAD here by design; use :8088
+    # Narrow mount set — NEVER the repo root (career/ holds PII that must not enter containers).
+    # resume/ is load-bearing: apps/web/data/resume.ts imports ../../../resume/resume.json.
+    volumes:
+      - ../../package.json:/app/package.json
+      - ../../package-lock.json:/app/package-lock.json
+      - ../../apps:/app/apps
+      - ../../packages:/app/packages
+      - ../../resume:/app/resume
+      - node_modules:/app/node_modules
+      - /app/apps/web/node_modules # anonymous — container-local workspace links
+      - /app/apps/web/.next # anonymous — Linux build cache never touches the host
+    depends_on:
+      core: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 20s
+      timeout: 5s
+      start_period: 300s # first run = full npm ci
+
+  # ---- obs profile — local observability (optional) --------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    profiles: [obs]
+    ports:
+      - "127.0.0.1:9091:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    profiles: [obs]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-localdev}
+    ports:
+      - "127.0.0.1:3002:3000"
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      prometheus: { condition: service_started }
+
+  loki:
+    image: grafana/loki:2.9.8 # shipped /etc/loki/local-config.yaml — no custom config to drift
+    profiles: [obs]
+    ports:
+      - "127.0.0.1:3101:3100"
+    volumes:
+      - lokidata:/loki
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    profiles: [obs]
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml:ro
+      # Both paths resolve inside colima's VM — where the container logs actually live.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      loki: { condition: service_started }
+
+  # ---- ollama profile — local model server (optional; heavy) ------------------------------
+  ollama:
+    image: ollama/ollama:0.9.6
+    profiles: [ollama]
+    ports:
+      - "127.0.0.1:11435:11434" # 11435 — this Mac runs its OWN ollama on 11434
+    volumes:
+      - ollamamodels:/root/.ollama
+
+volumes:
+  pgdata:
+  gomod:
+  gocache:
+  venv:
+  uvcache:
+  fastembed:
+  node_modules:
+  promdata:
+  grafanadata:
+  lokidata:
+  ollamamodels:

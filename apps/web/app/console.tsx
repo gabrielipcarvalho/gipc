@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sigil } from "./sigil";
-import { MetricPanel } from "./components/MetricPanel";
+import { MetricPanel, type Metric } from "./components/MetricPanel";
+import { statusToMetrics } from "../data/statusMetrics";
+import type { Status } from "../data/status";
 import { castRipple, fitText, tiltHandlers } from "./components/motion";
 import { applyTheme, currentTheme, THEME_IDS } from "../data/themes";
 import { projects } from "../data/projects";
@@ -21,13 +23,14 @@ const ORACLE_PAGES = new Set([
   "work", "writeups", "resume", "timeline", "system", "lab", "infra", "status", "connect", "meet",
 ]);
 
-/* M1 Console — interactive arcane operator console.
-   Metric values are placeholders until M3 wires real telemetry. */
-const metrics = [
-  { k: "web", pct: 82, v: "12 ms" },
-  { k: "api", pct: 74, v: "142 rps" },
-  { k: "ai", pct: 66, v: "agent up" },
-  { k: "db", pct: 88, v: "3.4 ms" },
+/* M1 Console — interactive arcane operator console. The metric strip renders REAL /api/status
+   numbers (Sprint H P1 — the last fabricated values died); honest "—" while loading/offline. */
+const EMPTY_METRICS: Metric[] = [
+  { k: "req/s", pct: 0, v: "—" },
+  { k: "p99 latency", pct: 0, v: "—" },
+  { k: "error rate", pct: 0, v: "—" },
+  { k: "web cpu", pct: 0, v: "—" },
+  { k: "web mem", pct: 0, v: "—" },
 ];
 
 const chips: [string, string][] = [
@@ -139,7 +142,8 @@ function runCommand(
         out: [
           <>
             the lab — live, safe-by-construction infra demos: chaos (kill a pod, watch it heal) · load test
-            (isolated target, live histogram) · events · rate-limit · API playground. → <b>/lab</b>
+            (isolated target, live histogram) · DB explorer (real EXPLAIN plans) · events · rate-limit ·
+            API playground. → <b>/lab</b>
           </>,
         ],
         nav: "/lab",
@@ -223,7 +227,35 @@ export function Console() {
   const [revealed, setRevealed] = useState(false); // metric bars + content in
   const [justRevealed, setJustRevealed] = useState(false); // one-shot sweep+glint window
   const [panelClosed, setPanelClosed] = useState(false); // closable telemetry pane (egg)
+  const [metrics, setMetrics] = useState<Metric[]>(EMPTY_METRICS); // REAL /api/status; "—" until it lands
   const [input, setInput] = useState("");
+
+  // real metrics for the panel — one fetch on mount + a slow refresh; honest "—" on failure
+  useEffect(() => {
+    let disposed = false;
+    let ac: AbortController | null = null;
+    const pull = async () => {
+      ac?.abort(); // a stale slow response must never overwrite a fresher one
+      const ctrl = new AbortController();
+      ac = ctrl;
+      try {
+        const res = await fetch("/api/status", { cache: "no-store", signal: ctrl.signal });
+        if (!res.ok || disposed) return;
+        setMetrics(statusToMetrics((await res.json()) as Status));
+      } catch {
+        /* keep "—" — never invent */
+      }
+    };
+    pull();
+    const t = window.setInterval(() => {
+      if (!document.hidden) pull();
+    }, 30_000);
+    return () => {
+      disposed = true;
+      ac?.abort();
+      window.clearInterval(t);
+    };
+  }, []);
   const [log, setLog] = useState<OutLine[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [hIdx, setHIdx] = useState(-1);
@@ -385,8 +417,8 @@ export function Console() {
         <span className="bar-path">arcane@prod : ~/portfolio</span>
         <div className="bar-meta">
           <span className="pulse" aria-hidden /> online
-          <span className="sep">·</span> p99 12ms
-          <span className="sep rps">·</span> <span className="rps">142 rps</span>
+          <span className="sep">·</span> p99 {metrics.find((m) => m.k === "p99 latency")?.v ?? "—"}
+          <span className="sep rps">·</span> <span className="rps">{metrics.find((m) => m.k === "req/s")?.v ?? "—"} req/s</span>
         </div>
       </header>
 
@@ -409,7 +441,7 @@ export function Console() {
           <span className="chk"><b>✓</b> services healthy</span>
           <span className="chk"><b>✓</b> agent warm</span>
           <span className="chk"><b>✓</b> tls valid</span>
-          <span className="chk"><b>✓</b> last deploy #482 · 3h ago</span>
+          <span className="chk"><b>✓</b> gitops synced</span>
         </div>
         <p className="line whoami"><span className="prompt">arcane@prod:~$</span> whoami</p>
 

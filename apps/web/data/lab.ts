@@ -1,5 +1,7 @@
 // Typed contracts for the M5 Lab — mirrors the Go structs in services/core/internal/server/lab_*.go.
 
+// NOTE: the wire pod (core k8s.Pod) is additive-only and now also carries
+// ready/restarts/image/requests/limits (Sprint H P1) — extend here as the UI needs them.
 export type ChaosPod = { name: string; phase: string; ageSeconds: number };
 export type ChaosStatus = { desired: number | null; ready: number | null; pods: ChaosPod[] };
 export type ChaosKill = { killed: string; at: string };
@@ -20,6 +22,29 @@ export type LabEvent = { kind: string; ts: string; detail?: string }; // P6
 export type RateLimitSnapshot = { rps: number; burst: number; activeBuckets: number; denied: number }; // P6
 
 export type LabError = { error: string };
+
+// DB explorer (Sprint H) — allowlisted queries against the disposable demo-ns toy postgres.
+export type DbQuery = { id: string; title: string; sql: string; note: string };
+export type DbRunResult = {
+  id: string;
+  columns: string[];
+  rows: string[][];
+  rowsCapped: boolean;
+  plan: PlanRoot[] | null; // EXPLAIN (ANALYZE, FORMAT JSON) output — [{ Plan: {...} }]
+  execMs: number;
+  timedOut: boolean;
+};
+// The subset of postgres plan-node fields the tree renders (the JSON carries many more).
+export type PlanNode = {
+  "Node Type": string;
+  "Actual Total Time"?: number; // per-loop (EXPLAIN semantics) — the UI shows ×N loops when > 1
+  "Actual Rows"?: number;
+  "Actual Loops"?: number;
+  "Index Name"?: string;
+  "Relation Name"?: string;
+  Plans?: PlanNode[];
+};
+export type PlanRoot = { Plan: PlanNode; "Execution Time"?: number; "Planning Time"?: number };
 
 // API-playground allowlist — fixed read-only GET paths (method is never a caller field → SSRF-safe).
 export type ApiEndpoint = { label: string; path: string; note: string };

@@ -8,3 +8,4 @@ resources:
   - chaos-target.yaml
   - netpol.yaml
   - core-lab-rbac.yaml
+  - db.yaml

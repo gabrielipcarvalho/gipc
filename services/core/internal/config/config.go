@@ -23,8 +23,9 @@ type Config struct {
 	MaxStreams      int           // concurrent SSE connection cap (P4)
 	DeployHookKey   string        // HMAC key for POST /api/hooks/deploy (P5; empty ⇒ endpoint 503)
 	// M5 Lab
-	LabEnabled          bool    // master switch — false ⇒ k8s.New returns nil ⇒ lab handlers 503
-	LabNamespace        string  // the ONLY namespace core's k8s client ever touches (default demo)
+	LabEnabled          bool    // master switch — false ⇒ lab handlers 503 (chaos killer stays nil)
+	LabNamespace        string  // the namespace the LAB mutates (default demo) — never widened
+	TopologyEnabled     bool    // /api/topology reads (multi-ns, read-only); independent of the Lab
 	ChaosTargetSelector string  // label selector for the chaos target (default app=chaos-target)
 	ChaosRPS            float64 // chaos-kill per-IP cooldown refill (default 0.1 ⇒ ~1 kill / 10s)
 	ChaosBurst          int     // chaos-kill per-IP bucket (default 1 ⇒ single-flight)
@@ -36,6 +37,10 @@ type Config struct {
 	LoadRPS            float64       // per-IP cooldown refill (default 0.2 ⇒ ~1 run / 5s)
 	LoadBurst          int           // per-IP bucket (default 1)
 	LabEventHeartbeat  time.Duration // /api/lab/events heartbeat cadence (default 10s)
+	// Sprint H Lab DB explorer — the DSN comes from an optional k8s Secret; empty ⇒ handlers 503
+	DemoDBURL  string  // demo-ns toy postgres DSN (SELECT-only role; NEVER the ns-data prod DB)
+	DBRunRPS   float64 // /api/lab/db/run per-IP cooldown refill (default 0.5 ⇒ ~1 run / 2s)
+	DBRunBurst int     // /api/lab/db/run per-IP bucket (default 2)
 }
 
 // clampInt bounds v to [1, hi] — used so a misconfigured env cap can neither exceed the invariant nor drop below 1.
@@ -68,6 +73,7 @@ func Load() (Config, error) {
 
 		LabEnabled:          envBool("LAB_ENABLED", false),
 		LabNamespace:        env("LAB_NAMESPACE", "demo"),
+		TopologyEnabled:     envBool("TOPOLOGY_ENABLED", true),
 		ChaosTargetSelector: env("CHAOS_TARGET_SELECTOR", "app=chaos-target"),
 		ChaosRPS:            envFloat("CHAOS_RPS", 0.1),
 		ChaosBurst:          envInt("CHAOS_BURST", 1),
@@ -79,6 +85,10 @@ func Load() (Config, error) {
 		LoadRPS:            envFloat("LOAD_RPS", 0.2),
 		LoadBurst:          envInt("LOAD_BURST", 1),
 		LabEventHeartbeat:  envDuration("LAB_EVENT_HEARTBEAT", 10*time.Second),
+
+		DemoDBURL:  env("DEMO_DB_URL", ""),
+		DBRunRPS:   envFloat("DB_RPS", 0.5),
+		DBRunBurst: envInt("DB_BURST", 2),
 	}, nil
 }
 

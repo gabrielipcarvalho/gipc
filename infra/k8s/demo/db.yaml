@@ -1,0 +1,169 @@
+# The Lab DB explorer's DISPOSABLE demo postgres. SYNTHETIC toy dataset seeded at initdb — this is
+# NOT the platform's real database (that one lives in ns data and is never touched by the Lab).
+# Storage is emptyDir by design: pod delete = full reseed (container restart keeps the volume).
+# Passwords come from the IMPERATIVE Secret `demo-db` (see demo-db.secret.example.yaml); the
+# matching core-side DSN lives in ns gipc Secret `demo-db-url` (see infra/k8s/core/).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-db-seed
+  namespace: demo
+data:
+  # Runs first (lexical order). Creates the SELECT-only exhibit role; the password is injected via
+  # env from the Secret — never committed. The two ALTER ROLE GUCs are session-overridable
+  # defense-in-depth; the hard boundary is the SELECT-only grant + the fixed server-side allowlist.
+  10-role.sh: |
+    #!/bin/sh
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+      CREATE ROLE demo_ro LOGIN PASSWORD '${DEMO_RO_PASSWORD}';
+      ALTER ROLE demo_ro SET default_transaction_read_only = on;
+      ALTER ROLE demo_ro SET statement_timeout = '2s';
+    EOSQL
+  # ==========================================================================
+  # SYNTHETIC TOY DATASET — every row below is generated with generate_series
+  # + random(). Nothing here is real platform telemetry. The dataset exists so
+  # the Lab's EXPLAIN exhibit has honest, non-trivial plans to show.
+  # ==========================================================================
+  20-seed.sql: |
+    SELECT setseed(0.42);
+
+    CREATE TABLE services (
+        name  text PRIMARY KEY,
+        tier  text NOT NULL,
+        owner text NOT NULL
+    );
+    INSERT INTO services (name, tier, owner) VALUES
+        ('web',    'frontend', 'gipc'),
+        ('core',   'backend',  'gipc'),
+        ('ai',     'backend',  'gipc'),
+        ('ollama', 'model',    'gipc'),
+        ('caddy',  'edge',     'gipc');
+
+    CREATE TABLE deploys (
+        id         serial PRIMARY KEY,
+        sha        text        NOT NULL,
+        service    text        NOT NULL REFERENCES services (name),
+        started_at timestamptz NOT NULL,
+        duration_s integer     NOT NULL,
+        success    boolean     NOT NULL
+    );
+    INSERT INTO deploys (sha, service, started_at, duration_s, success)
+    SELECT
+        substr(md5(g::text || 'a') || md5(g::text || 'b'), 1, 40),
+        (ARRAY['web','core','ai','ollama','caddy'])[1 + (g % 5)],
+        now() - (random() * interval '90 days'),
+        30 + (random() * 300)::int,
+        random() > 0.08
+    FROM generate_series(1, 3000) g;
+
+    CREATE TABLE requests (
+        id         bigserial PRIMARY KEY,
+        ts         timestamptz      NOT NULL,
+        route      text             NOT NULL,
+        status     integer          NOT NULL,
+        latency_ms double precision NOT NULL
+    );
+    INSERT INTO requests (ts, route, status, latency_ms)
+    SELECT
+        now() - (random() * interval '30 days'),
+        (ARRAY['/','/work','/lab','/system','/writeups','/api/status','/api/stream',
+               '/api/oracle','/api/topology','/construct'])[1 + floor(random() * 10)::int],
+        CASE WHEN random() < 0.96 THEN 200 WHEN random() < 0.5 THEN 404 ELSE 500 END,
+        round(exp(random() * 5.5)::numeric, 2)
+    FROM generate_series(1, 150000);
+
+    -- Indexes AFTER the bulk load (faster initdb); these are what the explorer's
+    -- index-scan-vs-seq-scan exhibit queries lean on.
+    CREATE INDEX idx_deploys_service_started ON deploys (service, started_at);
+    CREATE INDEX idx_requests_route_ts ON requests (route, ts);
+    ANALYZE services;
+    ANALYZE deploys;
+    ANALYZE requests;
+
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO demo_ro;
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-db
+  namespace: demo
+  labels: { app: demo-db }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate               # single writer; no reason to surge a disposable DB
+  selector:
+    matchLabels: { app: demo-db }
+  template:
+    metadata:
+      labels: { app: demo-db }
+    spec:
+      terminationGracePeriodSeconds: 30
+      automountServiceAccountToken: false  # postgres never talks to the k8s API
+      securityContext:                      # non-root: uid/gid 70 = postgres in the alpine image
+        runAsUser: 70
+        runAsGroup: 70
+        runAsNonRoot: true
+        fsGroup: 70
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: postgres
+          image: postgres:16.9-alpine
+          ports:
+            - { containerPort: 5432, name: pg }
+          env:
+            - { name: POSTGRES_DB, value: demo }
+            # subdir: initdb wants to own its dir (0700); the emptyDir mount root is root-owned
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: demo-db, key: password }
+            - name: DEMO_RO_PASSWORD           # consumed by 10-role.sh at initdb
+              valueFrom:
+                secretKeyRef: { name: demo-db, key: ro-password }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+            - { name: seed, mountPath: /docker-entrypoint-initdb.d, readOnly: true }
+            - { name: run, mountPath: /var/run/postgresql }   # unix socket + pid
+            - { name: tmp, mountPath: /tmp }
+          readinessProbe:
+            exec:
+              # -h 127.0.0.1 (TCP) — the entrypoint's init-time temp server is socket-only, so
+              # this can't report ready during first-boot init: Ready ⇒ seeded.
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "demo"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "demo"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { cpu: 250m, memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true      # all write paths covered by the three emptyDirs
+            capabilities: { drop: [ALL] }
+      volumes:
+        - name: data
+          emptyDir: {}                        # DISPOSABLE by design — pod delete = reseed
+        - name: seed
+          configMap: { name: demo-db-seed, defaultMode: 0555 }
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-db
+  namespace: demo
+  labels: { app: demo-db }
+spec:
+  type: ClusterIP
+  selector: { app: demo-db }
+  ports:
+    - { port: 5432, targetPort: 5432, name: pg }
