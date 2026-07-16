@@ -57,8 +57,11 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
   NodePort directly), Terraform + Ansible under `infra/` (provisioning is hand-built),
   `infra/compose/` local-dev stack (web+core+ai+pg+redis+prom+grafana via one `docker compose up`).
   ✅ compose SHIPPED Sprint H P5 — **sans redis** (user-approved cut: in-process limiter, Redis
-  never deployed); slim + obs + ollama profiles behind a local Caddy at :8088. Caddy shipped M3;
-  Terraform/Ansible skeleton remains open.
+  never deployed); slim + obs + ollama profiles behind a local Caddy at :8088. Caddy shipped M3.
+  Terraform/Ansible skeleton shipped Sprint C — k8s namespaces + host playbook (check-only;
+  deferred depth: k3s version-pin, cloudflared config/unit templates, sshd assertions); the Cloudflare
+  provider half (tunnel + DNS as import-ready resources) shipped Sprint I P4; applying/importing
+  = deliberate future step. (The Sprint H "remains open" annotation was wrong — corrected I P4.)
 
 ## 2. The AI Operator (M4 — flagship #2; CORE SHIPPED M4, DEPTH SHIPPED Sprint G — annotations inline)
 
