@@ -53,25 +53,26 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
   NodePort directly), Terraform + Ansible under `infra/` (provisioning is hand-built),
   `infra/compose/` local-dev stack (web+core+ai+pg+redis+prom+grafana via one `docker compose up`).
 
-## 2. The AI Operator (M4 — flagship #2, nothing built)
+## 2. The AI Operator (M4 — flagship #2; CORE SHIPPED M4, DEPTH SHIPPED Sprint G — annotations inline)
 
 - **Tool-using agent over real infra**: "what's the load?" → queries Prometheus; "when did you
   last ship?" → reads CI; allowlisted read-only tools, scoped tokens, full audit log (guardrails).
-- **RAG over repos/docs/résumé with inline citations** (Postgres + pgvector — neither deployed).
+- **RAG over repos/docs/résumé with inline citations** (Postgres + pgvector — neither deployed). ✅ SHIPPED: pgvector + doc RAG in M4; repo/code RAG in Sprint G P1.
 - **Live trace panel** streaming the agent's reasoning + tool calls beside the chat.
 - **"Paste a JD"** — the recruiter killer: (a) maps experience to their requirements *with
   evidence*, (b) generates a tailored 60-second pitch, (c) honestly flags gaps.
-- **Self-aware site**: agent explains any component by reading its own source.
+- **Self-aware site**: agent explains any component by reading its own source. ✅ SHIPPED (Sprint G P1 — build-time code corpus, GitHub-linked citations).
 - **Live inference demo** on a small self-hosted model — streaming tokens + latency + cost
-  readout (Ollama optional-local is in the locked stack).
-- **LLM eval/benchmark dashboard** — real eval results, rigor not just demos.
+  readout (Ollama optional-local is in the locked stack). ✅ SHIPPED (Sprint G P3 — in-cluster
+  Ollama qwen2.5:0.5b-instruct, /api/ai/infer + the oracle "local" tab).
+- **LLM eval/benchmark dashboard** — real eval results, rigor not just demos. ✅ SHIPPED (Sprint G P4 — committed harness + published scores on /oracle). Follow-up: judge-model == answer-model (self-judging flatters) — future cross-model judge.
 - **Oracle→Construct hook**: agent calls the Construct's `scrollTo(station)` — "show me the k8s
   experience" descends + decodes that card (blueprint §12.5).
-- **Context injection** (AT §8): viewing a project prepends "I'm looking at <project>…".
-- **Voice in/out** (AT-recorded): Vosk in-browser STT + streaming TTS — keys server-side only.
-- **Cloudflare Turnstile** bot-gating on the chat (locked, tech-stack P2).
-- Python `services/ai` (FastAPI) — dir doesn't exist; Redis also required and absent.
-- Console `oracle`/`operator` commands currently redirect to /system saying "wiring up (M4)".
+- **Context injection** (AT §8): viewing a project prepends "I'm looking at <project>…". ✅ SHIPPED (Sprint G P2 — ?ctx= typed slugs, server-resolved allowlist).
+- **Voice in/out** (AT-recorded): Vosk in-browser STT + streaming TTS — keys server-side only. → DEFERRED to Sprint I (user-approved cut at Sprint G planning).
+- **Cloudflare Turnstile** bot-gating on the chat (locked, tech-stack P2). NOTE: the deployed secret is still the always-pass TEST key — swap the real secret (user credential wall) and the gate arms itself, zero code change.
+- Python `services/ai` (FastAPI) — dir doesn't exist; Redis also required and absent. ✅ services/ai SHIPPED (M4; 149 tests as of Sprint G). Redis never needed (in-process limiter).
+- Console `oracle`/`operator` commands currently redirect to /system saying "wiring up (M4)". ✅ WIRED (M4 → /oracle; Sprint G adds slugs + infer/evals commands).
 
 ## 3. The Lab (M5 — `/lab` route doesn't exist; console `lab` says "coming in a later drop")
 
@@ -169,7 +170,13 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
 - **Private companion dashboard**: application tracker, JD scraping/mining, cover-letter drafting.
 - ChatGPT export still pending → mine into `career/career-mcd.md` when it arrives.
 
-## 12. Accepted cosmetic deferrals (QA-logged — don't re-litigate blindly)
+## 12. Accepted deferrals & operational notes (QA-logged — don't re-litigate blindly)
+
+- **kube-router same-ns NetworkPolicy ingress is broken on this k3s** (Sprint G P3): a policy with
+  same-namespace podSelector/namespaceSelector from-rules REJECTS all pod traffic regardless of the
+  allow rules; cross-ns policies (postgres) work. Ollama runs without a netpol + compensating
+  controls (ClusterIP-only, no SA token, non-root/ro-fs/seccomp; the demo ns is egress-locked).
+  Revisit if the CNI changes.
 
 - Jack-in veil can flash the mode-snap if first paint lags >~37ms on low-end devices.
 - Back/forward into /resume lands the camera slightly off-station once (self-corrects on scroll).
