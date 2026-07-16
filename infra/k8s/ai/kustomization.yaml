@@ -8,4 +8,4 @@ resources:
   - ollama.yaml
 images:
   - name: ghcr.io/gabrielipcarvalho/gipc-ai
-    newTag: "36777b41be4acdea5c047d4c8090901603c3f936"
+    newTag: "fcf83bf"
