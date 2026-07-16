@@ -17,21 +17,43 @@ export const metadata = pageMeta(
    comments/keys inline. Nothing secret reaches here (gen-iac hard-fails on a secret + redacts the tunnel id). */
 
 const KEY_RE = /^(\s*(?:-\s+)?)([\w.\-/]+)(:)(.*)$/;
+const EMAIL_RE = /([\w.+-]+@[\w.-]+\.[a-z]{2,})/gi;
+
+/* guardEmails: split email-like text around an invisible span. Cloudflare's Email Obfuscation
+   rewrites plaintext emails in the served HTML into __cf_email__ anchors, which diverges the DOM
+   from the React-rendered tree → hydration error #418 on every /infra load (the IAC display
+   carries the CI committer email). A tag inside the pattern stops the rewrite; rendering and
+   copy-paste are unchanged. */
+function guardEmails(text: string): ReactNode {
+  const parts = text.split(EMAIL_RE);
+  if (parts.length === 1) return text;
+  return parts.map((p, i) =>
+    i % 2 === 1 ? (
+      <span key={i}>
+        {p.slice(0, p.indexOf("@"))}
+        <span aria-hidden />
+        {p.slice(p.indexOf("@"))}
+      </span>
+    ) : (
+      p
+    ),
+  );
+}
 
 // splitInlineComment: peel a trailing " # ..." off a value (naive but safe — YAML values here have no '#').
 function withInlineComment(rest: string): ReactNode {
   const i = rest.indexOf(" #");
-  if (i < 0) return rest;
+  if (i < 0) return guardEmails(rest);
   return (
     <>
-      {rest.slice(0, i)}
-      <span className="tok-comment">{rest.slice(i)}</span>
+      {guardEmails(rest.slice(0, i))}
+      <span className="tok-comment">{guardEmails(rest.slice(i))}</span>
     </>
   );
 }
 
 function highlightYaml(line: string): ReactNode {
-  if (line.trimStart().startsWith("#")) return <span className="tok-comment">{line}</span>;
+  if (line.trimStart().startsWith("#")) return <span className="tok-comment">{guardEmails(line)}</span>;
   const m = KEY_RE.exec(line);
   if (m) {
     return (
@@ -53,7 +75,7 @@ function Code({ content, lang }: { content: string; lang: string }) {
       <code>
         {lines.map((ln, i) => (
           <span className="iac-line" key={i}>
-            {lang === "yaml" ? highlightYaml(ln) : ln}
+            {lang === "yaml" ? highlightYaml(ln) : guardEmails(ln)}
             {"\n"}
           </span>
         ))}
