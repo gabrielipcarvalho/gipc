@@ -862,6 +862,38 @@ a{ color:inherit; text-decoration:none; }
 .load-stats dt{ color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.04em; }
 .load-stats dd{ margin:0; color:var(--cyan); font-size:var(--fs-body); }
 
+/* ── Lab DB explorer (Sprint H) ─────────────────────────────────────────────────────── */
+.dbx-picker{ display:flex; flex-wrap:wrap; gap:.45rem; margin:.5rem 0 .7rem; }
+.dbx-pick{
+  border:1px solid var(--border); background:transparent; color:var(--text-muted);
+  font:inherit; font-size:var(--fs-xs); padding:.35rem .65rem; border-radius:6px; cursor:pointer;
+}
+.dbx-pick:hover{ border-color:var(--border-cyan); color:var(--text); }
+.dbx-pick.on{ border-color:var(--border-cyan); background:color-mix(in srgb, var(--cyan) 10%, transparent); color:var(--cyan); }
+.dbx-pick:disabled{ opacity:.55; cursor:default; }
+.dbx-sql{ margin-top:.2rem; }
+.dbx-note{ margin:.35rem 0 .5rem; color:var(--text-faint); font-size:var(--fs-xs); }
+.dbx-h3{ margin:.7rem 0 .3rem; font-size:var(--fs-xs); color:var(--violet-bright); letter-spacing:.05em; text-transform:uppercase; }
+.dbx-plan{ margin-top:.4rem; }
+.dbx-planwrap{ overflow-x:auto; }
+.dbx-planwrap:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+.dbx-plantree{ min-width:max-content; }
+.dbx-node{ display:flex; align-items:center; gap:.55rem; font-size:var(--fs-xs); padding:.15rem 0; }
+.dbx-bar{ flex:0 0 3.4rem; height:.45rem; border-radius:3px; background:color-mix(in srgb, var(--violet) 12%, transparent); overflow:hidden; }
+.dbx-barfill{ display:block; height:100%; background:var(--violet); opacity:.85; }
+.dbx-nodetype{ color:var(--cyan); font-weight:600; white-space:nowrap; }
+.dbx-target{ color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dbx-nodestats{ margin-left:auto; color:var(--text-faint); white-space:nowrap; }
+.dbx-tablewrap{ margin-top:.7rem; overflow-x:auto; border:1px solid var(--border); border-radius:6px; max-height:320px; overflow-y:auto; }
+.dbx-tablewrap:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+.dbx-table{ border-collapse:collapse; width:100%; font-size:var(--fs-xs); }
+.dbx-table th{
+  position:sticky; top:0; background:var(--bg-elev); color:var(--violet-bright); text-align:left;
+  padding:.4rem .6rem; border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.dbx-table td{ padding:.3rem .6rem; border-bottom:1px solid color-mix(in srgb, var(--border) 45%, transparent); color:var(--text-muted); white-space:nowrap; }
+.dbx-table tbody tr:hover td{ background:color-mix(in srgb, var(--violet) 5%, transparent); }
+
 /* ── The Lab (M5) · P6 panels ─────────────────────────────────────────────── */
 .lab-wide{ grid-column:1/-1; }
 .lab-empty{ margin:0; color:var(--text-faint); font-size:var(--fs-sm); }
@@ -871,6 +903,7 @@ a{ color:inherit; text-decoration:none; }
 .evt-log{ list-style:none; margin:0; padding:.4rem .1rem; display:flex; flex-direction:column; gap:.4rem;
   max-height:260px; overflow:auto; }
 .evt-log:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+.evt-kind.db{ color:var(--violet-bright); }
 .evt-row{ display:grid; grid-template-columns:auto 1fr auto; align-items:baseline; gap:.6rem;
   font-size:var(--fs-sm); }
 .evt-kind{ font-size:var(--fs-xs); letter-spacing:.04em; text-transform:uppercase;

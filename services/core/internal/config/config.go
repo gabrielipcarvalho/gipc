@@ -37,6 +37,10 @@ type Config struct {
 	LoadRPS            float64       // per-IP cooldown refill (default 0.2 ⇒ ~1 run / 5s)
 	LoadBurst          int           // per-IP bucket (default 1)
 	LabEventHeartbeat  time.Duration // /api/lab/events heartbeat cadence (default 10s)
+	// Sprint H Lab DB explorer — the DSN comes from an optional k8s Secret; empty ⇒ handlers 503
+	DemoDBURL  string  // demo-ns toy postgres DSN (SELECT-only role; NEVER the ns-data prod DB)
+	DBRunRPS   float64 // /api/lab/db/run per-IP cooldown refill (default 0.5 ⇒ ~1 run / 2s)
+	DBRunBurst int     // /api/lab/db/run per-IP bucket (default 2)
 }
 
 // clampInt bounds v to [1, hi] — used so a misconfigured env cap can neither exceed the invariant nor drop below 1.
@@ -81,6 +85,10 @@ func Load() (Config, error) {
 		LoadRPS:            envFloat("LOAD_RPS", 0.2),
 		LoadBurst:          envInt("LOAD_BURST", 1),
 		LabEventHeartbeat:  envDuration("LAB_EVENT_HEARTBEAT", 10*time.Second),
+
+		DemoDBURL:  env("DEMO_DB_URL", ""),
+		DBRunRPS:   envFloat("DB_RPS", 0.5),
+		DBRunBurst: envInt("DB_BURST", 2),
 	}, nil
 }
 

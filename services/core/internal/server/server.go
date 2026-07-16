@@ -46,6 +46,8 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	lister := armLister(cfg.TopologyEnabled, k8sc)
 	chaosLimiter := middleware.NewLimiter(cfg.ChaosRPS, cfg.ChaosBurst) // per-IP cooldown ≈ 1 kill / 10s
 	loadLimiter := middleware.NewLimiter(cfg.LoadRPS, cfg.LoadBurst)    // per-IP cooldown ≈ 1 run / 5s
+	dbLimiter := middleware.NewLimiter(cfg.DBRunRPS, cfg.DBRunBurst)    // per-IP cooldown ≈ 1 run / 2s
+	dbRun := armDBRunner(cfg.LabEnabled, cfg.DemoDBURL)                 // nil without Lab+DSN → honest 503
 	labHub := newHub()                                                  // lab lifecycle events — separate from /api/stream
 
 	mux := http.NewServeMux()
@@ -69,6 +71,9 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	mux.Handle("GET /api/lab/loadtest", loadLimiter.Middleware(http.HandlerFunc(loadTestHandler(cfg, srvCtx, labHub, log)))) // bounded SSE load
 	mux.HandleFunc("GET /api/lab/events", labEventsHandler(labHub, srvCtx, cfg))
 	mux.HandleFunc("GET /api/lab/ratelimit", labRateLimitHandler(limiter))
+	// Lab DB explorer — allowlisted queries against the disposable demo-ns toy postgres.
+	mux.HandleFunc("GET /api/lab/db/queries", labDBQueriesHandler())
+	mux.Handle("POST /api/lab/db/run", dbLimiter.Middleware(http.HandlerFunc(labDBRunHandler(dbRun, log, labHub))))
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never

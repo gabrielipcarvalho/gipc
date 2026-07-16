@@ -13,7 +13,7 @@ import (
 
 // LabEvent is one entry on the lab event stream (JSON; mirrored in apps/web data/lab.ts).
 type LabEvent struct {
-	Kind   string `json:"kind"`   // chaos | loadtest | heartbeat
+	Kind   string `json:"kind"`   // chaos | loadtest | db | heartbeat
 	TS     string `json:"ts"`     // RFC3339
 	Detail string `json:"detail"` // human-readable — pod name / load params, NEVER an IP or secret
 }

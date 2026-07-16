@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { LabEvent } from "../../data/lab";
 
 const MAX_ROWS = 40;
-const KNOWN_KINDS = new Set(["chaos", "loadtest"]);
+const KNOWN_KINDS = new Set(["chaos", "loadtest", "db"]);
 
 type Row = LabEvent & { id: number };
 

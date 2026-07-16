@@ -23,6 +23,29 @@ export type RateLimitSnapshot = { rps: number; burst: number; activeBuckets: num
 
 export type LabError = { error: string };
 
+// DB explorer (Sprint H) — allowlisted queries against the disposable demo-ns toy postgres.
+export type DbQuery = { id: string; title: string; sql: string; note: string };
+export type DbRunResult = {
+  id: string;
+  columns: string[];
+  rows: string[][];
+  rowsCapped: boolean;
+  plan: PlanRoot[] | null; // EXPLAIN (ANALYZE, FORMAT JSON) output — [{ Plan: {...} }]
+  execMs: number;
+  timedOut: boolean;
+};
+// The subset of postgres plan-node fields the tree renders (the JSON carries many more).
+export type PlanNode = {
+  "Node Type": string;
+  "Actual Total Time"?: number; // per-loop (EXPLAIN semantics) — the UI shows ×N loops when > 1
+  "Actual Rows"?: number;
+  "Actual Loops"?: number;
+  "Index Name"?: string;
+  "Relation Name"?: string;
+  Plans?: PlanNode[];
+};
+export type PlanRoot = { Plan: PlanNode; "Execution Time"?: number; "Planning Time"?: number };
+
 // API-playground allowlist — fixed read-only GET paths (method is never a caller field → SSRF-safe).
 export type ApiEndpoint = { label: string; path: string; note: string };
 export const PLAYGROUND_ENDPOINTS: readonly ApiEndpoint[] = [
