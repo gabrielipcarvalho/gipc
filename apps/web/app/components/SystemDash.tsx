@@ -13,10 +13,14 @@ import {
   HISTORY_PANELS,
 } from "../../data/observability";
 import { MetricPanel, type Metric } from "./MetricPanel";
+import { Sparkline } from "./Sparkline";
+import { DeepPanels } from "./DeepPanels";
+import type { DeepResponse, VolumeResponse } from "../../data/deep";
 
 /* /system dashboard. Metrics (SSE /api/stream), the deploy feed (SSR + SSE `deploy`), the 30m history
    sparklines, the redacted log stream and the per-visitor request trace are all REAL and LIVE. Only the
-   service topology is REAL (30s /api/topology poll — pod truth from core's k8s reads). The SSE stream OWNS the severed/restored status
+   service topology is real (30s /api/topology poll — pod truth from core's k8s reads);
+   the deep-scry panels (DeepPanels) run their displayed queries verbatim. The SSE stream OWNS the severed/restored status
    line; the observability polls fail silently. */
 const TOPOLOGY_POLL_MS = 30000;
 const HISTORY_POLL_MS = 15000;
@@ -60,24 +64,6 @@ function groupDeploys(events: DeployEvent[]): DeployRow[] {
   return Array.from(bySha.values()).sort((a, b) => b.ts.localeCompare(a.ts));
 }
 
-/* Inline SVG sparkline — pure geometry from the samples (SSR-safe, no time/random). */
-function Sparkline({ points }: { points: Point[] }) {
-  if (points.length < 2) return <span className="spark-empty">no data</span>;
-  const W = 140, H = 30;
-  const vs = points.map((p) => p.v);
-  const min = Math.min(...vs, 0);
-  const max = Math.max(...vs);
-  const span = max - min || 1;
-  const step = W / (points.length - 1);
-  const d = points
-    .map((p, i) => `${i === 0 ? "M" : "L"}${(i * step).toFixed(1)},${(H - ((p.v - min) / span) * H).toFixed(1)}`)
-    .join(" ");
-  return (
-    <svg className="spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
-      <path d={d} />
-    </svg>
-  );
-}
 
 function fmtMs(ms: number | null): string {
   if (ms == null) return "—";
@@ -89,10 +75,14 @@ export function SystemDash({
   initial,
   initialDeploys,
   initialHistory,
+  initialDeep,
+  initialVolume,
 }: {
   initial: Status;
   initialDeploys: DeployEvent[];
   initialHistory: MetricsHistory;
+  initialDeep: DeepResponse | null;
+  initialVolume: VolumeResponse | null;
 }) {
   const [status, setStatus] = useState<Status>(initial); // SSR-seeded → real numbers pre-hydration
   const [deployEvents, setDeployEvents] = useState<DeployEvent[]>(initialDeploys);
@@ -431,6 +421,8 @@ export function SystemDash({
           <div className="skel" />
         </div>
       )}
+
+      <DeepPanels initialDeep={initialDeep} initialVolume={initialVolume} />
     </div>
   );
 }

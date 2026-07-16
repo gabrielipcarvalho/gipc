@@ -58,6 +58,8 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	mux.HandleFunc("GET /api/deploys", deploysHandler(deploys))
 	mux.HandleFunc("GET /api/metrics/history", historyHandler(prom))           // aggregate range series (Grafana-on-display)
 	mux.HandleFunc("GET /api/logs", logsHandler(lk))                           // fixed+redacted log surface (Loki-on-display)
+	mux.HandleFunc("GET /api/logs/volume", logsVolumeHandler(lk))              // log-volume histogram by container
+	mux.HandleFunc("GET /api/metrics/deep", deepHandler(prom, &deepCache{}))   // deep panels (queries on display)
 	mux.HandleFunc("GET /api/trace", traceHandler())                           // per-visitor real request path
 	mux.HandleFunc("GET /api/uptime", uptimeHandler(uptime))                   // probe/incident history (loop started in main)
 	mux.HandleFunc("GET /api/topology", topologyHandler(lister, &topoCache{})) // real per-service pod truth
