@@ -88,8 +88,22 @@ export function EvalsPanel() {
 
       <p className="evals-meta">
         measured {r.run_at.slice(0, 10)} · model {r.model} · embedder {r.embedder} · corpus{" "}
-        {r.corpus_hash.slice(0, 8)} · k={r.params.k}, code_cap={r.params.code_cap}; answer+judge at
-        temp 0, JD mapping runs the production path
+        {r.corpus_hash.slice(0, 8)} · k={r.params.k}, code_cap={r.params.code_cap}; answers at temp
+        0, JD mapping runs the production path
+      </p>
+      <p className="evals-meta">
+        {!r.params.judge_model || r.params.judge_model === r.model ? (
+          <>
+            faithfulness judged by the answer model itself — answered and judged by the same model;
+            self-judging can flatter, so read it as an upper bound
+          </>
+        ) : (
+          <>
+            answers by {r.model}, judged for faithfulness by {r.params.judge_model} — an
+            independent model, so the judge doesn&apos;t grade its own words; not comparable with
+            earlier same-model-judged runs (claim-splitting varies by judge)
+          </>
+        )}
       </p>
 
       <div className="evals-notes">

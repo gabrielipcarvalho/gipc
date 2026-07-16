@@ -32,7 +32,14 @@ export type EvalResults = {
   run_at: string;
   model: string;
   embedder: string;
-  params: { k: number; code_cap: number; answer_temp: number; judge_temp: number; jd_path: string };
+  params: {
+    k: number;
+    code_cap: number;
+    answer_temp: number;
+    judge_temp: number | string; // 0 when sent; "default" when the cross-model judge omits it
+    judge_model?: string; // absent on pre-Sprint-I (self-judged) runs
+    jd_path: string;
+  };
   corpus_hash: string;
   evals: {
     retrieval: RetrievalEval | PendingEval;

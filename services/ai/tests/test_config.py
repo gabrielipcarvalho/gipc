@@ -27,3 +27,19 @@ def test_secrets_never_in_repr(monkeypatch) -> None:
     blob = repr(s) + str(s)
     assert "sk-ant-test-not-a-real-key" not in blob
     assert "supersecret" not in blob
+
+
+def test_judge_model_defaults_empty_falls_back(monkeypatch):
+    monkeypatch.delenv("JUDGE_MODEL", raising=False)
+    from app.config import Settings
+
+    cfg = Settings()
+    assert cfg.judge_model == ""
+    assert (cfg.judge_model or cfg.anthropic_model) == cfg.anthropic_model
+
+
+def test_judge_model_env_override(monkeypatch):
+    monkeypatch.setenv("JUDGE_MODEL", "claude-sonnet-5")
+    from app.config import Settings
+
+    assert Settings().judge_model == "claude-sonnet-5"

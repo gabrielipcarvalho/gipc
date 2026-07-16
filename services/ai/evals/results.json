@@ -1,15 +1,16 @@
 {
- "run_at": "2026-07-16T07:52:24Z",
+ "run_at": "2026-07-16T21:17:26Z",
  "model": "claude-haiku-4-5",
  "embedder": "BAAI/bge-small-en-v1.5",
  "params": {
   "k": 6,
   "code_cap": 2,
   "answer_temp": 0,
-  "judge_temp": 0,
+  "judge_temp": "default",
+  "judge_model": "claude-sonnet-5",
   "jd_path": "production analyze_jd params"
  },
- "corpus_hash": "03de0d329873406afdb54f1787070931630d06e0afe4f6ac80925880a3101984",
+ "corpus_hash": "15e52a75408d688b6a031e5d3e4beeb203c505c7d00809aa343a986c0bdd6586",
  "evals": {
   "retrieval": {
    "hit_at_6": 0.812,
@@ -43,27 +44,32 @@
    ]
   },
   "faithfulness": {
-   "supported_ratio": 0.972,
-   "n_claims": 144,
+   "supported_ratio": 0.925,
+   "n_claims": 146,
    "n": 16,
    "ungraded": 0,
    "unsupported_examples": [
-    "That work emerged from his PhD research in adaptive, agentic multi-agent AI",
-    "Queries are embedded client-side using bge-small-en-v1.5 (ONNX, runs locally)",
-    "Generation is gated by the same cost meter"
+    "AKS is Azure Kubernetes Service",
+    "At WealthGoal, he likely worked with managed Kubernetes as part of the AWS environment",
+    "The IEEE Access publication is in his PhD domain"
    ]
   },
   "jd_mapping": {
-   "label_accuracy": 0.812,
+   "label_accuracy": 0.75,
    "n": 16,
    "jds": [
     {
      "name": "platform",
-     "label_accuracy": 0.778,
-     "correct": 7,
+     "label_accuracy": 0.667,
+     "correct": 6,
      "n": 9,
      "unmatched_labels": [],
      "wrong_labels": [
+      {
+       "match": "CI/CD",
+       "expected": "strong",
+       "got": "partial"
+      },
       {
        "match": "Docker",
        "expected": "strong",
@@ -91,17 +97,17 @@
      ]
     }
    ],
-   "evidence_grounded_ratio": 0.525,
-   "n_evidence": 40,
+   "evidence_grounded_ratio": 0.537,
+   "n_evidence": 41,
    "ungrounded_examples": [
     {
-     "evidence": "Deployed and operates a live k3s cluster behind Cloudflare Tunnel with infrastructure-as-code",
+     "evidence": "Kubernetes (k3s, AKS) listed in Cloud & Infrastructure skills",
      "tokens": [
-      "cluster"
+      "listed"
      ]
     },
     {
-     "evidence": "Azure AKS listed in Cloud & Infrastructure skills",
+     "evidence": "Azure (AKS) listed in Cloud & Infrastructure skills",
      "tokens": [
       "listed"
      ]
