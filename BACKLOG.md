@@ -41,14 +41,17 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
   (/system "deep scry"). Public Grafana embedding = documented cut (CSP-safe native panels
   instead; Grafana stays private).
 - **Real deploy/CI feed** — GitHub Actions deploy step → webhook → Go core stores event →
-  `GET /api/deploys`; UI animates commit → build → test → deploy → live. Stub list today (real
-  commit-subject format already matched).
+  `GET /api/deploys`; UI animates commit → build → test → deploy → live. ✅ SHIPPED M3
+  (webhook → core store → /api/deploys; the CI pin steps post real signed events).
 - **Live streaming, not polling** — tech-stack locks *SSR initial paint* (`GET /api/status`
-  server-side) **+ SSE/WebSocket push** for updates; SystemDash currently client-polls every 5s
-  with no SSR data.
+  server-side) **+ SSE/WebSocket push** for updates. ✅ SHIPPED (M3→H: SystemDash is SSR-seeded
+  + /api/stream SSE w/ backoff; the deep panels poll 60s by design).
 - **Real per-visitor request trace** — "trace YOUR request": the actual path this visitor's
-  request took (edge PoP → tunnel → k3s → pod) with real timings; today one static sample.
+  request took (edge PoP → tunnel → k3s → pod) with real timings. ✅ SHIPPED (M3 /api/trace —
+  the visitor's own real path from CF headers; core-handler time measured, upstream hops
+  honestly unmeasured).
 - **Incident/status history page** backed by real uptime monitoring (Uptime-Kuma-class).
+  ✅ SHIPPED (M3 /status + core's uptime monitor → /api/uptime).
 - **"How this page is provisioned"** — annotated real IaC on display: k8s manifests, Actions
   workflow, tunnel config, kustomize.
 - **Go `services/core`** to serve all of it (REST/WS API, metrics aggregation, deploy webhooks,
@@ -75,11 +78,13 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
 - **Live inference demo** on a small self-hosted model — streaming tokens + latency + cost
   readout (Ollama optional-local is in the locked stack). ✅ SHIPPED (Sprint G P3 — in-cluster
   Ollama qwen2.5:0.5b-instruct, /api/ai/infer + the oracle "local" tab).
-- **LLM eval/benchmark dashboard** — real eval results, rigor not just demos. ✅ SHIPPED (Sprint G P4 — committed harness + published scores on /oracle). Follow-up: judge-model == answer-model (self-judging flatters) — future cross-model judge.
+- **LLM eval/benchmark dashboard** — real eval results, rigor not just demos. ✅ SHIPPED (Sprint G P4 — committed harness + published scores on /oracle). Follow-up resolved Sprint I P3: cross-model judge shipped (claude-sonnet-5 judges the haiku answers; republished faithfulness 0.925 vs self-judged 0.986 — a same-session twin run isolating the judge-only delta, consistent with self-preference and/or a stricter judge).
 - **Oracle→Construct hook**: agent calls the Construct's `scrollTo(station)` — "show me the k8s
-  experience" descends + decodes that card (blueprint §12.5).
+  experience" descends + decodes that card (blueprint §12.5). ✅ SHIPPED Sprint I P2 — the
+  show_station tool (allowlisted, typed SSE ui frames) offers a one-click descent chip; never
+  auto-navigates.
 - **Context injection** (AT §8): viewing a project prepends "I'm looking at <project>…". ✅ SHIPPED (Sprint G P2 — ?ctx= typed slugs, server-resolved allowlist).
-- **Voice in/out** (AT-recorded): Vosk in-browser STT + streaming TTS — keys server-side only. → DEFERRED to Sprint I (user-approved cut at Sprint G planning).
+- **Voice in/out** (AT-recorded): Vosk in-browser STT + streaming TTS — keys server-side only. → deferred again at Sprint I scoping (not among its phases; future sprint).
 - **Cloudflare Turnstile** bot-gating on the chat (locked, tech-stack P2). NOTE: the deployed secret is still the always-pass TEST key — swap the real secret (user credential wall) and the gate arms itself, zero code change.
 - Python `services/ai` (FastAPI) — dir doesn't exist; Redis also required and absent. ✅ services/ai SHIPPED (M4; 149 tests as of Sprint G). Redis never needed (in-process limiter).
 - Console `oracle`/`operator` commands currently redirect to /system saying "wiring up (M4)". ✅ WIRED (M4 → /oracle; Sprint G adds slugs + infer/evals commands).
@@ -107,14 +112,22 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
 - WAF + rate-limit + abuse monitoring — the security-hardening workstream gating the milestone.
 - `GaussianSplats3D` (AT toolbox) — a future lab toy.
 
-## 4. Résumé / authenticity — recorded promises the site already makes ⚠️
+## 4. Résumé / authenticity (signing + preview SHIPPED F; /authenticity SHIPPED I — annotations inline)
 
 - **The PDF is not actually signed** — /connect says "signed"; the concept + kaveenk reference
   mean *cryptographically* signed (Ed25519 + signature metadata). Options: signed PDF,
   `/authenticity`-style live build verification (asset hashes vs manifest) + drop-a-file verifier.
+  ✅ signing SHIPPED Sprint F (Ed25519 .sig + pubkey + drop-a-file WebCrypto verifier —
+  sign-resume.mjs; honest unsigned-dev state) — live-verified Sprint I recon. The
+  "/authenticity-style live build verification" option ✅ SHIPPED Sprint I P1 (43fc7a8):
+  /authenticity verifies served asset hashes against a committed build manifest in the
+  visitor's own browser, two-stage CDN-aware fetch, honest threat-model framing.
 - **Inline PDF preview** — kaveenk renders the résumé in-page via PDF.js before download; ours is
-  download-only.
-- **One-click signed-PDF regeneration from resume.json** (today regenerated manually).
+  download-only. ✅ SHIPPED Sprint F — inline preview in ResumePanel (native <object> embed,
+  not PDF.js; graceful fallback); live-verified Sprint I recon.
+- **One-click signed-PDF regeneration from resume.json** (today regenerated manually). STILL
+  OPEN — sign-resume.mjs only re-SIGNS an existing PDF; regeneration remains manual (verified
+  Sprint I P5).
 - **JD-tailored résumé variants** — reorder/re-emphasise per application, facts never change
   (feeds M4's JD feature).
 

@@ -42,7 +42,7 @@ export const REQUEST_PATH: ArchDiagramData = {
   id: "reqpath",
   title: "the request path",
   caption:
-    "How a request reaches this page and what talks to what — read from the manifests in this repo (Sprint H).",
+    "How a request reaches this page and what talks to what — read from the manifests in this repo (Sprints H-I).",
   viewW: 940,
   viewH: 620,
   lanes: [
@@ -58,7 +58,7 @@ export const REQUEST_PATH: ArchDiagramData = {
     { id: "cf", label: "Cloudflare edge", sub: "DNS · TLS · WAF", x: 360, y: 30, w: 170, h: NH, facts: ["gipc.dev + www resolve at Cloudflare; TLS terminates at the edge.", "Origin is reachable ONLY via the tunnel — no inbound ports exposed on garuda (the tunnel dials out)."] },
     { id: "cloudflared", label: "cloudflared", sub: "host systemd — the tunnel", x: 360, y: 126, w: 170, h: NH, facts: ["A host systemd process, not a cluster workload (infra/cloudflared/config.yml).", "Outbound-only tunnel to Cloudflare; tunnel id redacted from this page by policy."] },
     { id: "k8sapi", label: "k8s API", sub: "k3s server", x: 720, y: 126, w: NW, h: NH, facts: ["Single-node k3s; the API server runs on the same host."] },
-    { id: "caddy", label: "Caddy", sub: "ingress · CSP · headers", x: 360, y: 222, w: 170, h: NH, facts: ["Route table (caddy.yaml): /api/ai/* → ai:8000 · /api/* → core:8080 · everything else → web:80.", "/api/telemetry → web:80 is a legacy route — its handler was removed in Sprint H P1 (Caddy config is read-only this sprint).", "Sets the CSP + security headers site-wide; -Server header stripped."] },
+    { id: "caddy", label: "Caddy", sub: "ingress · CSP · headers", x: 360, y: 222, w: 170, h: NH, facts: ["Route table (caddy.yaml): /api/ai/* → ai:8000 · /api/* → core:8080 · everything else → web:80.", "Sets the CSP + security headers site-wide; -Server header stripped."] },
     { id: "web", label: "web", sub: "Next.js 15", x: 60, y: 316, w: 140, h: NH, facts: ["Static-first App Router; SSR pages seed from core in-cluster."] },
     { id: "core", label: "core", sub: "Go · stdlib", x: 400, y: 316, w: NW, h: NH, facts: ["One external dep (lib/pq, Sprint H); everything else stdlib.", "Boot-independent: serves /api/healthz with every dependency down."] },
     { id: "ai", label: "ai", sub: "FastAPI · RAG", x: 640, y: 316, w: 130, h: NH, facts: ["The oracle's tools also GET the site's own public APIs via https://gipc.dev (config.py core_base) — a real loopback through this whole diagram."] },
@@ -106,7 +106,7 @@ export const RAG_PIPELINE: ArchDiagramData = {
   id: "ragpipe",
   title: "the oracle's RAG pipeline",
   caption:
-    "How the oracle answers: the real modules in services/ai, in the order a question flows through them (Sprint H).",
+    "How the oracle answers: the real modules in services/ai, in the order a question flows through them (Sprints H-I).",
   viewW: 940,
   viewH: 400,
   lanes: [
@@ -122,7 +122,7 @@ export const RAG_PIPELINE: ArchDiagramData = {
     { id: "retrieval", label: "retrieval.py", sub: "top-k 6 · code cap 2", x: 760, y: 160, w: 150, h: 52, facts: ["TOP_K=6; the oracle's auto-context admits at most CODE_CAP=2 code chunks (dilution guard); fixed SQL shape, embedding passed as a literal."] },
     { id: "oracle", label: "oracle.py", sub: "assembly + budget", x: 520, y: 160, w: 180, h: 52, facts: ["Trims history (6 turns / 4k chars), builds the user turn, enforces budget.py's fail-closed daily cost breaker + per-IP limits."] },
     { id: "llm", label: "Anthropic API", sub: "claude-haiku-4-5", x: 280, y: 160, w: 180, h: 52, facts: ["Generation is the Anthropic Messages API (llm.py) — model claude-haiku-4-5, streamed.", "The self-hosted Ollama serves only the separate /api/ai/infer demo — not this pipeline."] },
-    { id: "toolloop", label: "tool loop", sub: "tools.py · ≤4 rounds", x: 280, y: 300, w: 180, h: 52, facts: ["The model may call fixed tools (search_corpus, public site APIs) for at most tool_rounds_max=4 rounds — then it must answer."] },
+    { id: "toolloop", label: "tool loop", sub: "tools.py · ≤4 rounds", x: 280, y: 300, w: 180, h: 52, facts: ["The model may call fixed tools (search_corpus, the public site APIs, show_station — the Construct hook) for at most tool_rounds_max=4 rounds — then it must answer."] },
     { id: "sse", label: "SSE → Oracle UI", sub: "sse.py", x: 40, y: 160, w: 170, h: 52, facts: ["Tokens stream to the browser as server-sent events through Caddy (flush_interval -1)."] },
     { id: "evals", label: "evals.py", sub: "published, real", x: 640, y: 300, w: 180, h: 52, facts: evalFacts },
   ],
