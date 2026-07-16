@@ -723,6 +723,17 @@ a{ color:inherit; text-decoration:none; }
 .oracle-cites a:hover{ color:var(--cyan-bright); }
 .oracle-error{ margin-top:.9rem; color:var(--warn); font-size:var(--fs-sm); }
 
+.oracle-ctx{
+  margin-top:1rem; display:flex; align-items:center; gap:.6rem;
+  padding:.4rem .7rem; border:1px solid var(--border); border-radius:6px;
+  background:var(--bg-elev); color:var(--text-muted); font-size:var(--fs-xs);
+}
+.oracle-ctx b{ color:var(--cyan); font-weight:600; }
+.oracle-ctx-clear{
+  margin-left:auto; border:0; background:none; color:var(--text-muted);
+  font-size:var(--fs-sm); line-height:1; cursor:pointer; padding:.1rem .35rem;
+}
+.oracle-ctx-clear:hover{ color:var(--err); }
 .oracle-form{ margin-top:1.1rem; display:flex; flex-direction:column; gap:.55rem; }
 .oracle-label{ color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.04em; }
 .oracle-input{ width:100%; background:var(--bg-elev); border:1px solid var(--border); border-radius:6px;
@@ -917,6 +928,9 @@ a{ color:inherit; text-decoration:none; }
 .wu-code{ margin:0; background:var(--bg-elev); border:1px solid var(--border); border-radius:6px; padding:.8rem 1rem; overflow-x:auto; }
 .wu-code code{ background:none; padding:0; color:var(--text-muted); font-size:var(--fs-sm); line-height:1.5; }
 .wu-code:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+.wu-ask{ margin-top:1.4rem; color:var(--text-muted); font-size:var(--fs-sm); }
+.wu-ask a{ color:var(--cyan); text-decoration:none; }
+.wu-ask a:hover{ color:var(--violet-bright); }
 .wu-back{ margin-top:1.6rem; }
 .wu-back a{ color:var(--violet); font-size:var(--fs-sm); text-decoration:none; }
 .wu-back a:hover{ color:var(--violet-bright); }
@@ -927,3 +941,9 @@ a{ color:inherit; text-decoration:none; }
   stroke-dasharray:1; stroke-dashoffset:0; animation:sig-draw 2.4s ease; }
 @keyframes sig-draw{ from{ stroke-dashoffset:1; } }
 .foot-geo{ margin:.2rem 0 0; color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.03em; }
+
+/* /resume oracle affordance — rendered OUTSIDE the ConstructShell; hidden in immersive mode */
+.cst-ask{ margin-top:1.2rem; color:var(--text-muted); font-size:var(--fs-sm); }
+.cst-ask a{ color:var(--cyan); text-decoration:none; }
+.cst-ask a:hover{ color:var(--violet-bright); }
+.construct[data-mode="immersive"] ~ .cst-ask{ display:none; }

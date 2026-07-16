@@ -78,7 +78,7 @@ function WorkCard({ p }: { p: Project }) {
         </p>
       )}
       <p className="card-oracle">
-        <a href={`/oracle?ctx=${p.slug}`} aria-label={`ask the oracle about ${p.name}`}>
+        <a href={`/oracle?ctx=project:${p.slug}`} aria-label={`ask the oracle about ${p.name}`}>
           ask the oracle ▸
         </a>
       </p>

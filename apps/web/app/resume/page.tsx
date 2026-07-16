@@ -82,6 +82,11 @@ export default function ResumePage() {
       <ConstructShell>
         <StaticResume />
       </ConstructShell>
+      {/* outside ConstructShell: crawlable, reduced-motion-present, zero interaction with the
+          immersive positioning/decode; hidden while immersive via the sibling combinator in CSS */}
+      <p className="cst-ask">
+        questions about this résumé? <a href="/oracle?ctx=page:resume">interrogate the oracle →</a>
+      </p>
     </main>
   );
 }

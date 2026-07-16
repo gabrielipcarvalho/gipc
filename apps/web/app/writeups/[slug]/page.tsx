@@ -37,6 +37,10 @@ export default async function WriteupPost({ params }: { params: Promise<{ slug: 
           <time dateTime={post.date}>{post.date}</time> · {readingMinutes(post)} min read
         </p>
         <WriteupBody blocks={post.body} />
+        <p className="wu-ask">
+          questions about this build?{" "}
+          <a href={`/oracle?ctx=writeup:${post.slug}`}>ask the oracle →</a>
+        </p>
         <p className="wu-back">
           <Link href="/writeups">← all writeups</Link>
         </p>
