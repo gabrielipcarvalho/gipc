@@ -1,0 +1,25 @@
+# Local dev proxy — mirrors prod's route table (infra/k8s/caddy) so relative /api/* fetches and
+# SSE work exactly like production. This file is compose-local; the prod Caddy is untouched.
+{
+	auto_https off
+	admin off
+}
+
+:8088 {
+	handle /-/proxy-healthz {
+		respond "ok" 200
+	}
+	handle /api/ai/* {
+		reverse_proxy ai:8000 {
+			flush_interval -1
+		}
+	}
+	handle /api/* {
+		reverse_proxy core:8080 {
+			flush_interval -1
+		}
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
