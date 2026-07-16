@@ -1,5 +1,7 @@
 // Typed contracts for the M5 Lab — mirrors the Go structs in services/core/internal/server/lab_*.go.
 
+// NOTE: the wire pod (core k8s.Pod) is additive-only and now also carries
+// ready/restarts/image/requests/limits (Sprint H P1) — extend here as the UI needs them.
 export type ChaosPod = { name: string; phase: string; ageSeconds: number };
 export type ChaosStatus = { desired: number | null; ready: number | null; pods: ChaosPod[] };
 export type ChaosKill = { killed: string; at: string };

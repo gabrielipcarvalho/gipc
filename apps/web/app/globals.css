@@ -982,3 +982,16 @@ a{ color:inherit; text-decoration:none; }
 .evals-notes p{ margin-top:.5rem; }
 .evals-notes a{ color:var(--cyan); text-decoration:none; }
 .evals-notes a:hover{ color:var(--violet-bright); }
+
+/* /system topology pod chips (Sprint H P1 — real pod truth) */
+.topo-node{ flex-wrap:wrap; }
+.topo-pods{ display:flex; flex-wrap:wrap; gap:.35rem .8rem; margin-left:auto; }
+.topo-pod{
+  display:inline-flex; align-items:center; gap:.4rem;
+  font-size:var(--fs-xs); color:var(--text-muted);
+}
+.topo-pod a{ color:var(--cyan); text-decoration:none; }
+.topo-pod a:hover{ color:var(--violet-bright); }
+.topo-pod i, .topo-pod em{ font-style:normal; }
+.topo-restarts{ color:var(--warn); font-weight:600; }
+.topo-res{ color:var(--text-faint); }

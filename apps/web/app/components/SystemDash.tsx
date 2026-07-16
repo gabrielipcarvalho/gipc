@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Telemetry } from "../../data/telemetry";
-import type { Status, StatusMetric } from "../../data/status";
+import type { Topology } from "../../data/topology";
+import type { Status } from "../../data/status";
+import { statusToMetrics } from "../../data/statusMetrics";
 import { type DeployEvent, type DeployStage, DEPLOY_STAGES } from "../../data/deploys";
 import {
   type MetricsHistory,
@@ -15,9 +16,9 @@ import { MetricPanel, type Metric } from "./MetricPanel";
 
 /* /system dashboard. Metrics (SSE /api/stream), the deploy feed (SSR + SSE `deploy`), the 30m history
    sparklines, the redacted log stream and the per-visitor request trace are all REAL and LIVE. Only the
-   service topology stays stub (30s /api/telemetry poll). The SSE stream OWNS the severed/restored status
+   service topology is REAL (30s /api/topology poll — pod truth from core's k8s reads). The SSE stream OWNS the severed/restored status
    line; the observability polls fail silently. */
-const STUB_POLL_MS = 30000;
+const TOPOLOGY_POLL_MS = 30000;
 const HISTORY_POLL_MS = 15000;
 const LOGS_POLL_MS = 10000;
 
@@ -31,24 +32,6 @@ function relTime(iso: string, now: number): string {
   return `${Math.round(h / 24)}d ago`;
 }
 
-function clampPct(v: number | null, max: number): number {
-  if (v == null || max <= 0) return 0;
-  return Math.max(0, Math.min(100, Math.round((v / max) * 100)));
-}
-function fixed(m: StatusMetric, digits: number): string {
-  return m.ok && m.value != null ? m.value.toFixed(digits) : "—";
-}
-function statusToMetrics(s: Status): Metric[] {
-  const m = s.metrics;
-  const errPct = m.errorRate.ok && m.errorRate.value != null ? m.errorRate.value * 100 : null;
-  return [
-    { k: "req/s", v: fixed(m.reqPerSec, 2), pct: clampPct(m.reqPerSec.value, 20) },
-    { k: "p99 latency", v: m.p99Ms.ok ? `${fixed(m.p99Ms, 1)} ms` : "—", pct: clampPct(m.p99Ms.value, 200) },
-    { k: "error rate", v: errPct != null ? `${errPct.toFixed(2)}%` : "—", pct: clampPct(errPct, 5) },
-    { k: "web cpu", v: m.cpuCores.ok ? `${fixed(m.cpuCores, 3)} cores` : "—", pct: clampPct(m.cpuCores.value, 1) },
-    { k: "web mem", v: m.memMiB.ok ? `${fixed(m.memMiB, 0)} MiB` : "—", pct: clampPct(m.memMiB.value, 384) },
-  ];
-}
 
 /* Client-side idempotent merge per (sha,stage) with the same ts replay-guard as the server. */
 function mergeDeploy(list: DeployEvent[], ev: DeployEvent): DeployEvent[] {
@@ -117,7 +100,8 @@ export function SystemDash({
   const [logs, setLogs] = useState<LogsResponse | null>(null);
   const [trace, setTrace] = useState<RequestTrace | null>(null);
   const [traceFailed, setTraceFailed] = useState(false); // distinguish failed from still-loading (honest copy)
-  const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
+  const [topology, setTopology] = useState<Topology | null>(null);
+  const [topoFailed, setTopoFailed] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
   const [now, setNow] = useState<number | null>(null); // null on SSR → relative times fill in post-mount (no hydration mismatch)
   const hadErrorRef = useRef(false);
@@ -172,26 +156,32 @@ export function SystemDash({
     };
     openStream();
 
-    // stub topology via a slow 30s poll (silent on failure)
+    // REAL topology via a slow 30s poll (pods change slowly). Failures set topoFailed → an honest
+    // 'unavailable' section when no prior truth exists; existing truth is kept, never invented.
     let telAc: AbortController | null = null;
-    const pullTelemetry = async () => {
+    const pullTopology = async () => {
       telAc?.abort();
       const ac = new AbortController();
       telAc = ac;
       try {
-        const res = await fetch("/api/telemetry", { cache: "no-store", signal: ac.signal });
-        if (!res.ok || disposed) return;
-        setTelemetry((await res.json()) as Telemetry);
+        const res = await fetch("/api/topology", { cache: "no-store", signal: ac.signal });
+        if (disposed) return;
+        if (!res.ok) {
+          setTopoFailed(true); // honest state — a skeleton must not shimmer forever on a 503/404
+          return;
+        }
+        setTopoFailed(false);
+        setTopology((await res.json()) as Topology);
       } catch {
-        /* silent — SSE owns the status line */
+        if (!disposed) setTopoFailed(true);
       }
     };
-    pullTelemetry();
+    pullTopology();
     const telInterval = window.setInterval(() => {
-      if (!document.hidden) pullTelemetry();
-    }, STUB_POLL_MS);
+      if (!document.hidden) pullTopology();
+    }, TOPOLOGY_POLL_MS);
     const onVisible = () => {
-      if (!document.hidden) pullTelemetry();
+      if (!document.hidden) pullTopology();
     };
     document.addEventListener("visibilitychange", onVisible);
 
@@ -270,7 +260,7 @@ export function SystemDash({
         <p className="sys-source">
           source: {status.source === "prometheus" ? "prometheus · live" : "unavailable — re-scrying"}
         </p>
-        <MetricPanel metrics={statusToMetrics(status)} countUp placeholder={false} />
+        <MetricPanel metrics={statusToMetrics(status)} countUp />
       </section>
 
       {/* REAL history — 30m aggregate range series rendered as native sparklines */}
@@ -387,17 +377,48 @@ export function SystemDash({
         )}
       </section>
 
-      {/* stub section — topology (from /api/telemetry) */}
-      {telemetry ? (
-        <section className="sys-block" aria-label="Service topology (placeholder)" data-placeholder="true">
+      {/* REAL topology — live pod truth from core's k8s reads */}
+      {!topology && topoFailed ? (
+        <section className="sys-block" aria-label="Service topology">
           <h2 className="sys-h">topology</h2>
-          {telemetry.services.length ? (
+          <p className="sys-empty">topology unavailable — re-scrying…</p>
+        </section>
+      ) : topology ? (
+        <section className="sys-block" aria-label="Service topology">
+          <h2 className="sys-h">topology</h2>
+          {topology.services.length ? (
             <ul className="topo">
-              {telemetry.services.map((s) => (
+              {topology.services.map((s) => (
                 <li className="topo-node" key={s.name} data-status={s.status}>
                   <span className="pulse topo-dot" aria-hidden />
                   <span className="topo-name">{s.name}</span>
                   <span className="topo-state">{s.status}</span>
+                  <span className="topo-pods">
+                    {s.pods.map((p) => (
+                      <span className="topo-pod" key={p.name}>
+                        {p.restarts > 0 && (
+                          <b className="topo-restarts">
+                            <span className="sr-only">restarts </span>↻{p.restarts}
+                          </b>
+                        )}
+                        {p.commitUrl ? (
+                          <a href={p.commitUrl} target="_blank" rel="noreferrer">
+                            {p.imageShort}
+                            <span className="sr-only"> (commit, opens in new tab)</span>
+                          </a>
+                        ) : (
+                          <i>{p.imageShort}</i>
+                        )}
+                        {(p.requests || p.limits) && (
+                          <em className="topo-res">
+                            {p.requests && `req ${p.requests}`}
+                            {p.requests && p.limits && " / "}
+                            {p.limits && `lim ${p.limits}`}
+                          </em>
+                        )}
+                      </span>
+                    ))}
+                  </span>
                 </li>
               ))}
             </ul>

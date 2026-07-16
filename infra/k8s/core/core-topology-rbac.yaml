@@ -1,0 +1,77 @@
+# Read-only pods access for /api/topology — SA core-lab (ns gipc) may LIST/GET pods in gipc,
+# observability and data. Applied mid-Sprint-H-P1 (image-independent; the M3/M5 pattern);
+# UNDO: pipe this same file to `kubectl delete -f -`. Mirrors infra/k8s/demo/core-lab-rbac.yaml:
+# Role objects are NAMESPACED and this file pins each namespace explicitly — never apply it
+# through a kustomization that sets a namespace directive (it would rewrite the Roles AND the
+# RoleBinding subject namespaces; the core kustomization deliberately has none).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: topology-pod-reader
+  namespace: gipc
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: core-topology-reader
+  namespace: gipc
+subjects:
+  - kind: ServiceAccount
+    name: core-lab
+    namespace: gipc
+roleRef:
+  kind: Role
+  name: topology-pod-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: topology-pod-reader
+  namespace: observability
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: core-topology-reader
+  namespace: observability
+subjects:
+  - kind: ServiceAccount
+    name: core-lab
+    namespace: gipc
+roleRef:
+  kind: Role
+  name: topology-pod-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: topology-pod-reader
+  namespace: data
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: core-topology-reader
+  namespace: data
+subjects:
+  - kind: ServiceAccount
+    name: core-lab
+    namespace: gipc
+roleRef:
+  kind: Role
+  name: topology-pod-reader
+  apiGroup: rbac.authorization.k8s.io

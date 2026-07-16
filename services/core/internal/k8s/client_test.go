@@ -127,3 +127,64 @@ func TestNilClientDisabled(t *testing.T) {
 		t.Errorf("DeletePod on nil: %v, want ErrDisabled", err)
 	}
 }
+
+func TestListPodsNSDecodesRichFields(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/namespaces/gipc/pods" {
+			t.Errorf("path=%s", r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"items":[{
+			"metadata":{"name":"web-1","creationTimestamp":"2026-07-16T00:00:00Z"},
+			"spec":{"containers":[{"image":"ghcr.io/gabrielipcarvalho/gipc-web:abc",
+				"resources":{"requests":{"cpu":"100m","memory":"128Mi"},"limits":{"cpu":"500m","memory":"256Mi"}}}]},
+			"status":{"phase":"Running","containerStatuses":[
+				{"ready":true,"restartCount":2},{"ready":true,"restartCount":3}]}}]}`))
+	}))
+	defer srv.Close()
+	c := testClient(srv)
+	pods, err := c.ListPodsNS(context.Background(), "gipc", "app=web")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := pods[0]
+	if !p.Ready || p.Restarts != 5 || p.Image != "ghcr.io/gabrielipcarvalho/gipc-web:abc" {
+		t.Fatalf("decoded %+v", p)
+	}
+	if p.Requests != "cpu 100m · mem 128Mi" || p.Limits != "cpu 500m · mem 256Mi" {
+		t.Fatalf("resources %q / %q", p.Requests, p.Limits)
+	}
+}
+
+func TestListPodsNSPendingPodNoStatusesNoPanic(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"items":[{
+			"metadata":{"name":"p","creationTimestamp":"2026-07-16T00:00:00Z"},
+			"spec":{"containers":[{"image":"x:y"}]},
+			"status":{"phase":"Pending"}}]}`))
+	}))
+	defer srv.Close()
+	pods, err := testClient(srv).ListPodsNS(context.Background(), "demo", "app=x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pods[0].Ready || pods[0].Restarts != 0 {
+		t.Fatalf("pending pod must be not-ready, 0 restarts: %+v", pods[0])
+	}
+}
+
+func TestListPodsNSRejectsUnlistedNamespace(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		t.Fatal("must never reach the API server")
+	}))
+	defer srv.Close()
+	if _, err := testClient(srv).ListPodsNS(context.Background(), "kube-system", ""); err == nil {
+		t.Fatal("expected allowlist rejection")
+	}
+}
+
+func TestListPodsNSNilClient(t *testing.T) {
+	var c *Client
+	if _, err := c.ListPodsNS(context.Background(), "gipc", ""); err != ErrDisabled {
+		t.Fatalf("err=%v", err)
+	}
+}
