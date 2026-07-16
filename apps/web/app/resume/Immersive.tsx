@@ -314,9 +314,16 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     // frame has painted → the static→immersive relayout contributes ~0 to CLS.
     const cards = Array.from(root.querySelectorAll<HTMLElement>(".cst-card"));
     const raf = requestAnimationFrame(() => cards.forEach((c) => (c.style.visibility = "visible")));
+    // Immersive cards are scroll containers (max-height + overflow-y:auto) — keyboard users need a
+    // focusable region to scroll them (axe scrollable-region-focusable). Static mode never scrolls
+    // cards, so the tab stops exist only while immersive is mounted.
+    cards.forEach((c) => c.setAttribute("tabindex", "0"));
     return () => {
       cancelAnimationFrame(raf);
-      cards.forEach((c) => (c.style.visibility = ""));
+      cards.forEach((c) => {
+        c.style.visibility = "";
+        c.removeAttribute("tabindex");
+      });
     };
   }, [rootRef]);
 
