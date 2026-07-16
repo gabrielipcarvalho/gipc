@@ -29,9 +29,10 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef: { name: ai-secrets, key: database-url }
-          resources:   # same envelope as the service — batch embedding must not disturb the node
-            requests: { cpu: 100m, memory: 256Mi }
-            limits: { cpu: 500m, memory: 768Mi }
+          resources:   # batch job: embeds the FULL corpus in one pass (62 chunks incl. 36 code
+            # excerpts since Sprint G) — needs more headroom than the serving pod; transient (<1min)
+            requests: { cpu: 200m, memory: 512Mi }
+            limits: { cpu: "1", memory: 1536Mi }
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
