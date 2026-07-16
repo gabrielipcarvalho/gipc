@@ -8,3 +8,10 @@
 !services/ai/corpus
 !resume/resume.json
 !apps/web/data/projects.json
+# self-aware code corpus (build-time excerpts via app.code_corpus; manifest is the only authority)
+!apps/web/app
+!apps/web/data
+!packages/tokens/tokens.css
+!infra/k8s
+# defense-in-depth: a real (non-example) secret manifest saved locally must never enter the context
+**/*.secret.yaml

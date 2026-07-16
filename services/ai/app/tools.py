@@ -32,8 +32,9 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "search_corpus",
-        "description": "Search the public knowledge base (Gabriel's résumé, projects, site docs) for "
-        "facts. Use for any claim about Gabriel's experience, skills, or projects.",
+        "description": "Search the public knowledge base (Gabriel's résumé, projects, site docs, and the "
+        "site's own source code) for facts. Use for any claim about Gabriel's experience, "
+        "skills, or projects — and for how this site itself is implemented.",
         "input_schema": {
             "type": "object",
             "properties": {"query": {"type": "string", "maxLength": 200}},

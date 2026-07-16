@@ -1,0 +1,43 @@
+# Ad-hoc model-pull Job — NOT in kustomization (Jobs are immutable; delete + re-apply to re-run).
+# The ollama CLI is a pure API client here: OLLAMA_HOST points it at the ollama Service, and the
+# SERVER downloads the model into its own PVC (this pod needs no volume and no direct egress).
+# Deviation from the spec's initContainer/postStart sketch — documented: an initContainer has no
+# running server to pull against; postStart races readiness. A Job is deterministic.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-pull
+  namespace: gipc
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      # NEVER `app: ai` — that label would enrol this probeless pod in the ai Service endpoints
+      # and round-robin live /api/ai/* traffic into connection-refused for the pull's duration.
+      labels: { app: ollama-pull }
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: pull
+          image: ollama/ollama:0.12.6 # same pinned tag as the server
+          command: ["sh", "-c", "OLLAMA_HOST=http://ollama:11434 ollama pull qwen2.5:0.5b-instruct"]
+          env:
+            - { name: HOME, value: "/tmp" } # the CLI wants a writable config dir
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}

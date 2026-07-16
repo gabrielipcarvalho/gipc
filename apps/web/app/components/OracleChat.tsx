@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { projects } from "../../data/projects";
+import { bySlug as writeupBySlug } from "../../data/writeups";
 import type { OracleCitation, OracleFrame } from "../../data/oracle";
 import { mapOracleError } from "../../data/oracleErrors";
 import { firstStation } from "../../data/construct";
@@ -16,6 +17,58 @@ import { MatrixText } from "./MatrixText";
 
 const MSG_MAX = 2000;
 const bySlug = new Map(projects.map((p) => [p.slug, p]));
+
+/* Visitor-context (?ctx=/?about=) — typed-slug grammar, mirrored server-side in app/context.py.
+   The chip label is client cosmetics; the PHRASE the model sees is resolved by the SERVER from its
+   own data (the raw param never enters the prompt). Client/server list drift across the manual ai
+   deploy window degrades to "context silently dropped" — the chip copy stays neutral about it. */
+const CTX_STATIONS = new Map<string, string>([
+  ["profile", "résumé · profile"], ["skills", "résumé · skills"],
+  ["experience", "résumé · experience"], ["projects", "résumé · projects"],
+  ["publications", "résumé · publications"], ["education", "résumé · education"],
+  ["honours", "résumé · honours"],
+]);
+const CTX_PAGES = new Map<string, string>([
+  ["work", "the work deck"], ["writeups", "the writeups"], ["resume", "the résumé"],
+  ["timeline", "the timeline"], ["system", "the system dashboard"], ["lab", "the Lab"],
+  ["infra", "the infra overview"], ["status", "the status page"], ["connect", "connect"],
+  ["meet", "book-a-call"],
+]);
+
+/* Dual-form parser: typed "type:key" (validated per namespace) OR legacy bare token (live WorkGrid
+   links + old bookmarks) tried as project → station → page → writeup. Returns the TYPED wire value
+   + a human label, or null. */
+function parseCtx(raw: string | null): { wire: string; label: string } | null {
+  if (!raw) return null;
+  const val = raw.trim();
+  if (val.includes(":")) {
+    const [kind, key] = [val.slice(0, val.indexOf(":")), val.slice(val.indexOf(":") + 1)];
+    if (kind === "project") {
+      const proj = bySlug.get(key);
+      return proj ? { wire: val, label: proj.name } : null;
+    }
+    if (kind === "station") {
+      const t = CTX_STATIONS.get(key);
+      return t ? { wire: val, label: t } : null;
+    }
+    if (kind === "page") {
+      const t = CTX_PAGES.get(key);
+      return t ? { wire: val, label: t } : null;
+    }
+    if (kind === "writeup") {
+      const w = writeupBySlug(key);
+      return w ? { wire: val, label: w.title } : null;
+    }
+    return null;
+  }
+  const proj = bySlug.get(val);
+  if (proj) return { wire: `project:${val}`, label: proj.name };
+  if (CTX_STATIONS.has(val)) return { wire: `station:${val}`, label: CTX_STATIONS.get(val)! };
+  if (CTX_PAGES.has(val)) return { wire: `page:${val}`, label: CTX_PAGES.get(val)! };
+  const w = writeupBySlug(val);
+  if (w) return { wire: `writeup:${val}`, label: w.title };
+  return null;
+}
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -32,6 +85,7 @@ export function OracleChat() {
   const [token, setToken] = useState("");
   const [botUnavailable, setBotUnavailable] = useState(false);
   const [context, setContext] = useState<string | null>(null);
+  const [ctxLabel, setCtxLabel] = useState<string | null>(null);
   const [engaged, setEngaged] = useState(false); // lazy-mount Turnstile only once the visitor engages
 
   const disposed = useRef(false);
@@ -40,9 +94,12 @@ export function OracleChat() {
 
   useEffect(() => {
     disposed.current = false;
-    const slug = new URLSearchParams(window.location.search).get("ctx");
-    const proj = slug ? bySlug.get(slug) : undefined;
-    if (proj) setContext(`visitor is looking at the ${proj.name} project`);
+    const params = new URLSearchParams(window.location.search);
+    const parsed = parseCtx(params.get("ctx") || params.get("about")); // || — an empty ctx= falls through to the alias
+    if (parsed) {
+      setContext(parsed.wire); // the TYPED slug — the server resolves the phrase from its own data
+      setCtxLabel(parsed.label);
+    }
     return () => {
       disposed.current = true;
       abortRef.current?.abort();
@@ -201,6 +258,33 @@ export function OracleChat() {
           </p>
         )}
 
+        {ctxLabel && (
+          <div className="oracle-ctx">
+            <span className="oracle-ctx-label">
+              context: <b>{ctxLabel}</b> — sent with your question
+            </span>
+            <button
+              type="button"
+              className="oracle-ctx-clear"
+              aria-label="clear context"
+              onClick={() => {
+                setContext(null);
+                setCtxLabel(null);
+                // sticky dismiss: strip the params so a tab-switch remount can't resurrect the chip
+                try {
+                  const u = new URL(window.location.href);
+                  u.searchParams.delete("ctx");
+                  u.searchParams.delete("about");
+                  window.history.replaceState(null, "", u);
+                } catch {
+                  /* non-fatal */
+                }
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
         <form className="oracle-form" onSubmit={send}>
           <label htmlFor="oracle-input" className="oracle-label">
             ask the operator

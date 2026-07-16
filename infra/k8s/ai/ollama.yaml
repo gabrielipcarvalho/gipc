@@ -1,0 +1,95 @@
+# Self-hosted Ollama for the /api/ai/infer live-inference demo (Sprint G P3).
+# In-cluster ONLY (ClusterIP; Caddy routes nothing here) — the protected ai service (Turnstile +
+# limiter + single-slot semaphore) is the only public path to it. A NetworkPolicy was attempted
+# and REMOVED at apply time (2026-07-16): kube-router's same-ns ingress enforcement on this k3s
+# rejects ALL pod traffic regardless of the from-rules (verified: podSelector app=ai AND
+# namespaceSelector gipc variants both refused; the cross-ns postgres policy works). Compensating
+# controls: ClusterIP-only, no SA token, non-root, read-only fs, seccomp, and the untrusted demo
+# ns is already egress-locked to DNS+intra-demo (infra/k8s/demo/netpol.yaml) so it cannot reach
+# ollama anyway.
+# Model (qwen2.5:0.5b-instruct) is pulled into the PVC by the ad-hoc ollama-pull Job (sibling
+# file, NOT in kustomize — Jobs are immutable). Rollback: delete deploy/svc (+ PVC only on
+# full abandon — the model is re-pullable).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-models
+  namespace: gipc
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path # explicit (k3s default) — pins behavior
+  resources:
+    requests:
+      storage: 8Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: gipc
+  labels: { app: ollama }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # RWO PVC — no surge (postgres precedent)
+  selector:
+    matchLabels: { app: ollama }
+  template:
+    metadata:
+      labels: { app: ollama }
+    spec:
+      terminationGracePeriodSeconds: 30
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532 # NOTE: no-op on local-path hostPath volumes — writability comes from the 0777 dir mode
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: ollama
+          image: ollama/ollama:0.12.6 # pinned — never latest
+          ports:
+            - { containerPort: 11434, name: http }
+          env:
+            - { name: OLLAMA_HOST, value: "0.0.0.0" }
+            - { name: OLLAMA_MODELS, value: "/models" }
+            - { name: OLLAMA_MAX_LOADED_MODELS, value: "1" }
+            - { name: OLLAMA_NUM_PARALLEL, value: "1" }
+            - { name: OLLAMA_KEEP_ALIVE, value: "10m" }
+            - { name: OLLAMA_CONTEXT_LENGTH, value: "4096" }
+            - { name: HOME, value: "/tmp" }
+          readinessProbe:
+            httpGet: { path: /, port: 11434 } # returns 200 "Ollama is running"
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /, port: 11434 }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 250m, memory: 1Gi } # honest scheduler signal — ~1GiB resident under load
+            limits: { cpu: "4", memory: 4Gi } # hard cap; 15Gi node, ~3.6Gi other limits
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true # models on the PVC, HOME on emptyDir
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: models, mountPath: /models }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: models
+          persistentVolumeClaim: { claimName: ollama-models }
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: gipc
+  labels: { app: ollama }
+spec:
+  type: ClusterIP
+  selector: { app: ollama }
+  ports:
+    - { port: 11434, targetPort: 11434, name: http }

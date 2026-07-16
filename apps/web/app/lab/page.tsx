@@ -25,7 +25,9 @@ export default function LabPage() {
           <strong>load test</strong> really hammers an isolated demo service (never this site) with hard
           caps, streaming a live latency histogram. Everything runs my own code against an isolated,
           NetworkPolicy-fenced namespace — the interactive visitor shell is deliberately deferred (too
-          dangerous on a single-node host). The same live metrics are on <a href="/system">/system</a>.
+          dangerous on a single-node host). The same live metrics are on <a href="/system">/system</a>;
+          the newest exhibit — a <a href="/oracle?tab=local">self-hosted local model</a> — lives on the
+          oracle page.
         </p>
         <noscript>
           <p className="page-lead">

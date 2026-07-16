@@ -3,14 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { OracleChat } from "./OracleChat";
 import { JdAnalyzer } from "./JdAnalyzer";
+import { LocalInfer } from "./LocalInfer";
 
-/* Two modes on /oracle: Ask (chat) and Analyze a JD. Only the ACTIVE panel is mounted — mounting both
-   would run two Turnstile widgets racing tokens and keep a hidden chat stream alive. Standard ARIA tabs. */
+/* Three modes on /oracle: Ask (chat), Analyze a JD, and the self-hosted Local model demo. Only the
+   ACTIVE panel is mounted — mounting more would race Turnstile widgets and keep hidden streams
+   alive. Standard ARIA tabs. */
 
-type Tab = "ask" | "jd";
+type Tab = "ask" | "jd" | "local";
 const TABS: { id: Tab; label: string }[] = [
   { id: "ask", label: "Ask" },
   { id: "jd", label: "Analyze a JD" },
+  { id: "local", label: "Local model" },
 ];
 
 export function OracleTabs() {
@@ -18,8 +21,9 @@ export function OracleTabs() {
   const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
-    // ?tab=jd opens the JD analyzer directly (read post-mount — keeps /oracle static)
-    if (new URLSearchParams(window.location.search).get("tab") === "jd") setTab("jd");
+    // ?tab=jd|local deep-links a panel directly (read post-mount — keeps /oracle static)
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t === "jd" || t === "local") setTab(t);
   }, []);
 
   function onKey(e: React.KeyboardEvent, i: number) {
@@ -63,7 +67,7 @@ export function OracleTabs() {
         tabIndex={0}
         className="oracle-tabpanel"
       >
-        {tab === "ask" ? <OracleChat /> : <JdAnalyzer />}
+        {tab === "ask" ? <OracleChat /> : tab === "jd" ? <JdAnalyzer /> : <LocalInfer />}
       </div>
     </div>
   );

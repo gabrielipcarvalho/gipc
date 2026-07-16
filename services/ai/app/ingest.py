@@ -5,6 +5,7 @@ the corpus (removed facts must actually disappear). Re-running against an unchan
 """
 
 import asyncio
+import collections
 import os
 import sys
 from pathlib import Path
@@ -48,7 +49,13 @@ async def run() -> int:
             )
             removed = cur.rowcount
             await conn.commit()
-        info("ingest complete", chunks=len(chunks), inserted=inserted, removed_stale=removed)
+        info(
+            "ingest complete",
+            chunks=len(chunks),
+            by_source=dict(collections.Counter(c.source for c in chunks)),
+            inserted=inserted,
+            removed_stale=removed,
+        )
         return 0
     finally:
         await db.close_pool()

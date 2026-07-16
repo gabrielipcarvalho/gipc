@@ -1,0 +1,35 @@
+{
+  "_notes": "Two fresh-authored JDs (inputs, not claimed results — no company names; each well under the prod JD_MAX 8000). Labels assert what analyze_jd MUST say given resume.json: 'gap' labels are technologies with ZERO resume evidence (verified by grep). match = substring locating the requirement in the model output; an unmatched label counts INCORRECT. Dual labels ≤2 per JD, genuinely ambiguous only.",
+  "jds": [
+    {
+      "name": "platform",
+      "jd": "Platform Engineer (mid-level)\n\nWe run a product platform on Kubernetes and are looking for an engineer to own reliability and delivery tooling.\n\nRequirements:\n- Production experience operating Kubernetes clusters\n- Strong Python for tooling and services\n- CI/CD pipeline design and ownership (GitHub Actions or similar)\n- Docker and container image hygiene\n- Infrastructure as Code with Terraform\n- Experience with Rust for systems tooling\n- Apache Kafka event streaming at scale\n- Cloud experience on AWS or Azure\n- PostgreSQL administration and query tuning",
+      "expect": [
+        { "match": "Kubernetes", "label": "strong" },
+        { "match": "Python", "label": "strong" },
+        { "match": "CI/CD", "label": "strong" },
+        { "match": "Docker", "label": "strong" },
+        { "match": "Terraform", "label": "strong|partial",
+          "why_dual": "Terraform appears in resume.json skills but without a deep production story — either strength is defensible" },
+        { "match": "Rust", "label": "gap" },
+        { "match": "Kafka", "label": "gap" },
+        { "match": "AWS", "label": "strong|partial",
+          "why_dual": "AWS appears in skills + a WireGuard NAS-AWS bullet; adjacent rather than primary-cloud depth" },
+        { "match": "PostgreSQL", "label": "strong" }
+      ]
+    },
+    {
+      "name": "ai",
+      "jd": "AI/ML Engineer (mid-level)\n\nWe ship LLM-powered product features and classical ML models to production.\n\nRequirements:\n- Python and PyTorch for model development\n- Experience integrating LLM APIs into production services\n- Retrieval-augmented generation (RAG) system design\n- Peer-reviewed research or publications\n- Model evaluation methodology\n- Apache Spark data pipelines\n- GraphQL API development\n- Teaching or mentoring experience",
+      "expect": [
+        { "match": "PyTorch", "label": "strong" },
+        { "match": "LLM", "label": "strong" },
+        { "match": "RAG", "label": "strong" },
+        { "match": "publication", "label": "strong" },
+        { "match": "Spark", "label": "gap" },
+        { "match": "GraphQL", "label": "gap" },
+        { "match": "mentoring", "label": "strong" }
+      ]
+    }
+  ]
+}

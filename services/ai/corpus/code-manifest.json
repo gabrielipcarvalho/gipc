@@ -1,0 +1,157 @@
+{
+  "base_url": "https://github.com/gabrielipcarvalho/gipc/blob/main/",
+  "allowed_roots": [
+    "apps/web/app",
+    "apps/web/data",
+    "packages/tokens",
+    "services/ai/app",
+    "infra/k8s"
+  ],
+  "_curator_notes": "NEVER manifest infra/k8s/*/kustomization.yaml (the CI-pinned 40-hex newTag trips the entropy secret-guard) or any file with CSP sha256-… hashes / base64 blobs. Paths must be git-tracked and must not start with a Construct station prefix or contain award/leadership/profile.",
+  "files": [
+    {
+      "path": "apps/web/app/layout.tsx",
+      "note": "Root layout — app shell, nav, fonts (self-hosted IBM Plex Mono via next/font), theme + metadata wiring"
+    },
+    {
+      "path": "apps/web/app/console.tsx",
+      "note": "The interactive terminal console on the home page — command parser, known commands, easter eggs"
+    },
+    {
+      "path": "apps/web/app/components/CommandPalette.tsx",
+      "note": "Cmd-K command palette — route navigation, theme switching, bespoke goto commands"
+    },
+    {
+      "path": "apps/web/app/components/Nav.tsx",
+      "note": "Site navigation bar driven by the shared routes registry"
+    },
+    {
+      "path": "apps/web/app/components/routes.ts",
+      "note": "Single source of truth for site routes — feeds the nav, command palette and sitemap"
+    },
+    {
+      "path": "apps/web/app/components/WorkGrid.tsx",
+      "note": "Project cards on /work with the inline expandable detail disclosure (aria-expanded + hidden panel)"
+    },
+    {
+      "path": "apps/web/app/components/SystemDash.tsx",
+      "note": "/system live telemetry dashboard — polls the core service, renders metrics, uptime and the request trace"
+    },
+    {
+      "path": "apps/web/app/components/OracleChat.tsx",
+      "note": "The Oracle chat client — SSE streaming, live agent trace panel, citation chips, Turnstile gating"
+    },
+    {
+      "path": "apps/web/app/components/JdAnalyzer.tsx",
+      "note": "Paste-a-job-description analyzer — maps JD requirements to evidenced experience via the ai service"
+    },
+    {
+      "path": "apps/web/app/components/LabDeck.tsx",
+      "note": "/lab deck of safe-by-construction infra demos (chaos, load, rate-limit, events, api playground)"
+    },
+    {
+      "path": "apps/web/app/components/TurnstileWidget.tsx",
+      "note": "Cloudflare Turnstile wrapper — bot-gates the public AI endpoints"
+    },
+    {
+      "path": "apps/web/app/components/MeetForm.tsx",
+      "note": "/meet book-a-call request form — CSP-safe mailto composition, no third-party scheduler"
+    },
+    {
+      "path": "apps/web/app/components/Signature.tsx",
+      "note": "Decorative CSS stroke-draw 'gipc' signature mark — reduced-motion-safe SVG"
+    },
+    {
+      "path": "apps/web/app/components/Greeter.tsx",
+      "note": "Privacy-respecting geo greeter — country-only from the edge header, stores nothing"
+    },
+    {
+      "path": "apps/web/app/components/motion.ts",
+      "note": "Hand-rolled motion utilities — the site uses no animation framework (ADR 0001)"
+    },
+    {
+      "path": "apps/web/app/resume/page.tsx",
+      "note": "/resume page — static crawlable résumé DOM + JSON-LD with the immersive Construct layered on top"
+    },
+    {
+      "path": "apps/web/app/resume/StaticResume.tsx",
+      "note": "The static selectable résumé DOM — server-rendered stations the Construct animates"
+    },
+    {
+      "path": "apps/web/app/resume/ConstructShell.tsx",
+      "note": "Construct mode switch — static-first progressive enhancement, reduced-motion gate, ?station deep-link"
+    },
+    {
+      "path": "apps/web/app/resume/Immersive.tsx",
+      "note": "Construct immersive layer — 2D-canvas glyph rain, device tiers T0-T3 with ?gpu override, hand-authored camera descent, decode reveals, opt-in audio"
+    },
+    {
+      "path": "apps/web/app/og/og-image.tsx",
+      "note": "Shared dynamic OG image generator — satori/ImageResponse with committed IBM Plex Mono fonts"
+    },
+    {
+      "path": "apps/web/app/writeups/page.tsx",
+      "note": "/writeups index — engineering blog rendered from a typed structured-content pipeline (no markdown dep)"
+    },
+    {
+      "path": "apps/web/data/writeups.ts",
+      "note": "Writeups content pipeline — typed block arrays, XSS-safe inline rendering, reading-time calc"
+    },
+    {
+      "path": "apps/web/data/projects.ts",
+      "note": "Typed project loader — mirrors resume.json, feeds /work cards and the corpus"
+    },
+    {
+      "path": "apps/web/data/construct-stations.ts",
+      "note": "Hand-authored Construct camera stations loader — per-station gaps/easing with a uniform-grid fallback"
+    },
+    {
+      "path": "apps/web/data/oracle.ts",
+      "note": "Oracle client types + SSE frame protocol shared by the chat and JD analyzer"
+    },
+    {
+      "path": "packages/tokens/tokens.css",
+      "note": "The design-token palette — every colour on the site comes from these CSS variables (tokens-only rule)"
+    },
+    {
+      "path": "services/ai/app/main.py",
+      "note": "FastAPI app assembly — routes, middleware, boot independence (serves with postgres/anthropic down)"
+    },
+    {
+      "path": "services/ai/app/oracle.py",
+      "note": "The Oracle agent loop — system prompt, tool use, citation assembly, SSE streaming, prompt-injection posture"
+    },
+    {
+      "path": "services/ai/app/tools.py",
+      "note": "Allowlisted read-only agent tools — live Prometheus metrics, uptime, deploys, corpus search"
+    },
+    {
+      "path": "services/ai/app/retrieval.py",
+      "note": "pgvector cosine retrieval over the knowledge base"
+    },
+    {
+      "path": "services/ai/app/corpus.py",
+      "note": "Corpus loaders/chunkers — the privacy boundary; explicit allow-lists, phone/private never enter"
+    },
+    {
+      "path": "services/ai/app/embedder.py",
+      "note": "Local ONNX embeddings (fastembed bge-small) baked into the image — vectors never leave the box"
+    },
+    {
+      "path": "services/ai/app/limiter.py",
+      "note": "In-process rate limiting for the public AI endpoints"
+    },
+    {
+      "path": "infra/k8s/ai/ai.yaml",
+      "note": "The ai service Deployment/Service — non-root, resource-capped, secret-mounted"
+    },
+    {
+      "path": "infra/k8s/data/postgres.yaml",
+      "note": "Postgres + pgvector StatefulSet backing the knowledge base"
+    },
+    {
+      "path": "infra/k8s/caddy/caddy.yaml",
+      "note": "Caddy reverse proxy — routes gipc.dev, applies the strict same-origin CSP and security headers"
+    }
+  ]
+}

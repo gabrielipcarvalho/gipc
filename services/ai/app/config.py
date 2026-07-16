@@ -33,6 +33,14 @@ class Settings(BaseSettings):
     tool_rounds_max: int = 4
     jd_rate_per_hour: int = 3  # stricter — the JD analyzer is expensive
     jd_max_tokens: int = 3500
+    # local inference demo (Sprint G P3) — self-hosted Ollama, in-cluster only
+    ollama_url: str = "http://ollama:11434"
+    ollama_model: str = "qwen2.5:0.5b-instruct"
+    infer_max_tokens: int = 256
+    infer_prompt_max: int = 500
+    infer_connect_timeout_s: float = 5.0
+    infer_read_timeout_s: float = 30.0  # per read op — a stalled stream holds the single slot <=30s
+    infer_rate_per_10min: int = 10
 
     @property
     def anthropic_configured(self) -> bool:

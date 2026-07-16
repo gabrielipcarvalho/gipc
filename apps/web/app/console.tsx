@@ -6,8 +6,20 @@ import { Sigil } from "./sigil";
 import { MetricPanel } from "./components/MetricPanel";
 import { castRipple, fitText, tiltHandlers } from "./components/motion";
 import { applyTheme, currentTheme, THEME_IDS } from "../data/themes";
+import { projects } from "../data/projects";
+import { writeups } from "../data/writeups";
 
 const tilt = tiltHandlers();
+
+// `oracle <slug>` context namespaces — mirror OracleChat's parseCtx (server-validated regardless)
+const PROJECT_SLUGS = new Set(projects.map((p) => p.slug));
+const WRITEUP_SLUGS = new Set(writeups.map((w) => w.slug));
+const ORACLE_STATIONS = new Set([
+  "profile", "skills", "experience", "projects", "publications", "education", "honours",
+]);
+const ORACLE_PAGES = new Set([
+  "work", "writeups", "resume", "timeline", "system", "lab", "infra", "status", "connect", "meet",
+]);
 
 /* M1 Console — interactive arcane operator console.
    Metric values are placeholders until M3 wires real telemetry. */
@@ -39,7 +51,7 @@ type OutLine = { id: number; kind: "cmd" | "out"; text: React.ReactNode };
 // every command + alias the switch below understands — drives tab-completion + did-you-mean
 export const KNOWN_COMMANDS = [
   "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "writeups", "blog", "timeline",
-  "experience", "resume", "lab", "operator", "oracle", "ward", "summon", "connect",
+  "experience", "resume", "lab", "operator", "oracle", "infer", "evals", "ward", "summon", "connect",
   "contact", "social", "meet", "call", "theme", "history", "restore", "clear", "exit",
 ]; // .hidden / cat kept OUT — the CTF trailhead stays off tab-complete + did-you-mean
 
@@ -72,7 +84,7 @@ function runCommand(
       return { out: [
         "navigate:  system · work · timeline · resume · connect",
         "inspect:   whoami · about · ls · theme · history",
-        "arcane:    scry (observe) · summon (deploy) · ward (security) · oracle (ask AI) · grimoire (work)",
+        "arcane:    scry (observe) · summon (deploy) · ward (security) · oracle [slug] · infer (local AI) · evals",
         "utility:   help · clear · Tab completes · ↑/↓ history",
       ] };
     case "history":
@@ -133,8 +145,37 @@ function runCommand(
         nav: "/lab",
       };
     case "operator":
-    case "oracle":
+    case "oracle": {
+      // `oracle <slug>` deep-links with typed visitor context (project → station → writeup)
+      const slug = cmd.split(/\s+/)[1] ?? "";
+      if (slug === "local" || slug === "infer") {
+        return { out: [<>opening the local model demo…</>], nav: "/oracle?tab=local" };
+      }
+      if (slug === "evals") {
+        return { out: [<>opening the eval scores…</>], nav: "/oracle#evals-head" };
+      }
+      if (slug) {
+        const kind = PROJECT_SLUGS.has(slug)
+          ? "project"
+          : ORACLE_STATIONS.has(slug)
+            ? "station"
+            : WRITEUP_SLUGS.has(slug)
+              ? "writeup"
+              : ORACLE_PAGES.has(slug)
+                ? "page"
+                : null;
+        if (kind) {
+          return { out: [<>opening the oracle with context: <b>{slug}</b>…</>], nav: `/oracle?ctx=${kind}:${slug}` };
+        }
+        return { out: [<>unknown context &quot;{slug}&quot; — opening the oracle. → <b>/oracle</b></>], nav: "/oracle" };
+      }
       return { out: [<>the oracle — a tool-using AI operator over my real infra: cited answers + a live trace. → <b>/oracle</b></>], nav: "/oracle" };
+    }
+    case "infer":
+    case "local":
+      return { out: [<>the local model — real self-hosted inference on my k3s box, streamed with live stats. → <b>/oracle</b> (local tab)</>], nav: "/oracle?tab=local" };
+    case "evals":
+      return { out: [<>measured, not vibes — real eval scores for the oracle, published with methodology. → <b>/oracle</b></>], nav: "/oracle#evals-head" };
     case "ward":
       return { out: ["ward: ufw deny-in · fail2ban · Cloudflare WAF · zero inbound ports (tunnel) · CIS-minded hardening."] };
     case "summon":

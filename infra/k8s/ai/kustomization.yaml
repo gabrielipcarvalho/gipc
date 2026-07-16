@@ -5,6 +5,7 @@ kind: Kustomization
 namespace: gipc
 resources:
   - ai.yaml
+  - ollama.yaml
 images:
   - name: ghcr.io/gabrielipcarvalho/gipc-ai
     newTag: "76a55f6a98adbb65efc06f1f791629c4689530f7"
