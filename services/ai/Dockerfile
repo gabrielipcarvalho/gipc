@@ -18,6 +18,16 @@ RUN python -c "import json; d=json.load(open('corpus/resume.json')); d['basics']
 # bake the embedding model — runtime must be fully offline
 ENV FASTEMBED_CACHE_PATH=/opt/fastembed
 RUN .venv/bin/python -c "from fastembed import TextEmbedding; TextEmbedding('BAAI/bge-small-en-v1.5')"
+# self-aware code corpus: excerpt the site's own curated source (AFTER the model bake so source
+# edits never invalidate that layer). app.code_corpus is stdlib-only — system python suffices.
+COPY apps/web/app repo/apps/web/app
+COPY apps/web/data repo/apps/web/data
+COPY packages/tokens/tokens.css repo/packages/tokens/tokens.css
+COPY infra/k8s repo/infra/k8s
+COPY services/ai/app repo/services/ai/app
+COPY services/ai/corpus/code-manifest.json corpus/code-manifest.json
+RUN python -m app.code_corpus repo corpus/code-manifest.json corpus/code.json \
+    && rm -rf repo app/__pycache__
 
 FROM python:3.12-slim
 ARG GIT_SHA=dev

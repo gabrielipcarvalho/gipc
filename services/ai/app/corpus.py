@@ -20,9 +20,9 @@ BASICS_PUBLIC_FIELDS = frozenset(
 
 @dataclass(frozen=True)
 class Chunk:
-    source: str  # resume | projects | site
+    source: str  # resume | projects | site | code
     title: str
-    url: str  # public site anchor for the citation
+    url: str  # public site anchor for the citation (absolute GitHub blob URL for code chunks)
     content: str
 
     @property
@@ -37,6 +37,11 @@ def load_corpus(corpus_dir: Path) -> list[Chunk]:
     chunks += resume_chunks(json.loads((corpus_dir / "resume.json").read_text()))
     chunks += project_chunks(json.loads((corpus_dir / "projects.json").read_text()))
     chunks += site_chunks((corpus_dir / "site.md").read_text())
+    # code.json is OPTIONAL: baked at image build by app.code_corpus. Absence degrades to the
+    # doc-only corpus (old images / test fixtures keep working) — never an error.
+    code_path = corpus_dir / "code.json"
+    if code_path.exists():
+        chunks += code_chunks(json.loads(code_path.read_text()))
     return [c for c in chunks if c.content.strip()]
 
 
@@ -133,6 +138,24 @@ def project_chunks(projects: list[dict]) -> list[Chunk]:
         )
         for p in projects
     ]
+
+
+# ---- code.json (build-time source excerpts — the self-aware corpus) ---------
+
+
+def code_chunks(items: list[dict]) -> list[Chunk]:
+    """[{path,url,note,excerpt}] → code chunks. title = repo-relative path; url = public GitHub
+    blob; content leads with the human note (retrieval semantics live there — the embedder's
+    window truncates tails, never heads). Empty excerpts are skipped."""
+    out: list[Chunk] = []
+    for it in items:
+        excerpt = (it.get("excerpt") or "").strip()
+        if not excerpt:
+            continue
+        note = (it.get("note") or "").strip()
+        content = f"{note}\n\n{excerpt}" if note else excerpt
+        out.append(Chunk("code", it["path"], it["url"], content))
+    return out
 
 
 # ---- site.md explainers ------------------------------------------------------

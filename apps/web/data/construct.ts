@@ -5,6 +5,10 @@
 import type { OracleCitation } from "./oracle";
 
 export function constructStation(c: OracleCitation): string | null {
+  // code citations (self-aware corpus) link to GitHub blobs and are titled by repo path — never a
+  // Construct station, regardless of what substrings a future path contains. NARROW guard on
+  // purpose: the gipc.dev project citation (url https://gipc.dev) must keep its "projects" station.
+  if (c.url.startsWith("https://github.com/")) return null;
   const t = c.title.toLowerCase();
   if (t.startsWith("skills")) return "skills";
   if (t.startsWith("experience")) return "experience";
