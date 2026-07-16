@@ -86,6 +86,7 @@ export default function ResumePage() {
           immersive positioning/decode; hidden while immersive via the sibling combinator in CSS */}
       <p className="cst-ask">
         questions about this résumé? <a href="/oracle?ctx=page:resume">interrogate the oracle →</a>
+        {" · "}downloaded the PDF? <a href="/authenticity">verify this build →</a>
       </p>
     </main>
   );

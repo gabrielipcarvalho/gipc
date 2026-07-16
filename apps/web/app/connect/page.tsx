@@ -45,6 +45,10 @@ export default function ConnectPage() {
             <span className="connect-k">book a call</span>
             <a href="/meet">request a time →</a>
           </li>
+          <li>
+            <span className="connect-k">verify</span>
+            <a href="/authenticity">verify this build →</a>
+          </li>
         </ul>
 
         <div className="connect-resume">

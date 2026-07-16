@@ -118,6 +118,13 @@ export function ResumePanel() {
       </p>
 
       {status === "signed" && (
+        <p className="resume-hint">
+          this build&apos;s assets are verifiable → <a href="/authenticity">/authenticity</a>. Note: the
+          CDN may serve a just-superseded PDF for up to ~4h after a deploy — a failed verify on a fresh
+          download can be that, not tampering.
+        </p>
+      )}
+      {status === "signed" && (
         <div
           className="resume-verify"
           onDragOver={(e) => e.preventDefault()}

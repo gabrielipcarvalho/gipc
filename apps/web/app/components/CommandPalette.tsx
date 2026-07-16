@@ -49,6 +49,8 @@ export function CommandPalette() {
       ...routeCmds,
       // /meet is a CTA sub-action of /connect (not a top-nav section), so it's palette-only, not in ROUTES.
       { id: "goto:/meet", label: "goto meet", hint: "book a call", run: go("/meet") },
+      // /authenticity is a trust artifact, not a destination — palette-only, same rationale.
+      { id: "goto:/authenticity", label: "goto authenticity", hint: "verify this build", run: go("/authenticity") },
       {
         id: "open-console",
         label: "open console",
