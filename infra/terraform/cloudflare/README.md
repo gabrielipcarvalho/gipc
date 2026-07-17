@@ -18,16 +18,44 @@ do not mix `tofu` and `terraform` against the same state.
 
 ## State & versions
 
-Local state, no backend (R2 remote state is Sprint J Phase 3). `~> 4.52` in `providers.tf` is
-the pin; v4 major deliberately — `zero_trust_*` names need >= 4.40 and this schema does not
-validate under v5.
+`~> 4.52` in `providers.tf` is the pin; v4 major deliberately — `zero_trust_*` names need
+>= 4.40 and this schema does not validate under v5.
 
 **State is credential-bearing.** After import the `cloudflare_zero_trust_tunnel_cloudflared`
 resource carries a computed, sensitive `tunnel_token` in state (functionally equivalent to the
-connector credential on the box). So `terraform.tfstate` is treated as a secret: it is local
-and git-ignored (`.gitignore` covers `*.tfstate*`), and the Phase 3 R2 backend must be a
-private bucket with scoped keys. The real tunnel `secret` is never fed to Terraform (a dummy
-satisfies the schema; `ignore_changes` suppresses it) and never lands in state.
+connector credential on the box). So `terraform.tfstate` is treated as a secret: it is local,
+git-ignored (`.gitignore` covers `*.tfstate*`), and `chmod 600` (owner-only). The real tunnel
+`secret` is never fed to Terraform (a dummy satisfies the schema; `ignore_changes` suppresses
+it) and never lands in state.
+
+## Remote state on R2 (ready to activate — not yet live)
+
+State is currently **local**. The intended home is a private Cloudflare R2 bucket, kept
+single-vendor with the rest of the infra. `backend.tf.example` holds the ready backend config;
+it is verified arg-schema-valid under Terraform v1.15.8 and CF-doc-matched, but **not** yet
+functionally round-tripped (no bucket exists).
+
+**Why it isn't live:** the current CF API token lacks the **Workers R2 Storage** permission
+(a separate scope), so it can neither create a bucket nor mint the R2 S3 credentials a backend
+needs. This is a documented wall, not a silent gap.
+
+**To activate** (two account-side prerequisites, not one step):
+
+0. If R2 has never been used on this account, **enable R2 in the dashboard first** (accept the
+   R2 terms) — it is a separate product opt-in.
+1. Add **Account → Workers R2 Storage → Edit** to the token (or use a dedicated R2 token),
+   create a **private** bucket `gipc-tfstate`, and mint an R2 API token (S3 access key id +
+   secret) **scoped to that bucket** (least privilege) → `~/.config/claude-secrets/`, never
+   the repo.
+2. Follow the runbook in `backend.tf.example` (`cp` it to `backend.tf`, set `<ACCOUNT_ID>`,
+   `source` the R2 creds, `terraform init -migrate-state`, verify `plan` is `No changes` —
+   if it shows changes, STOP, don't delete state — then delete both local `terraform.tfstate`
+   and `terraform.tfstate.backup`, and finally **un-ignore + commit `backend.tf`** so R2 is
+   the committed source of truth for fresh clones/CI).
+
+`chmod 600` on local state is a point-in-time hardening — Terraform rewrites state on the next
+`apply` and may reset it to the umask default; migrating to R2 (which removes local state
+entirely) is the durable fix.
 
 ## Verify (no token needed; init downloads the provider)
 
