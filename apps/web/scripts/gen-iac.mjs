@@ -56,9 +56,9 @@ const FILES = [
   {
     path: "infra/terraform/cloudflare/cloudflare.tf",
     lang: "hcl",
-    title: "Terraform — the tunnel + DNS, codified (not yet applied)",
+    title: "Terraform — the tunnel + DNS, under management",
     blurb:
-      "The migration path off hand-built: the tunnel and its proxied CNAMEs as import-ready resources. Written and validated — deliberately NOT applied; what serves this page today was provisioned by hand, and applying without importing first would risk the live tunnel. The import commands live in the repo README.",
+      "The whole Cloudflare zone as code: the tunnel, its proxied CNAMEs, and the full Migadu mail set (MX, DKIM, SPF, DMARC, SRV). Imported from the live account and applied — `terraform plan` is clean, so the code now describes reality and future changes go through it. The reconciling import (short names, config_src, one in-place apply that touched zero DNS bytes) is documented in the repo README.",
   },
 ];
 
