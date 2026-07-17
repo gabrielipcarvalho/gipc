@@ -29,6 +29,43 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
 
 ---
 
+## Sprint K — ux-polish & per-project diagrams (SHIPPED 2026-07-18)
+
+**Shipped this sprint** (all `apps/web`, LOCAL-verified per phase: tsc · next build · axe · render +
+reduced-motion empirical proofs):
+- **§3 Per-project architecture diagrams** — SHIPPED (`a5e8369` honest per-project data + `17a601c`
+  render into the /work card-detail). Reuses the /infra `ArchDiagram` engine over REAL per-project
+  architecture (nina-nails · seismic-unet · transformer-fin · gipc-dev); drowning-detection honestly
+  skipped (in-development edge-CV system — no shipped architecture to depict). Corrects §3's
+  "per-project ADR sequence/ER diagrams … remain open".
+- **§5 Experience timeline** — the page shipped earlier; Sprint K FINISHED it (`1bb8662`): a real
+  person-level links-out row (LinkedIn/GitHub from `basics.profiles` — the résumé's experience/
+  education entries carry NO per-role URLs, so per-role links are honestly absent) + a travelling
+  scanning-spine rail motion. Corrects §5's "missing page — no route, no component".
+- **§8 Typewriter reveal** — was PARTIAL (the console boot typed char-by-char but the `.cursor` class
+  was never rendered); Sprint K COMPLETED it (`b8b2b0b`): the boot caret cursor + a spark glow-pulse.
+- **Vanilla-CSS ratification** — reaffirmed ADR 0001 (already Accepted 2026-07-15); Sprint K added
+  ZERO deps and extended the same vanilla-CSS + `@gipc/tokens` + hand-rolled-motion system.
+
+**Stale "not yet built" annotations CORRECTED** (these shipped in Sprints F–J, live-verified — NOT K;
+the inline "never built" notes in §7/§8 below predate them and are superseded): §8 page transitions
+(`template.tsx .route-enter`), data-in count-up (`CountUpText`), cast-ripple on ghost buttons
+(`motion.ts`), fit/balance-text, closable telemetry pane + scold + footer sign-off (`FootSign`),
+OG-per-route + twitter (13/13 routes), book-a-call `/meet` (Sprint F); §7 curated deck (`?deck=`, not
+`?workids=`), per-project corner glows (distinct accents), inline expand-in-place.
+
+**Sprint K deferred finding:** the global reduced-motion reset `*{animation:none}` (globals.css:62)
+does NOT match pseudo-elements — pseudo animations leak under RM site-wide. K fixed the timeline
+pseudos scoped (`.tl::before,.tl::after`); the canonical `*, *::before, *::after` broadening is
+deferred (needs a cross-page RM regression sweep).
+
+**NOT built (honest cuts):** Construct §6 (audio · shader rain-wipe · MSDF runes · per-char skills
+decode — the flagship résumé stays untouched); §9 heavy (AI theme-studio needs an LLM; guestbook needs
+auth); Tailwind + Framer ADOPT (ratified vanilla instead — ADR 0001). Sprint L (career / JD-tailored)
++ Sprint M (sandbox shell) remain the next tracks.
+
+---
+
 ## 1. Real telemetry backend (M3 SHIPPED; Sprint H killed the LAST stubs — annotations inline)
 
 - **Real Prometheus metrics off the box** (req/s, p99 latency, error rate, CPU/mem of the very
