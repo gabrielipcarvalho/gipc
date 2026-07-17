@@ -79,3 +79,6 @@ crash.log
 
 # Private career-tooling workspace — dossier + PII, never in the repo
 career/
+
+# --- private agent tooling — never ship (untracked Sprint J P1; history retained, accepted) ---
+/.claude/

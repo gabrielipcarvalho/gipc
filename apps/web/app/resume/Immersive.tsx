@@ -315,14 +315,30 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     const cards = Array.from(root.querySelectorAll<HTMLElement>(".cst-card"));
     const raf = requestAnimationFrame(() => cards.forEach((c) => (c.style.visibility = "visible")));
     // Immersive cards are scroll containers (max-height + overflow-y:auto) — keyboard users need a
-    // focusable region to scroll them (axe scrollable-region-focusable). Static mode never scrolls
-    // cards, so the tab stops exist only while immersive is mounted.
-    cards.forEach((c) => c.setAttribute("tabindex", "0"));
+    // focusable region to scroll them (axe scrollable-region-focusable), and a focusable region
+    // needs a NAME (role=region + aria-label, derived from the card's own kicker/heading — never
+    // hand-typed). role and label are set together or not at all: an unconditional role with a
+    // missing label would be an unnamed region. Static mode never scrolls cards, so all of this
+    // exists only while immersive is mounted.
+    cards.forEach((c) => {
+      c.setAttribute("tabindex", "0");
+      const kicker = c.querySelector(".cst-kicker")?.textContent?.replace(/^\/\/\s*/, "") ?? "";
+      const title = c.querySelector(".cst-title, .cst-name")?.textContent ?? "";
+      const label = [kicker, title].filter(Boolean).join(" — ");
+      if (label) {
+        // ARIA-in-HTML: <header> (the identity card) doesn't allow role=region — group is the
+        // allowed nameable role there; the 15 <article> cards get true region landmarks.
+        c.setAttribute("role", c.tagName === "HEADER" ? "group" : "region");
+        c.setAttribute("aria-label", label);
+      }
+    });
     return () => {
       cancelAnimationFrame(raf);
       cards.forEach((c) => {
         c.style.visibility = "";
         c.removeAttribute("tabindex");
+        c.removeAttribute("role");
+        c.removeAttribute("aria-label");
       });
     };
   }, [rootRef]);
