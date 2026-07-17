@@ -5,6 +5,10 @@
 
 const TEST_SITE_KEY = "1x00000000000000000000AA";
 
-export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+// The production widget for gipc.dev. Site keys are public by design (they ship in every page's
+// HTML) — the SECRET key lives only in the cluster Secret the ai service verifies with.
+const PROD_SITE_KEY = "0x4AAAAAAD3kUZY1IpxRmEdy";
+
+export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? PROD_SITE_KEY;
 
 export const TURNSTILE_ON = TURNSTILE_SITE_KEY !== "" && TURNSTILE_SITE_KEY !== TEST_SITE_KEY;
