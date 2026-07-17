@@ -63,8 +63,12 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
   never deployed); slim + obs + ollama profiles behind a local Caddy at :8088. Caddy shipped M3.
   Terraform/Ansible skeleton shipped Sprint C — k8s namespaces + host playbook (check-only;
   deferred depth: k3s version-pin, cloudflared config/unit templates, sshd assertions); the Cloudflare
-  provider half (tunnel + DNS as import-ready resources) shipped Sprint I P4; applying/importing
-  = deliberate future step. (The Sprint H "remains open" annotation was wrong — corrected I P4.)
+  provider half (tunnel + DNS) — ✅ **IMPORTED + APPLIED Sprint J P2**: the whole zone (tunnel +
+  proxied CNAMEs + the full Migadu mail set) is now under Terraform management, `plan` is clean
+  (one reconciling in-place apply that touched zero DNS bytes; mail verified intact). R2 remote
+  state is ready-to-activate (Sprint J P3 — `backend.tf.example` + runbook; blocked on the CF
+  token's Workers R2 Storage scope, a documented user step). (The Sprint H "remains open"
+  annotation was wrong — corrected I P4; the "not yet applied" framing is now stale — done J P2.)
 
 ## 2. The AI Operator (M4 — flagship #2; CORE SHIPPED M4, DEPTH SHIPPED Sprint G — annotations inline)
 
@@ -125,9 +129,12 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
 - **Inline PDF preview** — kaveenk renders the résumé in-page via PDF.js before download; ours is
   download-only. ✅ SHIPPED Sprint F — inline preview in ResumePanel (native <object> embed,
   not PDF.js; graceful fallback); live-verified Sprint I recon.
-- **One-click signed-PDF regeneration from resume.json** (today regenerated manually). STILL
-  OPEN — sign-resume.mjs only re-SIGNS an existing PDF; regeneration remains manual (verified
-  Sprint I P5).
+- **One-click signed-PDF regeneration** — ✅ **SHIPPED Sprint J P4** (`npm run regen:resume`,
+  scripts/regen-resume.mjs): renders the ATS PDF (zero-dep Chrome headless print) → signs
+  (Ed25519) → regenerates the /authenticity manifest → crypto-verifies the chain, one command,
+  idempotent. NOTE: it renders from `resume/resume.html` (the authoritative ATS layout), NOT
+  `resume.json` directly — the resume.html↔resume.json reconciliation is a tracked career-track
+  follow-up (the two hand-maintained copies have drifted).
 - **JD-tailored résumé variants** — reorder/re-emphasise per application, facts never change
   (feeds M4's JD feature).
 

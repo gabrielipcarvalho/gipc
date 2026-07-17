@@ -1,0 +1,52 @@
+# Cloudflare R2 remote state — READY TO ACTIVATE, not yet active.
+#
+# Terraform only loads *.tf, so this .example file is inert (never parsed). To activate:
+#   0. If R2 has never been used on the account, enable it in the Cloudflare dashboard first
+#      (accept the R2 terms) — R2 is a separate product opt-in, not just a token scope.
+#   1. Give the CF API token (or a dedicated R2 API token) the Account -> Workers R2 Storage
+#      -> Edit permission, and create a PRIVATE bucket named `gipc-tfstate`.
+#   2. Mint an R2 API token (S3 access key id + secret), SCOPED to the gipc-tfstate bucket
+#      (least privilege), and store the two values in ~/.config/claude-secrets/ (e.g. an
+#      r2.env with AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY) — never in this repo.
+#   3. Copy this file to backend.tf, replace <ACCOUNT_ID>, then:
+#        source ~/.config/claude-secrets/r2.env   # keeps the keys out of shell history
+#        terraform init -migrate-state
+#      If init fails on a checksum / x-amz error:  export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
+#      If init fails on a lock / precondition error: drop `use_lockfile` (solo operator — no-lock is fine).
+#      Verify `terraform plan` still prints "No changes" (that read now comes FROM R2 — the
+#      round-trip proof). If plan shows ANY changes, STOP and investigate — do NOT delete
+#      local state. On a clean plan, delete BOTH local terraform.tfstate AND
+#      terraform.tfstate.backup (both are credential-bearing — they carry the computed
+#      tunnel_token).
+#   4. Make R2 the committed source of truth: remove the `backend.tf` line from
+#      cloudflare/.gitignore and commit backend.tf. Otherwise a fresh clone / second machine /
+#      CI has no backend block, defaults to the (now-empty) local backend, and `plan` wants to
+#      recreate all 17 live resources.
+#
+# Verified: this arg set is schema-valid under Terraform v1.15.8 (a real `terraform init`
+# accepts these flags and routes straight to R2 with no STS/IMDS detour). NOT yet tested
+# for a functional round-trip — no bucket exists. Credentials come from the environment only;
+# no key material ever lives in this file or in state config.
+
+terraform {
+  backend "s3" {
+    bucket = "gipc-tfstate"
+    key    = "cloudflare/terraform.tfstate"
+    region = "auto"
+
+    endpoints = {
+      s3 = "https://<ACCOUNT_ID>.r2.cloudflarestorage.com"
+    }
+
+    # R2 speaks the S3 API but is not AWS — skip every AWS-ism the s3 backend assumes.
+    skip_credentials_validation = true # no AWS STS
+    skip_region_validation      = true # "auto" is not an AWS region
+    skip_requesting_account_id  = true # no AWS account-id lookup
+    skip_metadata_api_check     = true # no EC2 IMDS (169.254.169.254) — would hang off-EC2
+    skip_s3_checksum            = true # R2 rejects the newer default request checksums
+    use_path_style              = true # R2 uses path-style, not virtual-host-style
+
+    # S3-native state locking via a lock file (R2 supports If-None-Match conditional writes).
+    use_lockfile = true
+  }
+}
