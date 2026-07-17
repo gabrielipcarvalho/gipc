@@ -6,4 +6,4 @@ resources:
   - service.yaml
 images:
   - name: ghcr.io/gabrielipcarvalho/gipc-web
-    newTag: "fcf83bf5ea254aff1937b33610c569d548f41fae"
+    newTag: "817d1c71b634c06653740a5de93139245778d3ee"
