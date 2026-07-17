@@ -2,6 +2,7 @@ import { TerminalWindow } from "../components/TerminalWindow";
 import { SectionHeader } from "../components/SectionHeader";
 import { Timeline } from "../components/Timeline";
 import { timeline } from "../../data/timeline";
+import { resume } from "../../data/resume";
 import { pageMeta } from "../og";
 
 export const metadata = pageMeta(
@@ -23,6 +24,21 @@ export default function TimelinePage() {
           out as a descent through time.
         </p>
         <Timeline nodes={timeline} />
+        <p className="tl-links">
+          <span className="prompt">arcane@prod:~$</span> links --out
+          {resume.basics.profiles.map((pr) => (
+            <a
+              key={pr.url}
+              className="tl-link"
+              href={pr.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${pr.network} profile (opens in new tab)`}
+            >
+              {pr.network} ↗
+            </a>
+          ))}
+        </p>
       </TerminalWindow>
     </main>
   );
