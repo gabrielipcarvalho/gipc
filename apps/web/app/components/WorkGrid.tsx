@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../../data/projects";
 import { tiltHandlers } from "./motion";
+import { ArchDiagram } from "./ArchDiagram";
+import { PROJECT_DIAGRAMS, hasProjectDiagram } from "../../data/project-diagrams";
 
 /* Project cards + tag filter + shareable curated decks. Server-renders the full list
    (DOM-first for SEO); the tag filter, the ?deck= URL narrowing (read post-hydration,
@@ -11,7 +13,7 @@ import { tiltHandlers } from "./motion";
 const tilt = tiltHandlers();
 function WorkCard({ p }: { p: Project }) {
   const [open, setOpen] = useState(false);
-  const hasDetail = !!(p.detail || p.stack?.length || p.highlights?.length);
+  const hasDetail = !!(p.detail || p.stack?.length || p.highlights?.length || hasProjectDiagram(p.slug));
   const detailId = `detail-${p.slug}`;
   return (
     <article
@@ -55,6 +57,7 @@ function WorkCard({ p }: { p: Project }) {
               ))}
             </ul>
           )}
+          {hasProjectDiagram(p.slug) && <ArchDiagram data={PROJECT_DIAGRAMS[p.slug]} />}
         </div>
       )}
       <p className="card-tags">

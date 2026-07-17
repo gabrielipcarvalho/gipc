@@ -433,7 +433,7 @@ export function Console() {
             ))}
             {bootShown < bootLines.length && (
               /* key by index so the node is REUSED as it completes (no fade-in replay) */
-              <div className="boot-line" key={bootShown}>{bootLines[bootShown].slice(0, bootChars)}</div>
+              <div className="boot-line" key={bootShown}>{bootLines[bootShown].slice(0, bootChars)}<span className="cursor" aria-hidden /></div>
             )}
             <div className="boot-skip">press any key to skip</div>
           </button>

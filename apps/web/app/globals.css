@@ -441,6 +441,21 @@ a{ color:inherit; text-decoration:none; }
 .tl-tags span{ padding:.12rem .5rem; border-radius:var(--r-pill); border:1px solid var(--hairline); color:var(--text-faint); font-size:var(--fs-xs); }
 @keyframes tlPulse{ 0%,100%{ opacity:.38; } 50%{ opacity:.7; } }
 @keyframes tlFlicker{ 0%,100%{ opacity:1; box-shadow:0 0 10px var(--glow-violet); } 50%{ opacity:.6; box-shadow:0 0 4px var(--glow-violet); } }
+.tl::after{ /* travelling scan-spine highlight — layered over the ::before pulse rail */
+  content:""; position:absolute; left:.3rem; top:.4rem; bottom:.4rem; width:1.5px;
+  background:linear-gradient(to bottom, transparent, var(--cyan-bright), transparent);
+  background-size:100% 25%; background-repeat:no-repeat; background-position:0 -100%; /* rest: off-top = invisible */
+  pointer-events:none; opacity:.9;
+  animation:tlScan 5.5s var(--ease) infinite;
+}
+@keyframes tlScan{ 0%{ background-position:0 -100%; } 100%{ background-position:0 200%; } }
+/* globals.css:62's bare `*{animation:none}` does NOT match pseudo-elements — still the rail pseudos
+   explicitly under reduced-motion (also fixes the pre-existing .tl::before pulse leak). */
+@media (prefers-reduced-motion:reduce){ .tl::before, .tl::after{ animation:none !important; } }
+.tl-links{ margin-top:1.6rem; color:var(--text-faint); font-size:var(--fs-sm); }
+.tl-link{ color:var(--cyan); text-decoration:none; margin-left:.6rem; }
+.tl-link:hover{ color:var(--cyan-bright); text-decoration:underline; }
+.tl-link:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; border-radius:2px; }
 
 /* ---- /system: telemetry dashboard ---- */
 .sys{ margin-top:1.2rem; display:grid; grid-template-columns:1fr; gap:1.4rem; }
@@ -685,6 +700,12 @@ a{ color:inherit; text-decoration:none; }
 }
 .boot-line{ font-size:var(--fs-sm); letter-spacing:.02em; animation:bootIn .16s var(--ease); }
 .boot-skip{ margin-top:1.1rem; color:var(--text-faint); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; }
+/* boot typing caret spark — glow-pulse riding the caret; boot-only (the boot block never renders
+   under reduced-motion / for returning visitors, so this never runs there — .cursor is also an
+   element, so the bare *{animation:none} at :62 would still it regardless). Re-lists blink so the
+   base .cursor blink isn't dropped by the shorthand. */
+@keyframes bootSpark{ 0%,100%{ box-shadow:0 0 8px var(--cyan); } 50%{ box-shadow:0 0 18px var(--cyan-bright); } }
+.boot .cursor{ animation: blink 1.05s steps(1) infinite, bootSpark 1.6s var(--ease) infinite; }
 @keyframes bootIn{ from{ opacity:0; transform:translateY(3px); } to{ opacity:1; transform:none; } }
 
 /* ---- interactive command line ---- */

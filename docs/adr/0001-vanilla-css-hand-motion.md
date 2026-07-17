@@ -71,3 +71,19 @@ motion found.
 
 **Post-state:** `verify.sh` hex-WARN goes from 7 matching lines to 5 (the `themeColor` literal + the 4 `--mx-*`
 construct vars remain by design — the target is *reduced*, not zero). No visual change.
+
+## Reaffirmed (Sprint K — ux-polish, 2026-07-18)
+
+Sprint K's UI work — per-project architecture diagrams (reusing the existing `ArchDiagram` engine over
+honest per-project data), the experience-timeline scanning-spine rail + a real links-out row, and the
+console typewriter caret cursor + spark — added **zero dependencies** (`git diff main…HEAD -- **/package.json`
+is empty) and extended the SAME vanilla-CSS + `@gipc/tokens` + hand-rolled-motion system. The decision
+holds; the shipped commits are `a5e8369` · `17a601c` · `1bb8662` · `b8b2b0b`.
+
+**Correction to the reduced-motion claim above (§Decision "Motion" and Appendix "Motion"):** the global
+reset `*{animation:none!important}` (globals.css:62) does NOT match pseudo-elements — the universal
+selector `*` never selects `::before`/`::after`, so the canonical reset is `*, *::before, *::after`.
+Sprint K found the pre-existing `.tl::before` rail pulse was consequently leaking under reduced-motion,
+and added a scoped `@media(prefers-reduced-motion){.tl::before,.tl::after{animation:none}}` fix
+(globals.css). The **site-wide** broadening of line 62 to cover all pseudo-elements remains an OPEN
+deferred finding (it changes RM behaviour on every page → needs a cross-page regression sweep first).
