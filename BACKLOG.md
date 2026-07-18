@@ -29,6 +29,46 @@ shell + an AI agent with real infra tools — those need human-in-the-loop, not 
 
 ---
 
+## Sprint L — career/JD + hygiene + studio/flair (SHIPPED 2026-07-19)
+
+**Shipped** (7 phases; every phase LOCAL-gated: tsc · next build · axe · ruff · pytest · empirical proofs;
+QA = independent subagents each phase). Reorganized from a 4-agent reality audit that found ~90% of the old
+backlog already built — L = the genuinely-open career/JD remainder + folded-in hygiene + the AI Theme Studio
+/ flair polish.
+
+- **P1 hygiene** (`5bc25a4`) — the reduced-motion reset broadened to `*,*::before,*::after` (reaches
+  pseudo-elements site-wide, superseding K's scoped fix); dropped the dead `GENERATED_NOTE` export; softened
+  6 dangling local-only `verify.sh` refs.
+- **P2 résumé single-source reconcile** (`43e8f7c`) — reconciled the two drifted facts across resume.json/
+  html/master to TRUTH (zero-fabrication, projects.json-verified: "six databases", "iterative"); a new
+  `scripts/check-resume-drift.mjs` fact drift-gate; regenerated the signed PDF (Ed25519 + /authenticity).
+- **P3 JD-tailored résumé variant** (`e681cb9` ai + `e2f5520` web) — a NEW `/api/ai/variant`: a DETERMINISTIC
+  keyword-overlap reorder of the existing sanitized résumé facts (NO LLM → structurally zero-fabrication) + a
+  "Tailor résumé" tab on /oracle. A non-vacuous fabrication+PII guard test.
+- **P4 JD-analyzer grounding lift** (`2b41221`) — a verbatim-span SYSTEM_PROMPT (bans the framing words that
+  drag the metric) + a fine-grained post-validation REJECT of pure-fabrication evidence, via a new pure
+  `app/grounding.py`; the eval de-gamed (measures the RAW model grounding, a mutation-proven tautology guard).
+  The published eval stays 0.537 = the PRE-P4 baseline (re-measure blocked — no local Anthropic key + the
+  harness can't run in-pod; a documented user-action).
+- **P5 AI Theme Studio** (`37a86fe` ai + `a185b25` web) — a NEW `/api/ai/theme`: a mood → 2 hex seeds
+  (pydantic pattern + extra=forbid) → a server-derived, WCAG-contrast-clamped 11-token palette (the injection
+  guard: no model text ever becomes a CSS name/value); a live-apply "Theme studio" tab + no-flash
+  persistence. Turnstile + the shared $2/day budget breaker.
+- **P6 Construct audio iOS-silent-bypass** (`c6e2a1b`) — a silent same-origin `<audio playsinline>` unlock
+  flips the iOS AVAudioSession past the hardware mute switch. Entry-wipe VT-upgrade documented sufficient (the
+  CSS clip-wipe) + skipped.
+
+**Deploy:** web via ArgoCD (web.yml); services/ai via the CI ai.yml build (the local buildx SIDELOAD is
+user-blocked — no Docker daemon + the gh token lacks `write:packages`); the HF-bake 504 is transient →
+re-run ai.yml. core.yml did NOT fire (services/core untouched).
+
+**Roadmap after L:** M — the real browser SANDBOX SHELL (CF Containers, security-critical) + API-playground
+auth/pagination + WAF engine + GaussianSplats — the big genuinely-open greenfield, its own supervised sprint
+next. Auth & social (guestbook + off-site companion) stay CUT (auth-free by design). Permanent cuts: voice,
+multiplayer/site-music/activeframe (§10), Redis visualizer, MSDF runes, CMS + runnable-artifacts.
+
+---
+
 ## Sprint K — ux-polish & per-project diagrams (SHIPPED 2026-07-18)
 
 **Shipped this sprint** (all `apps/web`, LOCAL-verified per phase: tsc · next build · axe · render +
