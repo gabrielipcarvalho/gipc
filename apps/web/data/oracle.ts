@@ -40,3 +40,29 @@ export type JdAnalysis = {
 };
 
 export type JdRequest = { jdText: string; turnstileToken: string };
+
+// ── JD-tailored résumé variant (POST /api/ai/variant) — mirrors services/ai/app/variant.py ──
+// A DETERMINISTIC reorder of EXISTING résumé facts (no LLM): every `text` is a verbatim résumé string,
+// `matched` are the JD terms it hit, `gaps` are recognized skills the JD wants that the résumé lacks.
+export type TailoredFact = {
+  id: string;
+  kind: "bullet" | "project" | "skill";
+  text: string;
+  section: string;
+  score: number;
+  matched: string[];
+};
+
+export type TailoredResume = {
+  ordered: TailoredFact[];
+  gaps: string[];
+  jdKeywords: string[];
+  factCount: number;
+};
+
+export type VariantRequest = { jdText: string; turnstileToken: string };
+
+// ── AI Theme Studio (POST /api/ai/theme) — mirrors services/ai/app/theme.py ──
+// A server-derived, WCAG-clamped map of the 11 allowlist palette tokens → validated colour values.
+export type ThemePalette = Record<string, string>;
+export type ThemeRequest = { mood: string; turnstileToken: string };

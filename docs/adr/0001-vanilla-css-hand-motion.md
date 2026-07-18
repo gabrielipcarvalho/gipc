@@ -38,7 +38,7 @@ motion layer**. Do NOT adopt Tailwind CSS or Framer Motion.
 
 ## Appendix — raw-hex + motion consistency audit (2026-07-15)
 
-Codebase-wide grep for raw hex outside `packages/tokens/tokens.css`, reconciled with `scripts/verify.sh`'s
+Codebase-wide grep for raw hex outside `packages/tokens/tokens.css`, reconciled with the local pre-QA hex scan's
 own sanctioned-exception list. Result: **2 spot-fixes applied (rendering-identical), the rest documented as
 accepted.**
 
@@ -50,7 +50,7 @@ overridden by the matrix/amber/mono presets):**
   semantic claim.
 
 **Accepted as-is (documented — NOT changed, to avoid theme/brand regression in a polish sprint):**
-- **Sanctioned brand/construct exceptions (already excluded by `verify.sh:119`):**
+- **Sanctioned brand/construct exceptions (already on the local hex scan's sanctioned-exception list):**
   `app/sigil.tsx` (`#b18cff`/`#34e6ff` brand-mark SVG gradient/strokes) and `app/icon.svg` (favicon), and
   `app/resume/Immersive.tsx` (`#c8ffc8`/`#9fdf9f`/… construct canvas-rain glyph colours). **The sigil hex
   must NOT be swapped to `var(--violet)`/`var(--cyan)`** — that would re-skin the brand mark under the
@@ -64,12 +64,12 @@ overridden by the matrix/amber/mono presets):**
 - **`@media print` construct grays** in `globals.css` (`#bbb`/`#333`/`#111`/`#555`) — print-only; accepted.
 - **Inline `style=` colour usages:** grep found **none** in `apps/web/app`.
 
-**Motion:** the global reduced-motion reset (`globals.css:62`) covers all CSS animation/transition; every
+**Motion:** the global reduced-motion reset (`globals.css:62`, broadened Sprint L to `*,*::before,*::after` so it also reaches pseudo-elements) covers all CSS animation/transition; every
 JS-driven motion path (`motion.ts`, the console boot, `ConstructShell`, `Immersive`, `EasterEggs`,
 `MatrixText`, `CountUpText`) guards on `matchMedia("(prefers-reduced-motion: reduce)")`. No unguarded JS
 motion found.
 
-**Post-state:** `verify.sh` hex-WARN goes from 7 matching lines to 5 (the `themeColor` literal + the 4 `--mx-*`
+**Post-state:** the local hex scan's WARN goes from 7 matching lines to 5 (the `themeColor` literal + the 4 `--mx-*`
 construct vars remain by design — the target is *reduced*, not zero). No visual change.
 
 ## Reaffirmed (Sprint K — ux-polish, 2026-07-18)

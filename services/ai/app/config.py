@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     tool_rounds_max: int = 4
     jd_rate_per_hour: int = 3  # stricter — the JD analyzer is expensive
     jd_max_tokens: int = 3500
+    # JD-tailored résumé variant (Sprint L P3) — deterministic reorder, NO LLM cost → generous (not the
+    # strict jd_rate_per_hour); still bounded vs scrapers. No budget breaker (nothing to bill).
+    variant_rate_per_hour: int = 30
+    # AI Theme Studio (Sprint L P5) — mood→palette, DOES call the LLM (shares the $2/day budget). A short
+    # exploratory call → per-10min limiter; tiny output (2 hexes).
+    theme_rate_per_10min: int = 8
+    theme_max_tokens: int = 200
     # local inference demo (Sprint G P3) — self-hosted Ollama, in-cluster only
     ollama_url: str = "http://ollama:11434"
     ollama_model: str = "qwen2.5:0.5b-instruct"

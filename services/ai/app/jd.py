@@ -12,6 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from .config import Settings
+from .grounding import is_pure_fabrication
 from .llm import LLM
 from .log import error
 from .resume_evidence import resume_evidence_json
@@ -33,9 +34,12 @@ class JdAnalysis(BaseModel):
 
 SYSTEM_PROMPT = """You map a job description to Gabriel Carvalho's evidence, for a recruiter. The ONLY \
 evidence base is the <resume> JSON in the user turn. RULES:
-- Every string in an `evidence` array MUST quote or closely paraphrase a fact found in <resume>. NEVER \
-invent an employer, metric, date, technology, or skill. If it isn't in <resume>, it does not exist.
-- `strength`: "strong" = direct résumé evidence; "partial" = adjacent/transferable évidence; "gap" = no \
+- Every string in an `evidence` array MUST be a VERBATIM span copied from <resume> — a skill name, phrase, \
+or bullet fragment, as written. Do NOT wrap it in framing words that are absent from <resume> (no "listed", \
+"mentioned", "appears", "shown", "noted", "as primary", "in the ... section"): quote the résumé fact itself \
+(e.g. "Python", NOT "Python listed as primary language"). NEVER invent an employer, metric, date, \
+technology, or skill. If it isn't in <resume>, it does not exist.
+- `strength`: "strong" = direct résumé evidence; "partial" = adjacent/transferable evidence; "gap" = no \
 evidence in <resume>. A `gap` requirement has an empty `evidence` array and is ALSO listed in `gaps`.
 - `pitch`: a ~90-word (≈60-second) pitch built ONLY from mapped strong/partial evidence. No new facts.
 - `gaps`: honestly list what the JD wants that the résumé does not evidence. Do NOT stretch or hide gaps.
@@ -53,6 +57,16 @@ def _corpus_dir() -> Path:
     return Path(os.environ.get("CORPUS_DIR", "/app/corpus"))
 
 
+def _reject_ungrounded_evidence(analysis: "JdAnalysis", resume_text: str) -> None:
+    """Drop evidence strings that are PURE fabrications (real content tokens, NONE grounding to the
+    résumé); keep grounded-core-with-framing + bare-skill strings. A NARROW last-resort backstop — a
+    fabrication co-located with a grounded token survives (see is_pure_fabrication); the primary zero-fab
+    defense is the grounded model + the verbatim-span prompt + pydantic. `strength` is left untouched — an
+    honest reject, never a relabel. The eval measures the RAW pre-reject output (filter_ungrounded=False)."""
+    for req in analysis.requirements:
+        req.evidence = [ev for ev in req.evidence if not is_pure_fabrication(ev, resume_text)]
+
+
 def _extract_text(message) -> str:
     return "".join(getattr(b, "text", "") for b in message.content if getattr(b, "type", None) == "text")
 
@@ -68,8 +82,12 @@ def _parse_json(text: str) -> dict | None:
         return None
 
 
-async def analyze_jd(jd_text: str, llm: LLM, cfg: Settings) -> tuple[JdAnalysis | None, int, int]:
-    """(analysis|None, tokens_in, tokens_out). None on truncation / unparseable-after-repair / API error."""
+async def analyze_jd(
+    jd_text: str, llm: LLM, cfg: Settings, *, filter_ungrounded: bool = True
+) -> tuple[JdAnalysis | None, int, int]:
+    """(analysis|None, tokens_in, tokens_out). None on truncation / unparseable-after-repair / API error.
+    filter_ungrounded (production default True) rejects pure-fabrication evidence; the eval passes False to
+    measure the model's RAW grounding (else the ratio would tautologically read 1.0)."""
     tin = tout = 0
     try:
         resume = resume_evidence_json(_corpus_dir())  # inside try: a corrupt baked corpus → 503, not 500
@@ -91,9 +109,13 @@ async def analyze_jd(jd_text: str, llm: LLM, cfg: Settings) -> tuple[JdAnalysis 
             parsed = _parse_json(raw)
             if parsed is not None:
                 try:
-                    return JdAnalysis.model_validate(parsed), tin, tout
+                    analysis = JdAnalysis.model_validate(parsed)
                 except Exception as e:
                     err = str(e)[:300]
+                else:
+                    if filter_ungrounded:
+                        _reject_ungrounded_evidence(analysis, resume)
+                    return analysis, tin, tout
             else:
                 err = "response was not a JSON object"
             if attempt == 1:  # repair once

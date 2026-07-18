@@ -59,7 +59,7 @@ a{ color:inherit; text-decoration:none; }
   background:repeating-linear-gradient(to bottom, rgba(255,255,255,.022) 0 1px, transparent 1px 3px);
   box-shadow:inset 0 0 240px 40px rgba(0,0,0,.55);
 }
-@media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{ animation:none !important; transition:none !important; } }
 
 /* ---- motion polish (Phase 4) — all rest at their final/visible state; reduced-motion
    (animation:none above) leaves that final state, never a hidden one ---- */
@@ -449,9 +449,8 @@ a{ color:inherit; text-decoration:none; }
   animation:tlScan 5.5s var(--ease) infinite;
 }
 @keyframes tlScan{ 0%{ background-position:0 -100%; } 100%{ background-position:0 200%; } }
-/* globals.css:62's bare `*{animation:none}` does NOT match pseudo-elements — still the rail pseudos
-   explicitly under reduced-motion (also fixes the pre-existing .tl::before pulse leak). */
-@media (prefers-reduced-motion:reduce){ .tl::before, .tl::after{ animation:none !important; } }
+/* (the timeline rail pseudos are stilled under reduced-motion by the global `*,*::before,*::after`
+   reset at the top of this file — no scoped rule needed.) */
 .tl-links{ margin-top:1.6rem; color:var(--text-faint); font-size:var(--fs-sm); }
 .tl-link{ color:var(--cyan); text-decoration:none; margin-left:.6rem; }
 .tl-link:hover{ color:var(--cyan-bright); text-decoration:underline; }

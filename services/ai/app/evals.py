@@ -23,22 +23,17 @@ import asyncio
 import hashlib
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 
+from .grounding import evidence_grounded, is_pure_fabrication
+
 REPO = Path(__file__).resolve().parents[3]
 EVALS_DIR = REPO / "services/ai/evals"
 WEB_MIRROR = REPO / "apps/web/data/evals.json"
-
-STOPWORDS = frozenset(
-    ["with", "from", "that", "this", "have", "has", "and", "the", "for", "was",
-     "were", "are", "into", "over", "under", "across", "both"]
-)
-_SUFFIXES = ("ments", "ment", "ions", "ion", "ings", "ing", "es", "ed", "s")
 
 
 # ---- corpus materialization (the shared substrate) ---------------------------
@@ -91,31 +86,6 @@ def retrieval_scores(ranks: list[int | None], k: int = 6) -> dict:
     hits = sum(1 for r in ranks if r is not None and r <= k)
     mrr = sum(1.0 / r for r in ranks if r is not None) / n if n else 0.0
     return {"hit_at_6": round(hits / n, 3) if n else 0.0, "mrr": round(mrr, 3), "n": n}
-
-
-def _stem(token: str) -> str:
-    for suf in _SUFFIXES:
-        if token.endswith(suf) and len(token) - len(suf) >= 4:
-            return token[: -len(suf)]
-    return token
-
-
-def _normalize(text: str) -> str:
-    return re.sub(r"[^a-z0-9 ]+", " ", text.casefold())
-
-
-def evidence_grounded(evidence: str, resume_text: str) -> tuple[bool, list[str]]:
-    """A token is grounded if it, or its stem, occurs as a substring of the sanitized resume text.
-    Returns (all_grounded, failing_tokens)."""
-    hay = _normalize(resume_text)
-    failing = []
-    for tok in _normalize(evidence).split():
-        if len(tok) < 4 or tok in STOPWORDS:
-            continue
-        if tok in hay or _stem(tok) in hay:
-            continue
-        failing.append(tok)
-    return (not failing, failing)
 
 
 def score_jd_labels(analysis: dict, expect: list[dict]) -> dict:
@@ -265,9 +235,13 @@ async def eval_jd(gold: dict, llm, cfg, resume_text: str) -> dict:
     per_jd = []
     grounded_all = 0
     grounded_ok = 0
+    zero_grounded_drop = 0
     failing_strings: list[dict] = []
     for spec in gold["jds"]:
-        analysis, _tin, _tout = await analyze_jd(spec["jd"], llm, cfg)
+        # filter_ungrounded=False → measure the model's RAW grounding (comparable to the historical
+        # baseline + reflects the prompt). Production ships filtered; the eval must NOT filter, or it would
+        # measure post-reject output and inflate the ratio — gaming the metric, not improving grounding.
+        analysis, _tin, _tout = await analyze_jd(spec["jd"], llm, cfg, filter_ungrounded=False)
         if analysis is None:
             per_jd.append({"name": spec["name"], "status": "error"})
             continue
@@ -279,8 +253,10 @@ async def eval_jd(gold: dict, llm, cfg, resume_text: str) -> dict:
                 ok, failing = evidence_grounded(ev, resume_text)
                 if ok:
                     grounded_ok += 1
-                elif len(failing_strings) < 5:
+                elif len(failing_strings) < 25:
                     failing_strings.append({"evidence": ev[:160], "tokens": failing[:6]})
+                if is_pure_fabrication(ev, resume_text):
+                    zero_grounded_drop += 1  # what production WOULD reject — reported separately
         per_jd.append({"name": spec["name"], **scored})
     graded = [p for p in per_jd if "label_accuracy" in p]
     n_labels = sum(p["n"] for p in graded)
@@ -293,6 +269,7 @@ async def eval_jd(gold: dict, llm, cfg, resume_text: str) -> dict:
         "jds": per_jd,
         "evidence_grounded_ratio": round(grounded_ok / grounded_all, 3) if grounded_all else 0.0,
         "n_evidence": grounded_all,
+        "zero_grounded_drop_count": zero_grounded_drop,
         "ungrounded_examples": failing_strings,
     }
 

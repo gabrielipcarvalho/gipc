@@ -174,6 +174,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
   const tickRef = useRef<(() => void) | null>(null); // null when audio off → decode ticks no-op
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
+  const silentRef = useRef<HTMLAudioElement | null>(null);
   const lastTickRef = useRef(0);
   const didMountTint = useRef(false);
 
@@ -212,10 +213,28 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     m.gain.setValueAtTime(m.gain.value, now);
     m.gain.linearRampToValueAtTime(to, now + 0.12);
   };
+  // iOS mute-switch bypass: a silent, looping <audio> element flips WebKit's page-shared audio session to a
+  // playback category that ignores the hardware mute switch, so the WebAudio graph rides along. The clip is
+  // a same-origin static file (the prod CSP has no media-src → blob:/data: audio are blocked; /public 'self'
+  // is allowed). play() runs on EVERY enable (a paused session can lapse back to "ambient"); the element is
+  // created once. Trade-off: the loop may surface an OS "now-playing" control (paused on disable). Pure
+  // zero-sample silence engages current iOS/WebKit; if a device ever needs it, one non-zero WAV sample is the
+  // known fallback.
+  const ensureSilentUnlock = () => {
+    if (!silentRef.current) {
+      const el = new Audio("/construct-silence.wav");
+      el.loop = true;
+      el.setAttribute("playsinline", ""); // harmless no-op on <audio>; belt-and-suspenders for WebKit
+      silentRef.current = el;
+    }
+    void silentRef.current.play().catch(() => {}); // an autoplay reject is non-fatal — WebAudio path unchanged
+    rootRef.current?.setAttribute("data-cst-unlock", ""); // test/debug hook (mirrors data-cst-tint)
+  };
   const enableAudio = () => {
     const ctx = ensureCtx();
     if (!ctx) return;
     void ctx.resume();
+    ensureSilentUnlock();
     rampMaster(0.04);
     tickRef.current = () => {
       const c = ctxRef.current;
@@ -237,6 +256,8 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
   const disableAudio = () => {
     rampMaster(0);
     tickRef.current = null;
+    silentRef.current?.pause(); // release the iOS session; the element is reused on re-enable
+    rootRef.current?.removeAttribute("data-cst-unlock");
   };
   const toggleAudio = () => {
     const next = !audioOn;
@@ -272,6 +293,8 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     () => () => {
       const c = ctxRef.current;
       if (c && c.state !== "closed") void c.close();
+      silentRef.current?.pause(); // stop the silent loop on leaving /resume (no object URL to revoke)
+      silentRef.current = null;
     },
     [],
   );
