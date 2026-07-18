@@ -159,8 +159,8 @@ def test_evals_module_defers_heavy_imports() -> None:
         elif isinstance(node, ast.ImportFrom) and node.module:
             top.add(node.module.split(".")[0])
     assert "fastembed" not in top and "anthropic" not in top and "numpy" not in top
-    assert top - {"argparse", "asyncio", "hashlib", "json", "os", "re", "shutil",
-                  "subprocess", "sys", "time", "pathlib"} == set(), top
+    assert top - {"argparse", "asyncio", "hashlib", "json", "os", "shutil",
+                  "subprocess", "sys", "time", "pathlib", "grounding"} == set(), top
 
 
 def test_corpus_hash_deterministic(real_titles) -> None:
