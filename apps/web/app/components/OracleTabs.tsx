@@ -3,16 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { OracleChat } from "./OracleChat";
 import { JdAnalyzer } from "./JdAnalyzer";
+import { JdTailor } from "./JdTailor";
 import { LocalInfer } from "./LocalInfer";
 
-/* Three modes on /oracle: Ask (chat), Analyze a JD, and the self-hosted Local model demo. Only the
-   ACTIVE panel is mounted — mounting more would race Turnstile widgets and keep hidden streams
-   alive. Standard ARIA tabs. */
+/* Four modes on /oracle: Ask (chat), Analyze a JD, Tailor a résumé to a JD, and the self-hosted Local
+   model demo. Only the ACTIVE panel is mounted — mounting more would race Turnstile widgets and keep
+   hidden streams alive. Standard ARIA tabs. */
 
-type Tab = "ask" | "jd" | "local";
+type Tab = "ask" | "jd" | "tailor" | "local";
 const TABS: { id: Tab; label: string }[] = [
   { id: "ask", label: "Ask" },
   { id: "jd", label: "Analyze a JD" },
+  { id: "tailor", label: "Tailor résumé" },
   { id: "local", label: "Local model" },
 ];
 
@@ -21,9 +23,9 @@ export function OracleTabs() {
   const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
-    // ?tab=jd|local deep-links a panel directly (read post-mount — keeps /oracle static)
+    // ?tab=jd|tailor|local deep-links a panel directly (read post-mount — keeps /oracle static)
     const t = new URLSearchParams(window.location.search).get("tab");
-    if (t === "jd" || t === "local") setTab(t);
+    if (t === "jd" || t === "tailor" || t === "local") setTab(t);
   }, []);
 
   function onKey(e: React.KeyboardEvent, i: number) {
@@ -67,7 +69,15 @@ export function OracleTabs() {
         tabIndex={0}
         className="oracle-tabpanel"
       >
-        {tab === "ask" ? <OracleChat /> : tab === "jd" ? <JdAnalyzer /> : <LocalInfer />}
+        {tab === "ask" ? (
+          <OracleChat />
+        ) : tab === "jd" ? (
+          <JdAnalyzer />
+        ) : tab === "tailor" ? (
+          <JdTailor />
+        ) : (
+          <LocalInfer />
+        )}
       </div>
     </div>
   );

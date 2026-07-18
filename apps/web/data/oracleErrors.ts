@@ -1,5 +1,6 @@
-// Shared honest-error mapping for the oracle chat + JD analyzer. Keys are the exact `error` strings the
-// services/ai backend returns (routes/oracle.py, routes/jd.py); everything else falls to a generic line.
+// Shared honest-error mapping for the oracle chat + JD analyzer + résumé tailor. Keys are the exact
+// `error` strings the services/ai backend returns (routes/oracle.py, routes/jd.py, routes/variant.py);
+// everything else falls to a generic line.
 
 export function mapOracleError(status: number, code?: string): string {
   switch (code) {
@@ -8,6 +9,8 @@ export function mapOracleError(status: number, code?: string): string {
     case "the oracle rests — daily budget spent":
     case "the oracle is temporarily unavailable":
       return `${code}.`;
+    case "résumé temporarily unavailable":
+      return "the résumé is momentarily unavailable — try again.";
     case "the oracle is busy":
       return "the oracle is busy — try again in a moment.";
     case "local model offline":

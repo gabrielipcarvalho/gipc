@@ -40,3 +40,24 @@ export type JdAnalysis = {
 };
 
 export type JdRequest = { jdText: string; turnstileToken: string };
+
+// ── JD-tailored résumé variant (POST /api/ai/variant) — mirrors services/ai/app/variant.py ──
+// A DETERMINISTIC reorder of EXISTING résumé facts (no LLM): every `text` is a verbatim résumé string,
+// `matched` are the JD terms it hit, `gaps` are recognized skills the JD wants that the résumé lacks.
+export type TailoredFact = {
+  id: string;
+  kind: "bullet" | "project" | "skill";
+  text: string;
+  section: string;
+  score: number;
+  matched: string[];
+};
+
+export type TailoredResume = {
+  ordered: TailoredFact[];
+  gaps: string[];
+  jdKeywords: string[];
+  factCount: number;
+};
+
+export type VariantRequest = { jdText: string; turnstileToken: string };
