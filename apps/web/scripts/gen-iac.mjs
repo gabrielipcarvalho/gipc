@@ -6,8 +6,8 @@
  * so infra/ + .github/ are present at build time; the standalone runtime doesn't need them.
  *
  * SECURITY (acceptance-critical): the CURATED allow-list is the primary control — only files known to
- * be secret-free are listed. Backstops: (a) each file is scanned with the verify.sh secret regex and
- * the build HARD-FAILS if anything matches; (b) the Cloudflare tunnel UUID is redacted.
+ * be secret-free are listed. Backstops: (a) each file is scanned with the repo's committed-secret regex
+ * and the build HARD-FAILS if anything matches; (b) the Cloudflare tunnel UUID is redacted.
  *   node apps/web/scripts/gen-iac.mjs
  */
 import { readFileSync, writeFileSync } from "node:fs";
@@ -62,8 +62,8 @@ const FILES = [
   },
 ];
 
-// Mirror scripts/verify.sh SECRET_RX (the committed-secret hard-fail). Split the AWS-key literal so THIS
-// script doesn't trip verify.sh's own grep.
+// Mirror the repo's committed-secret SECRET_RX (the pre-QA hard-fail). Split the AWS-key literal so THIS
+// script doesn't self-trip that secret scan.
 const SECRET_RX = new RegExp(
   ["BEGIN (RSA |EC |OPENSSH |PGP )?PRIVATE KEY", "aws_secret_access_key", "-----BEGIN", "xox[baprs]-", "ghp_[A-Za-z0-9]{20,}", "AKIA" + "[0-9A-Z]{16}"].join("|"),
 );

@@ -38,6 +38,3 @@ export const AUTH_ASSETS: readonly AuthAsset[] = [
     "bytes": 17668
   }
 ];
-
-export const GENERATED_NOTE =
-  "generated at build by scripts/gen-authenticity.mjs — deterministic, drift-gated";
