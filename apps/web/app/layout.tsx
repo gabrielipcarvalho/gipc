@@ -6,10 +6,13 @@ import { Nav } from "./components/Nav";
 import { CommandPalette } from "./components/CommandPalette";
 import { RouteFocus } from "./components/RouteFocus";
 import { EasterEggs } from "./components/EasterEggs";
-import { THEME_IDS } from "../data/themes";
+import { THEME_IDS, THEME_TOKENS, VALUE_RE } from "../data/themes";
 
 // non-default theme ids for the no-flash guard — derived so a new preset can't drift
 const THEME_GUARD = JSON.stringify(THEME_IDS.filter((id) => id !== "arcane"));
+// AI Theme Studio no-flash restore — the allowlist + value-guard, interpolated so they can't drift
+const TOKENS_JSON = JSON.stringify(THEME_TOKENS);
+const VALUE_SRC = JSON.stringify(VALUE_RE.source);
 
 const plex = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -65,10 +68,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd).replace(/</g, "\\u003c") }}
         />
-        {/* no-flash theme: apply the saved preset before first paint */}
+        {/* no-flash theme: apply the saved preset, then any saved custom palette (allowlist + value-guarded),
+            before first paint. Inline vars win over :root[data-theme] regardless of order. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('gipc-theme');if(t&&${THEME_GUARD}.indexOf(t)>-1)document.documentElement.dataset.theme=t}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('gipc-theme');if(t&&${THEME_GUARD}.indexOf(t)>-1)document.documentElement.dataset.theme=t}catch(e){}try{var c=JSON.parse(localStorage.getItem('gipc-theme-custom')||'{}'),K=${TOKENS_JSON},R=new RegExp(${VALUE_SRC});for(var i=0;i<K.length;i++){var v=c[K[i]];if(typeof v==='string'&&R.test(v))document.documentElement.style.setProperty(K[i],v)}}catch(e){}`,
           }}
         />
         {/* skip-to-content: first tab stop, visible only on focus → jumps past the nav to the page main */}

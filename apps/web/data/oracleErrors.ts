@@ -21,6 +21,10 @@ export function mapOracleError(status: number, code?: string): string {
       return "couldn't analyze that JD — try again.";
     case "empty job description":
       return "paste a job description first.";
+    case "empty mood":
+      return "describe a mood first.";
+    case "couldn't read that mood — try again":
+      return "couldn't read that mood — try again.";
   }
   if (status === 404) return "local model offline — the self-hosted engine isn't rolled out yet, or is down.";
   if (status === 403 || code === "turnstile") return "verification failed — solve the check and retry.";

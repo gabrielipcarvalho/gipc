@@ -61,3 +61,8 @@ export type TailoredResume = {
 };
 
 export type VariantRequest = { jdText: string; turnstileToken: string };
+
+// ── AI Theme Studio (POST /api/ai/theme) — mirrors services/ai/app/theme.py ──
+// A server-derived, WCAG-clamped map of the 11 allowlist palette tokens → validated colour values.
+export type ThemePalette = Record<string, string>;
+export type ThemeRequest = { mood: string; turnstileToken: string };

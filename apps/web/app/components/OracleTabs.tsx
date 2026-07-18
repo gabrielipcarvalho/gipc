@@ -4,17 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import { OracleChat } from "./OracleChat";
 import { JdAnalyzer } from "./JdAnalyzer";
 import { JdTailor } from "./JdTailor";
+import { StudioPanel } from "./StudioPanel";
 import { LocalInfer } from "./LocalInfer";
 
-/* Four modes on /oracle: Ask (chat), Analyze a JD, Tailor a résumé to a JD, and the self-hosted Local
-   model demo. Only the ACTIVE panel is mounted — mounting more would race Turnstile widgets and keep
-   hidden streams alive. Standard ARIA tabs. */
+/* Five modes on /oracle: Ask (chat), Analyze a JD, Tailor a résumé to a JD, the AI Theme Studio (mood →
+   live palette), and the self-hosted Local model demo. Only the ACTIVE panel is mounted — mounting more
+   would race Turnstile widgets and keep hidden streams alive. Standard ARIA tabs. */
 
-type Tab = "ask" | "jd" | "tailor" | "local";
+type Tab = "ask" | "jd" | "tailor" | "studio" | "local";
 const TABS: { id: Tab; label: string }[] = [
   { id: "ask", label: "Ask" },
   { id: "jd", label: "Analyze a JD" },
   { id: "tailor", label: "Tailor résumé" },
+  { id: "studio", label: "Theme studio" },
   { id: "local", label: "Local model" },
 ];
 
@@ -23,9 +25,9 @@ export function OracleTabs() {
   const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
-    // ?tab=jd|tailor|local deep-links a panel directly (read post-mount — keeps /oracle static)
+    // ?tab=jd|tailor|studio|local deep-links a panel directly (read post-mount — keeps /oracle static)
     const t = new URLSearchParams(window.location.search).get("tab");
-    if (t === "jd" || t === "tailor" || t === "local") setTab(t);
+    if (t === "jd" || t === "tailor" || t === "studio" || t === "local") setTab(t);
   }, []);
 
   function onKey(e: React.KeyboardEvent, i: number) {
@@ -75,6 +77,8 @@ export function OracleTabs() {
           <JdAnalyzer />
         ) : tab === "tailor" ? (
           <JdTailor />
+        ) : tab === "studio" ? (
+          <StudioPanel />
         ) : (
           <LocalInfer />
         )}

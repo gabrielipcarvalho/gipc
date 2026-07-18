@@ -198,7 +198,7 @@ function runCommand(
     case "theme": {
       const arg = cmd.split(/\s+/)[1] ?? "";
       if (!arg) {
-        return { out: [<>themes → <b>arcane</b> · <b>matrix</b> · <b>amber</b> · <b>mono</b> · active: <b>{currentTheme()}</b> · apply: <b>theme &lt;name&gt;</b></>] };
+        return { out: [<>themes → <b>arcane</b> · <b>matrix</b> · <b>amber</b> · <b>mono</b> · active: <b>{currentTheme()}</b> · apply: <b>theme &lt;name&gt;</b> · or describe a mood in the <a href="/oracle?tab=studio">AI theme studio</a></>] };
       }
       if (THEME_IDS.includes(arg)) {
         return { out: [<>theme applied → <b>{arg}</b>.</>], theme: arg };
