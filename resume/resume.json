@@ -329,7 +329,7 @@
     {
       "name": "AI drowning-detection research (Griffith × Huizhou)",
       "year": "2024–2026",
-      "text": "First-author IEEE Access paper establishing the technical feasibility of AI drowning detection; now developing the on-device (Raspberry Pi/ARM) edge computer-vision system as the core of my PhD — targeting real-time inference — informed by a funded cross-site systematic review (~82 papers).",
+      "text": "First-author IEEE Access paper establishing the technical feasibility of AI drowning detection; now developing the on-device (Raspberry Pi/ARM) edge computer-vision system as the core of my PhD — targeting real-time inference — informed by a funded cross-site systematic review (~82 papers across six databases).",
       "evidence": [
         "PUB-1",
         "CGX-POOL-01",
