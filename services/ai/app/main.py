@@ -18,7 +18,7 @@ from .config import get_settings
 from .limiter import RateLimiter, RateLimitMiddleware
 from .llm import get_llm
 from .log import AccessLogMiddleware, configure_logging, info
-from .routes import health, infer, jd, oracle, search, variant
+from .routes import health, infer, jd, oracle, search, theme, variant
 
 
 @asynccontextmanager
@@ -52,6 +52,8 @@ def create_app() -> FastAPI:
     app.state.jd_limiter = RateLimiter(cfg.jd_rate_per_hour / 3600.0, cfg.jd_rate_per_hour)
     # JD-tailored variant: deterministic, no LLM cost → generous per-IP limiter, no budget breaker
     app.state.variant_limiter = RateLimiter(cfg.variant_rate_per_hour / 3600.0, cfg.variant_rate_per_hour)
+    # Theme studio: LLM-calling → strict per-IP limiter + the shared daily budget breaker
+    app.state.theme_limiter = RateLimiter(cfg.theme_rate_per_10min / 600.0, cfg.theme_rate_per_10min)
     # local-inference demo: ONE stream at a time (CPU box) + strict per-IP limiter. Boot never
     # touches Ollama — first contact is the first request.
     app.state.infer_sem = asyncio.Semaphore(1)
@@ -72,6 +74,7 @@ def create_app() -> FastAPI:
     app.include_router(oracle.router)
     app.include_router(jd.router)
     app.include_router(variant.router)
+    app.include_router(theme.router)
     app.include_router(infer.router)
     info("gipc-ai configured", anthropic_configured=cfg.anthropic_configured)
     return app
