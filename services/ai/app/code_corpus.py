@@ -18,7 +18,7 @@ EXCERPT_CAP = 1800  # chars per file after trimming
 
 # Secret VALUES only — never identifier names (config.py declares anthropic_api_key etc. and holds
 # Cloudflare's 35-char always-pass test sitekey; turnstile.py posts data={"secret": ...}; none may
-# trip). The PEM pattern is built with \s+ so verify.sh's own literal-text scan never matches THIS
+# trip). The PEM pattern is built with \s+ so the repo's committed-secret scan never matches THIS
 # file. High-entropy check excludes URL-ish strings (dots/slashes) to spare long endpoint literals.
 SECRET_PATTERNS = [
     re.compile(r"sk-ant-[A-Za-z0-9_-]{20,}"),
