@@ -65,3 +65,18 @@ export type DemoToken = { token: string; expiresAt: string; tokenType: string; n
 export type DemoEvent = { id: number; ref: string; kind: string; note: string; ts: string };
 // nextCursor is `string | null` — null (never "") means no further page (Load-more hides on it).
 export type DemoEventsPage = { items: DemoEvent[]; nextCursor: string | null; total: number; limit: number };
+
+// App-layer WAF (Sprint M P4) — mirrors services/core/internal/{waf.Finding, server/waf.go}. Aggregate +
+// redacted: the recent ring carries the PATH only (never the query, client IP, or user-agent). The probe
+// is a pure engine preview that never mutates the live counters.
+export type WafFinding = { ruleId: string; category: string; block: boolean };
+export type WafRecent = { ruleId: string; category: string; method: string; path: string; ts: string };
+export type WafSnapshot = {
+  inspected: number;
+  flagged: number;
+  blocked: number;
+  byCategory: Record<string, number>;
+  recent: WafRecent[];
+  rateDenied: number; // the global limiter's aggregate 429 count — the honest "rate" dimension
+};
+export type WafProbeResult = { sample: string; findings: WafFinding[]; monitorOnly: boolean; note: string };
