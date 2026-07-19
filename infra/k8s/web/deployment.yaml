@@ -15,6 +15,16 @@ spec:
     metadata:
       labels: { app: web }
     spec:
+      # Hardened (Sprint M audit gap → applied): non-root, read-only root fs (two tmpfs mounts for Next's
+      # only runtime writes — /tmp + the standalone cache), drop-ALL caps, seccomp, no SA token (web makes
+      # zero k8s-API calls). uid/gid 1001 come from apps/web/Dockerfile (adduser -u 1001 nextjs).
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001 # lets uid 1001 write the emptyDir volumes below
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: web
           image: ghcr.io/gabrielipcarvalho/gipc-web:latest # tag pinned by CI via kustomization
@@ -23,6 +33,13 @@ spec:
           env:
             - { name: NODE_ENV, value: production }
             - { name: PORT, value: "3000" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: next-cache, mountPath: /app/apps/web/.next/cache } # Next standalone runtime cache
           readinessProbe:
             httpGet: { path: /, port: 3000 }
             initialDelaySeconds: 3
@@ -34,3 +51,8 @@ spec:
           resources:
             requests: { cpu: 50m, memory: 96Mi }
             limits: { cpu: "1", memory: 384Mi }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: next-cache
+          emptyDir: {}
