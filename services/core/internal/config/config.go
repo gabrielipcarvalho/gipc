@@ -41,6 +41,9 @@ type Config struct {
 	DemoDBURL  string  // demo-ns toy postgres DSN (SELECT-only role; NEVER the ns-data prod DB)
 	DBRunRPS   float64 // /api/lab/db/run per-IP cooldown refill (default 0.5 ⇒ ~1 run / 2s)
 	DBRunBurst int     // /api/lab/db/run per-IP bucket (default 2)
+	// Sprint M safe sandbox shell — /api/lab/shell (in-memory, no exec; cheaper than the others)
+	ShellRPS   float64 // per-IP refill (default 2 ⇒ ~2 cmds/s)
+	ShellBurst int     // per-IP bucket (default 8)
 }
 
 // clampInt bounds v to [1, hi] — used so a misconfigured env cap can neither exceed the invariant nor drop below 1.
@@ -89,6 +92,8 @@ func Load() (Config, error) {
 		DemoDBURL:  env("DEMO_DB_URL", ""),
 		DBRunRPS:   envFloat("DB_RPS", 0.5),
 		DBRunBurst: envInt("DB_BURST", 2),
+		ShellRPS:   envFloat("SHELL_RPS", 2),
+		ShellBurst: envInt("SHELL_BURST", 8),
 	}, nil
 }
 

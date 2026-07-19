@@ -47,6 +47,7 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	chaosLimiter := middleware.NewLimiter(cfg.ChaosRPS, cfg.ChaosBurst) // per-IP cooldown ≈ 1 kill / 10s
 	loadLimiter := middleware.NewLimiter(cfg.LoadRPS, cfg.LoadBurst)    // per-IP cooldown ≈ 1 run / 5s
 	dbLimiter := middleware.NewLimiter(cfg.DBRunRPS, cfg.DBRunBurst)    // per-IP cooldown ≈ 1 run / 2s
+	shellLimiter := middleware.NewLimiter(cfg.ShellRPS, cfg.ShellBurst) // per-IP ≈ 2 cmds/s (in-memory, cheap)
 	dbRun := armDBRunner(cfg.LabEnabled, cfg.DemoDBURL)                 // nil without Lab+DSN → honest 503
 	labHub := newHub()                                                  // lab lifecycle events — separate from /api/stream
 
@@ -74,6 +75,9 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	// Lab DB explorer — allowlisted queries against the disposable demo-ns toy postgres.
 	mux.HandleFunc("GET /api/lab/db/queries", labDBQueriesHandler())
 	mux.Handle("POST /api/lab/db/run", dbLimiter.Middleware(http.HandlerFunc(labDBRunHandler(dbRun, log, labHub))))
+	// Sprint M — safe sandbox shell: a fixed-grammar, in-memory, no-exec terminal (internal/shell is a
+	// capability-free package; the handler passes it only the cmd+cwd strings). Gated by LabEnabled.
+	mux.Handle("POST /api/lab/shell", shellLimiter.Middleware(http.HandlerFunc(labShellHandler(cfg))))
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never
