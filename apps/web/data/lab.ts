@@ -58,3 +58,10 @@ export const PLAYGROUND_ENDPOINTS: readonly ApiEndpoint[] = [
 // Safe sandbox shell (POST /api/lab/shell) — mirrors services/core/internal/shell.Result. Output is
 // server-produced plain text (the client renders it as textContent, never HTML).
 export type ShellResult = { output: string; cwd: string; cleared: boolean };
+
+// API-playground demo-token + pagination (Sprint M P3) — mirrors services/core/internal/server/lab_demo.go.
+// The token is an EPHEMERAL demo key (not real auth); the events are a clearly-labeled SYNTHETIC dataset.
+export type DemoToken = { token: string; expiresAt: string; tokenType: string; note?: string };
+export type DemoEvent = { id: number; ref: string; kind: string; note: string; ts: string };
+// nextCursor is `string | null` — null (never "") means no further page (Load-more hides on it).
+export type DemoEventsPage = { items: DemoEvent[]; nextCursor: string | null; total: number; limit: number };
