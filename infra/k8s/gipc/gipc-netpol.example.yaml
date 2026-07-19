@@ -1,0 +1,241 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# gipc default-deny NetworkPolicy — SECURITY MODEL, ready for a same-ns-enforcing CNI.
+#
+#  ⚠ NOT ENFORCEABLE ON THE LIVE CLUSTER, AND NOT AUTO-APPLIED. ⚠
+#  * This cluster is k3s + kube-router. kube-router's same-namespace ingress enforcement
+#    rejects ALL same-ns pod traffic regardless of from-rules — a gipc NetworkPolicy was
+#    applied and REMOVED on 2026-07-16 for exactly this reason (see infra/k8s/ai/ollama.yaml
+#    header; only CROSS-ns policies like demo/data work). Applying this here would break the
+#    whole same-ns mesh (rows 3-7,14 below) even though the flow map is correct.
+#  * This is therefore a correct reference model for a CNI that enforces same-ns intra-pod
+#    policy (Calico / Cilium). It is `.example`, in NO kustomization, and watched by no
+#    ArgoCD app (infra/k8s/gipc/ is an orphan dir) — a cluster apply never picks it up.
+#  * BEFORE any apply on a capable CNI: confirm every CIDR (node/pod/svc/API) against the
+#    live cluster and validate the flow map against real traffic. See the runbook.
+#
+# Placeholders to confirm (k3s defaults shown — VERIFY with `ssh garuda kubectl get node -o wide`
+# and `kubectl cluster-info dump | grep -i cidr`):
+#   NODE_IP    — the k3s node's primary IP (kubelet probes + the cloudflared NodePort SNAT
+#                originate here). Shown as 0.0.0.0/0 on the probe/edge ports below with a
+#                CONFIRM note; tighten to <NODE_IP>/32 once known.
+#   POD_CIDR   — 10.42.0.0/16 (k3s default)
+#   API_IP     — 10.43.0.1/32 (kubernetes.default ClusterIP → host:6443)
+#
+# FLOW MAP (source of truth — see docs/infra/hardening-runbook.md for evidence file:lines):
+#   1  cloudflared(host root) → caddy      :80  (NodePort 30082, SNAT→NODE_IP)   [ipBlock]
+#   2  kubelet(node)          → ALL pods    probe ports (caddy80/web3000/core8080/ai8000/ollama11434) [ipBlock]
+#   3  caddy → web   :3000  (Svc 80 → targetPort 3000 — the port-remap trap)     [same-ns⚠]
+#   4  caddy → core  :8080                                                        [same-ns⚠]
+#   5  caddy → ai    :8000                                                        [same-ns⚠]
+#   6  web(SSR) → core :8080                                                       [same-ns⚠]
+#   7  core → web   :3000  (uptime probe; core env WEB_URL=http://web:80 → Svc 80 → tgt 3000) [same-ns⚠]
+#   8  core → prometheus.observability :9090                                       [cross-ns]
+#   9  core → loki.observability       :3100                                       [cross-ns]
+#   10 core → chaos-target.demo        :80                                         [cross-ns]
+#   11 core → demo-db.demo             :5432                                       [cross-ns]
+#   12 core → k8s API (API_IP)         :443                                        [ipBlock]
+#   13 ai → postgres.data              :5432                                       [cross-ns]
+#   14 ai → ollama                     :11434                                      [same-ns⚠]
+#   15 ai → Anthropic API (external)   :443                                        [ipBlock external]
+#   16 ai → challenges.cloudflare.com (Turnstile siteverify, external) :443        [ipBlock external]
+#   17 prometheus.observability → caddy :2019 (app metrics)                        [cross-ns]
+#   18 ALL gipc pods → kube-system DNS  :53 UDP+TCP                                [ns kube-system]
+# NOT flows (intentionally absent — adding them would be dead/misleading):
+#   web→ai is CLIENT-SIDE only (browser→caddy→ai); caddy→external NONE; GHCR pulls are node-level.
+# ═════════════════════════════════════════════════════════════════════════════
+---
+# Baseline: deny all ingress + egress for every pod in ns gipc. Every flow below re-opens explicitly.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: gipc
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Row 18 — every gipc pod may resolve DNS (kube-system). Without this, all Service names fail.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: gipc
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Row 2 (partial) — kubelet liveness/readiness probes originate from the NODE, not a pod, so NO
+# podSelector matches them. Allow the probe port on each app from the node. CONFIRM NODE_IP and
+# tighten `cidr` from 0.0.0.0/0 to <NODE_IP>/32 before applying. (Some CNIs, e.g. Calico, auto-allow
+# host→pod via failsafe ports and may not need this.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-kubelet-probes
+  namespace: gipc
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - ipBlock: { cidr: 0.0.0.0/0 } # CONFIRM → <NODE_IP>/32
+      ports:
+        - { protocol: TCP, port: 3000 } # web
+        - { protocol: TCP, port: 8080 } # core
+        - { protocol: TCP, port: 8000 } # ai
+        - { protocol: TCP, port: 80 } # caddy
+        - { protocol: TCP, port: 11434 } # ollama
+---
+# caddy — the public edge.
+#   Ingress: row 1 (cloudflared→:80 via NodePort SNAT→NODE_IP, ipBlock) + row 17 (prometheus→:2019).
+#   Egress:  rows 3/4/5 (→web:3000, core:8080, ai:8000).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: caddy
+  namespace: gipc
+spec:
+  podSelector:
+    matchLabels: { app: caddy }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - ipBlock: { cidr: 0.0.0.0/0 } # row 1 cloudflared via NodePort — CONFIRM → <NODE_IP>/32
+      ports:
+        - { protocol: TCP, port: 80 }
+    - from: # row 17 — prometheus scrapes caddy :2019
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: observability }
+      ports:
+        - { protocol: TCP, port: 2019 }
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app: web } }
+      ports: [{ protocol: TCP, port: 3000 }] # row 3 — Svc 80 → targetPort 3000
+    - to:
+        - podSelector: { matchLabels: { app: core } }
+      ports: [{ protocol: TCP, port: 8080 }] # row 4
+    - to:
+        - podSelector: { matchLabels: { app: ai } }
+      ports: [{ protocol: TCP, port: 8000 }] # row 5
+---
+# web — the Next.js pod (targetPort 3000).
+#   Ingress: rows 3 + 7 — from caddy AND core, on pod port 3000 (NOT 80: the Service remaps 80→3000).
+#   Egress:  row 6 — web SSR fetches core:8080. (web→ai is client-side → NOT an egress rule.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web
+  namespace: gipc
+spec:
+  podSelector:
+    matchLabels: { app: web }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: caddy } } # row 3
+        - podSelector: { matchLabels: { app: core } } # row 7 (uptime probe; Svc 80 → pod 3000)
+      ports:
+        - { protocol: TCP, port: 3000 }
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app: core } }
+      ports: [{ protocol: TCP, port: 8080 }] # row 6 — SSR /status,/system
+---
+# core — the Go platform service.
+#   Ingress: rows 4 + 6 — from caddy AND web(SSR), on :8080.
+#   Egress:  rows 8,9 (prometheus/loki, cross-ns), 7 (web uptime :3000), 10/11 (demo, cross-ns),
+#            12 (k8s API, ipBlock:443).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: core
+  namespace: gipc
+spec:
+  podSelector:
+    matchLabels: { app: core }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: caddy } } # row 4
+        - podSelector: { matchLabels: { app: web } } # row 6
+      ports:
+        - { protocol: TCP, port: 8080 }
+  egress:
+    - to: # rows 8,9 — Prometheus + Loki
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: observability }
+      ports:
+        - { protocol: TCP, port: 9090 }
+        - { protocol: TCP, port: 3100 }
+    - to:
+        - podSelector: { matchLabels: { app: web } }
+      ports: [{ protocol: TCP, port: 3000 }] # row 7 — uptime probe (Svc 80 → pod 3000)
+    - to: # rows 10,11 — demo ns (chaos-target + demo-db)
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: demo }
+      ports:
+        - { protocol: TCP, port: 80 }
+        - { protocol: TCP, port: 5432 }
+    - to: # row 12 — k8s API server (topology + chaos). CONFIRM API_IP.
+        - ipBlock: { cidr: 10.43.0.1/32 }
+      ports: [{ protocol: TCP, port: 443 }]
+---
+# ai — the FastAPI/RAG service.
+#   Ingress: row 5 — from caddy on :8000.
+#   Egress:  row 13 (postgres.data, cross-ns), 14 (ollama same-ns :11434), 15+16 (Anthropic AND
+#            Turnstile, EXTERNAL :443 — must be BOTH, or gated endpoints fail closed).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai
+  namespace: gipc
+spec:
+  podSelector:
+    matchLabels: { app: ai }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: caddy } } # row 5
+      ports:
+        - { protocol: TCP, port: 8000 }
+  egress:
+    - to: # row 13 — postgres in ns data
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: data }
+      ports: [{ protocol: TCP, port: 5432 }]
+    - to:
+        - podSelector: { matchLabels: { app: ollama } }
+      ports: [{ protocol: TCP, port: 11434 }] # row 14
+    - to: # rows 15+16 — external HTTPS: Anthropic API AND challenges.cloudflare.com (Turnstile).
+        # NetworkPolicy can't match DNS names → allow external :443, excluding cluster-internal ranges.
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.42.0.0/16, 10.43.0.0/16, 172.16.0.0/12, 192.168.0.0/16]
+      ports: [{ protocol: TCP, port: 443 }]
+---
+# ollama — the local model server.
+#   Ingress: row 14 — from ai on :11434.
+#   Egress:  DNS only (allow-dns-egress covers it). Model pulls are a separate one-shot Job, not the
+#            serving path; add a temporary external:443 egress only when running ollama-pull.job.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ollama
+  namespace: gipc
+spec:
+  podSelector:
+    matchLabels: { app: ollama }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: ai } }
+      ports:
+        - { protocol: TCP, port: 11434 }
