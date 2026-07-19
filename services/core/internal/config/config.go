@@ -44,6 +44,11 @@ type Config struct {
 	// Sprint M safe sandbox shell — /api/lab/shell (in-memory, no exec; cheaper than the others)
 	ShellRPS   float64 // per-IP refill (default 2 ⇒ ~2 cmds/s)
 	ShellBurst int     // per-IP bucket (default 8)
+	// Sprint M P3 — API-playground demo-token + pagination (/api/lab/demo/*). The HMAC signing key is
+	// minted per-process from crypto/rand (never env) — no secret to configure; tokens die on restart.
+	DemoTokenTTL time.Duration // ephemeral demo-token lifetime (default 5m — short)
+	DemoRPS      float64       // /api/lab/demo/* per-IP refill (default 1)
+	DemoBurst    int           // /api/lab/demo/* per-IP bucket (default 5; raw ⇒ DEMO_BURST=0 disables, for the wiring test)
 }
 
 // clampInt bounds v to [1, hi] — used so a misconfigured env cap can neither exceed the invariant nor drop below 1.
@@ -94,6 +99,10 @@ func Load() (Config, error) {
 		DBRunBurst: envInt("DB_BURST", 2),
 		ShellRPS:   envFloat("SHELL_RPS", 2),
 		ShellBurst: envInt("SHELL_BURST", 8),
+
+		DemoTokenTTL: envDuration("DEMO_TOKEN_TTL", 5*time.Minute),
+		DemoRPS:      envFloat("DEMO_RPS", 1),
+		DemoBurst:    envInt("DEMO_BURST", 5),
 	}, nil
 }
 

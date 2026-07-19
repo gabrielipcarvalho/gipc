@@ -48,8 +48,17 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	loadLimiter := middleware.NewLimiter(cfg.LoadRPS, cfg.LoadBurst)    // per-IP cooldown ≈ 1 run / 5s
 	dbLimiter := middleware.NewLimiter(cfg.DBRunRPS, cfg.DBRunBurst)    // per-IP cooldown ≈ 1 run / 2s
 	shellLimiter := middleware.NewLimiter(cfg.ShellRPS, cfg.ShellBurst) // per-IP ≈ 2 cmds/s (in-memory, cheap)
+	demoLimiter := middleware.NewLimiter(cfg.DemoRPS, cfg.DemoBurst)    // /api/lab/demo/* per-IP
 	dbRun := armDBRunner(cfg.LabEnabled, cfg.DemoDBURL)                 // nil without Lab+DSN → honest 503
 	labHub := newHub()                                                  // lab lifecycle events — separate from /api/stream
+
+	// Sprint M P3 — the demo-token signer's HMAC key is minted per-process (crypto/rand). A rand failure
+	// (near-unreachable) leaves it nil and both /api/lab/demo/* handlers degrade to 503.
+	demoSigner, err := newDemoTokenSigner(cfg.DemoTokenTTL)
+	if err != nil {
+		log.Warn("demo-token signer init failed — /api/lab/demo/* will 503", "err", err)
+		demoSigner = nil
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/healthz", healthz)
@@ -78,6 +87,10 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	// Sprint M — safe sandbox shell: a fixed-grammar, in-memory, no-exec terminal (internal/shell is a
 	// capability-free package; the handler passes it only the cmd+cwd strings). Gated by LabEnabled.
 	mux.Handle("POST /api/lab/shell", shellLimiter.Middleware(http.HandlerFunc(labShellHandler(cfg))))
+	// Sprint M P3 — API-playground demo-token + cursor pagination. Safe-by-construction: the token gates
+	// ONLY a synthetic demo dataset (no real capability/data/secret). Both routes LabEnabled+signer gated.
+	mux.Handle("POST /api/lab/demo/token", demoLimiter.Middleware(http.HandlerFunc(demoTokenHandler(cfg, demoSigner))))
+	mux.Handle("GET /api/lab/demo/events", demoLimiter.Middleware(http.HandlerFunc(demoEventsHandler(cfg, demoSigner))))
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never
