@@ -54,3 +54,7 @@ export const PLAYGROUND_ENDPOINTS: readonly ApiEndpoint[] = [
   { label: "uptime", path: "/api/uptime", note: "probe / incident history" },
   { label: "deploys", path: "/api/deploys", note: "recent deploy events" },
 ];
+
+// Safe sandbox shell (POST /api/lab/shell) — mirrors services/core/internal/shell.Result. Output is
+// server-produced plain text (the client renders it as textContent, never HTML).
+export type ShellResult = { output: string; cwd: string; cleared: boolean };
