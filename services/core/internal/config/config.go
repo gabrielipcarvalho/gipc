@@ -49,6 +49,12 @@ type Config struct {
 	DemoTokenTTL time.Duration // ephemeral demo-token lifetime (default 5m — short)
 	DemoRPS      float64       // /api/lab/demo/* per-IP refill (default 1)
 	DemoBurst    int           // /api/lab/demo/* per-IP bucket (default 5; raw ⇒ DEMO_BURST=0 disables, for the wiring test)
+	// Sprint M P4 — app-layer WAF: monitor-mode signature inspection over the core /api/* request stream.
+	WAFEnabled    bool    // monitor middleware on/off (default true; false ⇒ pure pass-through kill switch)
+	WAFBlock      bool    // soft-block block-eligible rules (default false ⇒ MONITOR only, never blocks legit traffic)
+	WAFRing       int     // recent-findings ring size (clampInt-floored ≥1 — no size-0 modulo panic)
+	WAFProbeRPS   float64 // /api/lab/waf/probe per-IP refill (default 1)
+	WAFProbeBurst int     // /api/lab/waf/probe per-IP bucket (default 5; raw ⇒ WAF_PROBE_BURST=0 disables, for the wiring test)
 }
 
 // clampInt bounds v to [1, hi] — used so a misconfigured env cap can neither exceed the invariant nor drop below 1.
@@ -103,6 +109,12 @@ func Load() (Config, error) {
 		DemoTokenTTL: envDuration("DEMO_TOKEN_TTL", 5*time.Minute),
 		DemoRPS:      envFloat("DEMO_RPS", 1),
 		DemoBurst:    envInt("DEMO_BURST", 5),
+
+		WAFEnabled:    envBool("WAF_ENABLED", true),
+		WAFBlock:      envBool("WAF_BLOCK", false),
+		WAFRing:       clampInt(envInt("WAF_RING", 32), 256),
+		WAFProbeRPS:   envFloat("WAF_PROBE_RPS", 1),
+		WAFProbeBurst: envInt("WAF_PROBE_BURST", 5),
 	}, nil
 }
 
