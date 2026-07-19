@@ -8,8 +8,9 @@ import { ApiPlaygroundPanel } from "./ApiPlaygroundPanel";
 import { DbExplorerPanel } from "./DbExplorerPanel";
 import { ShellPanel } from "./ShellPanel";
 import { WafPanel } from "./WafPanel";
+import { GpuFieldPanel } from "./GpuFieldPanel";
 
-// The Lab panel deck — chaos + load + events + rate-limit + API playground + DB explorer + safe shell + WAF.
+// The Lab panel deck — chaos + load + events + rate-limit + API playground + DB explorer + safe shell + WAF + GPU field.
 export function LabDeck() {
   return (
     <div className="lab">
@@ -28,6 +29,9 @@ export function LabDeck() {
       </div>
       <div className="lab-wide">
         <WafPanel />
+      </div>
+      <div className="lab-wide">
+        <GpuFieldPanel />
       </div>
     </div>
   );

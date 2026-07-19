@@ -1040,6 +1040,12 @@ a{ color:inherit; text-decoration:none; }
 .waf-cats{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:.3rem .9rem; }
 .waf-cats li{ color:var(--text-muted); font-size:var(--fs-xs); line-height:1.6; }
 .waf-block{ color:var(--warn); }
+/* GPU shader field (Sprint M P5) — tokens-only chrome; the shader itself paints the canvas (no CSS motion). */
+.gpuf-canvas{ display:block; width:100%; height:200px; border:1px solid var(--border); border-radius:6px; background:var(--bg); }
+.gpuf-fallback{ width:100%; height:200px; border:1px solid var(--border); border-radius:6px; opacity:.5;
+  background:radial-gradient(circle at 30% 40%, var(--violet), transparent 60%),
+    radial-gradient(circle at 70% 65%, var(--cyan), transparent 55%), var(--bg); }
+.gpuf-run{ align-self:flex-start; margin-top:.3rem; }
 
 /* ── Writeups (Sprint F) ──────────────────────────────────────────────────── */
 .wu-list{ list-style:none; margin:1.4rem 0 0; padding:0; display:flex; flex-direction:column; gap:1.1rem; }
