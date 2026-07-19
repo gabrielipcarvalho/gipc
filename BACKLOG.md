@@ -62,10 +62,64 @@ backlog already built — L = the genuinely-open career/JD remainder + folded-in
 user-blocked — no Docker daemon + the gh token lacks `write:packages`); the HF-bake 504 is transient →
 re-run ai.yml. core.yml did NOT fire (services/core untouched).
 
-**Roadmap after L:** M — the real browser SANDBOX SHELL (CF Containers, security-critical) + API-playground
-auth/pagination + WAF engine + GaussianSplats — the big genuinely-open greenfield, its own supervised sprint
-next. Auth & social (guestbook + off-site companion) stay CUT (auth-free by design). Permanent cuts: voice,
-multiplayer/site-music/activeframe (§10), Redis visualizer, MSDF runes, CMS + runnable-artifacts.
+**Roadmap after L:** M — the sandbox-safe sprint — ✅ SHIPPED 2026-07-19 (see the Sprint M section
+directly below). The ambitious "real browser SANDBOX SHELL (CF Containers) + API-playground auth + WAF +
+GaussianSplats" vision landed as deliberate SAFE-BY-CONSTRUCTION substitutes — the risky single-node prod
+surfaces were CUT, not shipped. Auth & social (guestbook + off-site companion) stay CUT (auth-free by
+design). Permanent cuts: voice, multiplayer/site-music/activeframe (§10), Redis visualizer, MSDF runes,
+CMS + runnable-artifacts.
+
+---
+
+## Sprint M — sandbox-safe (SHIPPED 2026-07-19)
+
+**Shipped** (safe-by-construction, user-locked; every shell phase RED-TEAM-QA'd by an independent subagent
+that had to FAIL to break out — injection/traversal/abuse/exfil). The rule: a public exec surface on a
+single-node prod host is unsafe → every phase ships REAL capability over PROVABLY-safe substrate, ZERO real
+RCE/eval/exec. Deliberately narrower than the original §3 Lab / §9 vision — the risky prod surfaces (a real
+microVM shell, a real auth system, an enforced netpol, a heavy splat dep) were CUT and REPLACED with honest
+safe substitutes: a deliberate choice, not a shortfall.
+
+- **P1+P2 safe sandbox shell** (`3d41238` core + `f2691ea` web) — a fixed-grammar, in-memory, PROVABLY
+  no-execution terminal on /lab: a pure Go `internal/shell` package + an AST import-allowlist test proving
+  the grammar reaches NO exec/FS/net/secret, a thin handler that passes ZERO capability, and a vanilla web
+  terminal with XSS-safe render. REPLACES §3's "real browser sandbox shell (ephemeral gVisor/Firecracker
+  microVM + ttyd, WS-proxied)" — CUT as too dangerous on a single-node prod host (a public exec surface);
+  safe-by-construction was the user-locked call.
+- **P3 API-playground upgrade** (`170ddb1` core + `ee70168` web) — real cursor pagination + an ephemeral
+  HMAC demo-token (NOT real auth — the site is auth-free by design; it demonstrates an honest auth-header +
+  401/429 flow over a clearly-labeled synthetic dataset). Answers §3's "API playground — auth, rate limits,
+  pagination" as a demo-token, not a real auth system (auth stays cut).
+- **P4 app-layer WAF engine** (`b8ca6fa` core + `e90ebf8` web) — a monitor-mode signature engine over the
+  core /api/* stream (path-traversal / sqli / xss / rce / scanner-UA), MONITOR-default (flags, never blocks;
+  soft-block is opt-in), IP/UA-redacted, a live dashboard + a pure-preview probe. Honestly best-effort, NOT
+  a security boundary. Answers §3's "WAF + rate-limit + abuse monitoring."
+- **P5 /lab toy** (`0434a2b`) — a vanilla raw-WebGL fragment-shader "arcane field". SUBSTITUTES for §3's
+  `GaussianSplats3D` (a splat needs a heavy dep; the vanilla ADR-0001 rule → a hand-rolled shader field
+  instead; RM-safe, CSP-safe, context-loss-robust).
+- **P5 infra-hardening manifests** (`8a6cc32`) — DOCUMENTED, NOT force-applied: a gipc default-deny
+  NetworkPolicy (the correct model + a full 18-flow map) + a hardened web Deployment
+  (non-root / readOnlyRootFS / drop-ALL / no-SA-token) + `docs/infra/hardening-runbook.md`. HONEST framing:
+  the netpol is NOT enforceable on the live k3s+kube-router (same-ns ingress rejected — a gipc netpol was
+  applied+removed 2026-07-16, §12) → it is a model for a future CNI (Calico/Cilium), never force-applied to
+  prod. Closes the §12 netpol note as documented-not-applied.
+
+**Deploy:** web via ArgoCD (web.yml); **services/core via core.yml + `ssh garuda kubectl -n gipc set image
+deploy/core <CI-tag>`** (core is NOT ArgoCD-managed — the shell/API/WAF all live in Go core; core.yml fires
+this sprint). The P5 hardening manifests are documented-not-applied (zero cluster mutation). ai.yml did NOT
+fire (services/ai untouched).
+
+**NOT built (honest cuts):** the real RCE shell (gVisor/Firecracker microVM + ttyd) — CUT as unsafe on a
+single-node prod host, in favour of the provably-no-exec fixed-grammar shell; a real auth system (the
+demo-token is HMAC-ephemeral, not accounts — auth-free by design); an ENFORCED NetworkPolicy (kube-router
+can't do same-ns ingress on this k3s — the manifest is a documented model for a future CNI); a
+GaussianSplats heavy dep (a hand-rolled vanilla WebGL shader field instead — ADR 0001).
+
+**Roadmap after M:** the genuinely-next infra step is the real-CNI migration (Calico/Cilium) that would let
+the documented default-deny NetworkPolicy actually enforce (see the P5 `hardening-runbook.md`). The
+gVisor/Firecracker real-RCE shell stays CUT (unsafe on a single node). Auth & social (guestbook + off-site
+companion) stay CUT (auth-free by design). Permanent cuts unchanged: voice, multiplayer/site-music/
+activeframe (§10), Redis visualizer, MSDF runes, CMS + runnable-artifacts.
 
 ---
 
@@ -170,12 +224,18 @@ auth); Tailwind + Framer ADOPT (ratified vanilla instead — ADR 0001). Sprint L
 - Python `services/ai` (FastAPI) — dir doesn't exist; Redis also required and absent. ✅ services/ai SHIPPED (M4; 149 tests as of Sprint G). Redis never needed (in-process limiter).
 - Console `oracle`/`operator` commands currently redirect to /system saying "wiring up (M4)". ✅ WIRED (M4 → /oracle; Sprint G adds slugs + infer/evals commands).
 
-## 3. The Lab (M5 SHIPPED /lab + 5 demos; Sprint H added depth — annotations inline)
+## 3. The Lab (M5 SHIPPED /lab + 5 demos; Sprint H added depth; Sprint M added the safe shell + WebGL toy + WAF + API-playground — annotations inline)
 
 - **Real sandbox shell in the browser** — ephemeral gVisor/Firecracker microVM + ttyd, WS-proxied
   by Go core; non-root, read-only rootfs + tmpfs, CPU/mem/PID/time caps, network-isolated,
-  per-session teardown, never on the site-serving host.
-- **API playground** for a real API — auth, rate limits, pagination, live.
+  per-session teardown, never on the site-serving host. ✅ Sprint M (safe-by-construction): the
+  microVM+ttyd vision was CUT as unsafe on a single-node prod host — shipped instead a fixed-grammar,
+  in-memory, PROVABLY no-execution /lab terminal (pure Go `internal/shell` + an AST import-allowlist
+  test, zero capability passed) — see the Sprint M section.
+- **API playground** for a real API — auth, rate limits, pagination, live. ✅ Sprint M
+  (safe-by-construction): shipped real cursor pagination + an ephemeral HMAC demo-token (an honest
+  auth-header + 401/429 flow over a synthetic dataset — NOT real accounts; auth stays cut) — see the
+  Sprint M section.
 - **Load-test demo** — hammer an isolated endpoint → live latency histogram + tail; hard
   concurrency/rate caps so it can't be weaponised.
 - **Chaos button** — kill a replica in a disposable `demo` namespace → watch Prometheus show
@@ -191,7 +251,13 @@ auth); Tailwind + Framer ADOPT (ratified vanilla instead — ADR 0001). Sprint L
   RAG pipeline on /infra (hand-rolled SVG, fact cards sourced from manifests/code) — not
   per-project ADR sequence/ER diagrams (those remain open).
 - WAF + rate-limit + abuse monitoring — the security-hardening workstream gating the milestone.
-- `GaussianSplats3D` (AT toolbox) — a future lab toy.
+  ✅ Sprint M (safe-by-construction): shipped a MONITOR-mode app-layer WAF signature engine over core
+  /api/* (flags, never blocks by default; IP/UA-redacted; a live dashboard + a preview probe) —
+  honestly best-effort, NOT a security boundary — see the Sprint M section.
+- `GaussianSplats3D` (AT toolbox) — a future lab toy. ✅ Sprint M (safe-by-construction): SUBSTITUTED
+  by a vanilla raw-WebGL fragment-shader "arcane field" (a splat needs a heavy dep; the ADR-0001
+  vanilla rule → a hand-rolled shader instead; RM/CSP-safe, context-loss-robust) — see the Sprint M
+  section.
 
 ## 4. Résumé / authenticity (signing + preview SHIPPED F; /authenticity SHIPPED I — annotations inline)
 
@@ -289,7 +355,11 @@ auth); Tailwind + Framer ADOPT (ratified vanilla instead — ADR 0001). Sprint L
   same-namespace podSelector/namespaceSelector from-rules REJECTS all pod traffic regardless of the
   allow rules; cross-ns policies (postgres) work. Ollama runs without a netpol + compensating
   controls (ClusterIP-only, no SA token, non-root/ro-fs/seccomp; the demo ns is egress-locked).
-  Revisit if the CNI changes.
+  Revisit if the CNI changes. ✅ Sprint M (safe-by-construction): the correct gipc default-deny
+  NetworkPolicy (+ the full 18-flow map) + a hardened web Deployment are now DOCUMENTED as
+  ready-to-apply manifests + `docs/infra/hardening-runbook.md` (`8a6cc32`), but NOT force-applied
+  (still unenforceable on kube-router; a model for a future Calico/Cilium CNI) — see the Sprint M
+  section.
 
 - Jack-in veil can flash the mode-snap if first paint lags >~37ms on low-end devices.
 - Back/forward into /resume lands the camera slightly off-station once (self-corrects on scroll).

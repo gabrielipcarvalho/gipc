@@ -1,0 +1,82 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# HARDENED web Deployment — DOCUMENTED / ready-to-apply reference. NOT auto-applied.
+#
+#   * This file is `.example` and is NOT referenced by any kustomization.yaml, so a
+#     cluster apply never picks it up.
+#   * gipc-web is an ArgoCD app with selfHeal:true + prune:true on path infra/k8s/web
+#     — a raw `kubectl apply` of this would be REVERTED at the next reconcile. To roll
+#     it out for real, merge the hardening into infra/k8s/web/deployment.yaml (the
+#     GitOps path) or `argocd app set gipc-web --sync-policy none` first, then canary.
+#   * See docs/infra/hardening-runbook.md for the canary + rollback procedure.
+#
+# Closes the audit gap: the live web pod runs as root, unhardened, mounting the default
+# ServiceAccount token. This variant adds a non-root + read-only-root + drop-ALL-caps +
+# seccomp posture, keeping the app working via two writable tmpfs mounts.
+#
+# WRITABLE-PATH ANALYSIS (Next.js standalone, from apps/web/Dockerfile):
+#   - The runner image is `USER nextjs` (uid/gid 1001 — `adduser -S nextjs -u 1001`,
+#     group nodejs gid 1001), WORKDIR /app; it COPYs only .next/standalone + .next/static
+#     + public. It does NOT ship a .next/cache dir.
+#   - At runtime the standalone server writes: (a) /tmp (general temp); (b) the Next
+#     fetch-cache / image-optimization cache under /app/apps/web/.next/cache. With
+#     readOnlyRootFilesystem:true both would fail (mkdir/write on a RO fs), so each gets
+#     an emptyDir. fsGroup:1001 makes them writable by uid 1001.
+#   - The server listens on TCP :3000 (non-privileged) — drop-ALL caps / no NET_BIND is
+#     fine; no PID/unix-socket file is written.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: gipc
+  labels: { app: web }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: web }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  template:
+    metadata:
+      labels: { app: web }
+    spec:
+      automountServiceAccountToken: false # web makes ZERO k8s-API calls (only core:8080 SSR) → no token needed
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001 # from apps/web/Dockerfile (adduser -u 1001 nextjs) — NOT core/ai's 65532
+        runAsGroup: 1001
+        fsGroup: 1001 # lets uid 1001 write the emptyDir volumes below
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web
+          image: ghcr.io/gabrielipcarvalho/gipc-web:latest # tag pinned by CI via kustomization
+          ports:
+            - containerPort: 3000
+          env:
+            - { name: NODE_ENV, value: production }
+            - { name: PORT, value: "3000" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: next-cache, mountPath: /app/apps/web/.next/cache } # Next standalone runtime cache
+          readinessProbe:
+            httpGet: { path: /, port: 3000 }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /, port: 3000 }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { cpu: "1", memory: 384Mi }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: next-cache
+          emptyDir: {}

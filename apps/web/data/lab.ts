@@ -54,3 +54,29 @@ export const PLAYGROUND_ENDPOINTS: readonly ApiEndpoint[] = [
   { label: "uptime", path: "/api/uptime", note: "probe / incident history" },
   { label: "deploys", path: "/api/deploys", note: "recent deploy events" },
 ];
+
+// Safe sandbox shell (POST /api/lab/shell) — mirrors services/core/internal/shell.Result. Output is
+// server-produced plain text (the client renders it as textContent, never HTML).
+export type ShellResult = { output: string; cwd: string; cleared: boolean };
+
+// API-playground demo-token + pagination (Sprint M P3) — mirrors services/core/internal/server/lab_demo.go.
+// The token is an EPHEMERAL demo key (not real auth); the events are a clearly-labeled SYNTHETIC dataset.
+export type DemoToken = { token: string; expiresAt: string; tokenType: string; note?: string };
+export type DemoEvent = { id: number; ref: string; kind: string; note: string; ts: string };
+// nextCursor is `string | null` — null (never "") means no further page (Load-more hides on it).
+export type DemoEventsPage = { items: DemoEvent[]; nextCursor: string | null; total: number; limit: number };
+
+// App-layer WAF (Sprint M P4) — mirrors services/core/internal/{waf.Finding, server/waf.go}. Aggregate +
+// redacted: the recent ring carries the PATH only (never the query, client IP, or user-agent). The probe
+// is a pure engine preview that never mutates the live counters.
+export type WafFinding = { ruleId: string; category: string; block: boolean };
+export type WafRecent = { ruleId: string; category: string; method: string; path: string; ts: string };
+export type WafSnapshot = {
+  inspected: number;
+  flagged: number;
+  blocked: number;
+  byCategory: Record<string, number>;
+  recent: WafRecent[];
+  rateDenied: number; // the global limiter's aggregate 429 count — the honest "rate" dimension
+};
+export type WafProbeResult = { sample: string; findings: WafFinding[]; monitorOnly: boolean; note: string };

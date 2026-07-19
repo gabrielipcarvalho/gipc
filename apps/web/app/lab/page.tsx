@@ -27,9 +27,10 @@ export default function LabPage() {
           caps, streaming a live latency histogram; the <strong>DB explorer</strong> runs allowlisted
           queries on a disposable demo postgres (synthetic data, never the platform&apos;s real database)
           and shows the planner&apos;s real <code>EXPLAIN (ANALYZE)</code> output. Everything runs my own
-          code against an isolated,
-          NetworkPolicy-fenced namespace — the interactive visitor shell is deliberately deferred (too
-          dangerous on a single-node host). The same live metrics are on <a href="/system">/system</a>;
+          code against an isolated, NetworkPolicy-fenced namespace. The <strong>sandbox shell</strong> is a
+          safe-by-construction terminal — a fixed command grammar over an in-memory filesystem with{" "}
+          <em>zero</em> arbitrary execution (a real exec surface would be too dangerous on a single-node
+          host, so it&apos;s deliberately not that). The same live metrics are on <a href="/system">/system</a>;
           the newest exhibit — a <a href="/oracle?tab=local">self-hosted local model</a> — lives on the
           oracle page.
         </p>

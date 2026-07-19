@@ -41,6 +41,20 @@ type Config struct {
 	DemoDBURL  string  // demo-ns toy postgres DSN (SELECT-only role; NEVER the ns-data prod DB)
 	DBRunRPS   float64 // /api/lab/db/run per-IP cooldown refill (default 0.5 ⇒ ~1 run / 2s)
 	DBRunBurst int     // /api/lab/db/run per-IP bucket (default 2)
+	// Sprint M safe sandbox shell — /api/lab/shell (in-memory, no exec; cheaper than the others)
+	ShellRPS   float64 // per-IP refill (default 2 ⇒ ~2 cmds/s)
+	ShellBurst int     // per-IP bucket (default 8)
+	// Sprint M P3 — API-playground demo-token + pagination (/api/lab/demo/*). The HMAC signing key is
+	// minted per-process from crypto/rand (never env) — no secret to configure; tokens die on restart.
+	DemoTokenTTL time.Duration // ephemeral demo-token lifetime (default 5m — short)
+	DemoRPS      float64       // /api/lab/demo/* per-IP refill (default 1)
+	DemoBurst    int           // /api/lab/demo/* per-IP bucket (default 5; raw ⇒ DEMO_BURST=0 disables, for the wiring test)
+	// Sprint M P4 — app-layer WAF: monitor-mode signature inspection over the core /api/* request stream.
+	WAFEnabled    bool    // monitor middleware on/off (default true; false ⇒ pure pass-through kill switch)
+	WAFBlock      bool    // soft-block block-eligible rules (default false ⇒ MONITOR only, never blocks legit traffic)
+	WAFRing       int     // recent-findings ring size (clampInt-floored ≥1 — no size-0 modulo panic)
+	WAFProbeRPS   float64 // /api/lab/waf/probe per-IP refill (default 1)
+	WAFProbeBurst int     // /api/lab/waf/probe per-IP bucket (default 5; raw ⇒ WAF_PROBE_BURST=0 disables, for the wiring test)
 }
 
 // clampInt bounds v to [1, hi] — used so a misconfigured env cap can neither exceed the invariant nor drop below 1.
@@ -89,6 +103,18 @@ func Load() (Config, error) {
 		DemoDBURL:  env("DEMO_DB_URL", ""),
 		DBRunRPS:   envFloat("DB_RPS", 0.5),
 		DBRunBurst: envInt("DB_BURST", 2),
+		ShellRPS:   envFloat("SHELL_RPS", 2),
+		ShellBurst: envInt("SHELL_BURST", 8),
+
+		DemoTokenTTL: envDuration("DEMO_TOKEN_TTL", 5*time.Minute),
+		DemoRPS:      envFloat("DEMO_RPS", 1),
+		DemoBurst:    envInt("DEMO_BURST", 5),
+
+		WAFEnabled:    envBool("WAF_ENABLED", true),
+		WAFBlock:      envBool("WAF_BLOCK", false),
+		WAFRing:       clampInt(envInt("WAF_RING", 32), 256),
+		WAFProbeRPS:   envFloat("WAF_PROBE_RPS", 1),
+		WAFProbeBurst: envInt("WAF_PROBE_BURST", 5),
 	}, nil
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/loki"
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/middleware"
 	"github.com/gabrielipcarvalho/gipc/services/core/internal/promql"
+	"github.com/gabrielipcarvalho/gipc/services/core/internal/waf"
 )
 
 // Version is stamped at build time via -ldflags "-X ...server.Version=<sha>"; "dev" otherwise.
@@ -47,8 +48,23 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	chaosLimiter := middleware.NewLimiter(cfg.ChaosRPS, cfg.ChaosBurst) // per-IP cooldown ≈ 1 kill / 10s
 	loadLimiter := middleware.NewLimiter(cfg.LoadRPS, cfg.LoadBurst)    // per-IP cooldown ≈ 1 run / 5s
 	dbLimiter := middleware.NewLimiter(cfg.DBRunRPS, cfg.DBRunBurst)    // per-IP cooldown ≈ 1 run / 2s
+	shellLimiter := middleware.NewLimiter(cfg.ShellRPS, cfg.ShellBurst) // per-IP ≈ 2 cmds/s (in-memory, cheap)
+	demoLimiter := middleware.NewLimiter(cfg.DemoRPS, cfg.DemoBurst)    // /api/lab/demo/* per-IP
 	dbRun := armDBRunner(cfg.LabEnabled, cfg.DemoDBURL)                 // nil without Lab+DSN → honest 503
 	labHub := newHub()                                                  // lab lifecycle events — separate from /api/stream
+
+	// Sprint M P3 — the demo-token signer's HMAC key is minted per-process (crypto/rand). A rand failure
+	// (near-unreachable) leaves it nil and both /api/lab/demo/* handlers degrade to 503.
+	demoSigner, err := newDemoTokenSigner(cfg.DemoTokenTTL)
+	if err != nil {
+		log.Warn("demo-token signer init failed — /api/lab/demo/* will 503", "err", err)
+		demoSigner = nil
+	}
+
+	// Sprint M P4 — app-layer WAF (monitor mode over /api/*): engine + aggregate state + probe limiter.
+	wafEngine := waf.NewEngine()
+	wafState := newWAFState(cfg.WAFRing)
+	wafProbeLimiter := middleware.NewLimiter(cfg.WAFProbeRPS, cfg.WAFProbeBurst)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/healthz", healthz)
@@ -74,6 +90,16 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 	// Lab DB explorer — allowlisted queries against the disposable demo-ns toy postgres.
 	mux.HandleFunc("GET /api/lab/db/queries", labDBQueriesHandler())
 	mux.Handle("POST /api/lab/db/run", dbLimiter.Middleware(http.HandlerFunc(labDBRunHandler(dbRun, log, labHub))))
+	// Sprint M — safe sandbox shell: a fixed-grammar, in-memory, no-exec terminal (internal/shell is a
+	// capability-free package; the handler passes it only the cmd+cwd strings). Gated by LabEnabled.
+	mux.Handle("POST /api/lab/shell", shellLimiter.Middleware(http.HandlerFunc(labShellHandler(cfg))))
+	// Sprint M P3 — API-playground demo-token + cursor pagination. Safe-by-construction: the token gates
+	// ONLY a synthetic demo dataset (no real capability/data/secret). Both routes LabEnabled+signer gated.
+	mux.Handle("POST /api/lab/demo/token", demoLimiter.Middleware(http.HandlerFunc(demoTokenHandler(cfg, demoSigner))))
+	mux.Handle("GET /api/lab/demo/events", demoLimiter.Middleware(http.HandlerFunc(demoEventsHandler(cfg, demoSigner))))
+	// Sprint M P4 — WAF dashboard (aggregate stats, incl. the limiter's rate-denied) + a pure-preview probe.
+	mux.HandleFunc("GET /api/lab/waf", wafStatsHandler(cfg, wafState, limiter))
+	mux.Handle("GET /api/lab/waf/probe", wafProbeLimiter.Middleware(http.HandlerFunc(wafProbeHandler(cfg, wafEngine))))
 
 	// One mux → correct 404 (unknown path) / 405 (wrong method). Logging + rate-limit skip
 	// /api/healthz|readyz internally (middleware.IsHealthPath), so kubelet probes are never
@@ -83,6 +109,7 @@ func New(cfg config.Config, log *slog.Logger, srvCtx context.Context) (http.Hand
 		middleware.RequestIDMiddleware,
 		middleware.Logging(log),
 		middleware.CORS(cfg.CORSOrigin),
+		wafMiddleware(wafEngine, wafState, cfg, labHub), // monitor-mode WAF — runs before the limiter so it sees floods
 		limiter.Middleware,
 	)(mux)
 	return handler, uptime
