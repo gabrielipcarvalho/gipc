@@ -20,23 +20,23 @@
     {
      "q": "Has Gabriel published any research papers?",
      "top": [
-      "Gabriel Carvalho — profile",
-      "Experience — Software & DevOps Engineer · WealthGoal Software (formerly part of JDL Strategies)",
-      "Work — AI drowning-detection research (Griffith × Huizhou)"
+      "Gabriel Carvalho \u2014 profile",
+      "Experience \u2014 Software & DevOps Engineer \u00b7 WealthGoal Software (formerly part of JDL Strategies)",
+      "Work \u2014 AI drowning-detection research (Griffith \u00d7 Huizhou)"
      ]
     },
     {
      "q": "What was Gabriel's Master's dissertation about?",
      "top": [
-      "Gabriel Carvalho — profile",
+      "Gabriel Carvalho \u2014 profile",
       "Education",
-      "Experience — Casual Academic · Griffith University"
+      "Experience \u2014 Casual Academic \u00b7 Griffith University"
      ]
     },
     {
      "q": "How does this site protect its AI endpoints from abuse?",
      "top": [
-      "The AI Operator — this service",
+      "The AI Operator \u2014 this service",
       "services/ai/app/oracle.py",
       "infra/k8s/ai/ai.yaml"
      ]
@@ -97,41 +97,11 @@
      ]
     }
    ],
-   "evidence_grounded_ratio": 0.537,
-   "n_evidence": 41,
-   "ungrounded_examples": [
-    {
-     "evidence": "Kubernetes (k3s, AKS) listed in Cloud & Infrastructure skills",
-     "tokens": [
-      "listed"
-     ]
-    },
-    {
-     "evidence": "Azure (AKS) listed in Cloud & Infrastructure skills",
-     "tokens": [
-      "listed"
-     ]
-    },
-    {
-     "evidence": "Python listed as primary language",
-     "tokens": [
-      "listed",
-      "primary"
-     ]
-    },
-    {
-     "evidence": "CI/CD & git-driven deploys listed in DevOps & Platform skills",
-     "tokens": [
-      "listed"
-     ]
-    },
-    {
-     "evidence": "Docker listed in DevOps & Platform skills",
-     "tokens": [
-      "listed"
-     ]
-    }
-   ]
+   "evidence_grounded_ratio": 1.0,
+   "n_evidence": 31,
+   "zero_grounded_drop_count": 0,
+   "ungrounded_examples": [],
+   "_note": "Re-measured 2026-07-19 post-P4 (RAW, filter_ungrounded=False): 4 clean runs all 1.0 (pre-P4 baseline was 0.537). n_evidence 41 to 31 as evidence became fully-verbatim/tighter. INDICATIVE, single-shot at default temperature; label_accuracy + jds unchanged. Other evals (retrieval/faithfulness) not re-run this pass."
   }
  }
 }
