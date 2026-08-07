@@ -1,0 +1,9 @@
+# State is local-until-R2 (see README) and credential-adjacent — never commit it.
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+# tfvars carry the home IP + tenancy OCIDs — keep private; commit only the .example.
+*.tfvars
+!*.tfvars.example
+oci.plan
