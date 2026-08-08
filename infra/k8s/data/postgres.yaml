@@ -100,3 +100,6 @@ spec:
             matchLabels: { kubernetes.io/metadata.name: gipc }
       ports:
         - { protocol: TCP, port: 5432 }
+  # NOTE: the pg-backup CronJob (gipc ns) reaches postgres via the rule above. Any NEW client
+  # pod must retry on start: kube-router adds fresh pod IPs to its netpol ipsets ~10s late
+  # (verified 2026-08-08 — connection refused until sync). See pg-backup.cronjob.yaml.
