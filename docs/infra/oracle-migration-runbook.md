@@ -81,6 +81,7 @@ for garuda — this time it RUNS for real, no `--check`):
    | demo-db-url · deploy-hook | gipc |
    | pg-backup-auth · r2-backup | gipc |
    | grafana-admin | observability |
+   | gipc-repo (ArgoCD repo SSH credential) | argocd |
 
    Method: pipe cluster→cluster (never to disk): `kubectl get secret -n <ns> <name> -o yaml`
    → scrub uid/resourceVersion/creationTimestamp → `ssh oracle 'sudo k3s kubectl apply -f -'`.
@@ -141,3 +142,31 @@ connectors** — cutover = add one, remove one:
   any demotion beyond stopping its connector.
 - Oracle-rug-pull day (tier shrunk/reclaimed/banned): this same runbook, Phases A–F, against an OVH
   VPS-2 Sydney (amd64 — images are multi-arch, no CI change needed). Budget ~1 hr + DNS untouched.
+
+## 11. Execution log — 2026-08-08 (MIGRATED; deviations that ARE the redeploy script)
+
+Cutover completed ~07:16 UTC. All routes 200 via oracle only; TTFB from AU ≈ 44 ms. Deviations vs
+the plan above — fold these in on any future run:
+
+1. **OCI Ubuntu images ship a blanket host firewall**: `-A INPUT -j REJECT` + `-A FORWARD -j
+   REJECT` (persisted in `/etc/iptables/rules.v4`). This silently breaks ALL pod networking
+   (pod→apiserver VIP = HTTP 000, coredns crashloops) while Cilium looks healthy and its service
+   map is correct. Fix: delete both rules runtime + from rules.v4 (keep the 169.254 InstanceServices
+   rules). The VCN NSG is the boundary. THE root cause of the only real debugging of the day.
+2. **Cilium + k3s**: cilium-cli install (1.19.5) auto-assumed kube-proxy replacement, so k3s got
+   `disable-kube-proxy: true` (+ flannel-backend none, disable-network-policy) in
+   `/etc/rancher/k3s/config.yaml` — and a **reboot** is required to flush the embedded kube-proxy's
+   leftover iptables (KUBE-SVC chains black-hole service VIPs; pods created pre-flip need a bounce).
+3. **ArgoCD**: `kubectl apply --server-side` (applicationsets CRD exceeds the client-side annotation
+   limit), and the repo SSH credential (`argocd/gipc-repo`) must migrate or sync fails with
+   "SSH agent requested" — added to the secrets table above.
+4. **cloudflared**: arm64 binary 2026.7.3 + a hand-written systemd unit (Ubuntu has no package);
+   creds staged pre-cutover, service enabled only at the flip. Connectors landed at syd01.
+5. **ollama**: models restored by the in-repo `ollama-pull.job.yaml` (qwen2.5:0.5b-instruct), not
+   copied from the old PVC.
+6. **Cilium enforcement verified**: same-ns unauthorized pod → postgres DENIED (kube-router never
+   could); authorized fresh pod connects first-try (the ~10s ipset lag is also gone). The pg-backup
+   job stays in gipc (works, documented); moving it back to data is now possible but optional.
+7. Bootstrap ran as direct SSH (logged in this session); ansible codification is a follow-up task.
+8. Post-cutover: garuda cloudflared stopped+disabled (rollback = `systemctl start`), garuda
+   pg-backup CronJob suspended, garuda cluster retained as staging ≥7 days.
