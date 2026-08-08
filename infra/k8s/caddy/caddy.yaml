@@ -17,6 +17,12 @@ data:
       handle /caddy-health {
         respond 200
       }
+      # arc4ne.io — the company-site tenant (ns arcane). Host-scoped FIRST so gipc's /api/*
+      # routes never leak onto the arc4ne hostnames.
+      @arc4ne host arc4ne.io www.arc4ne.io
+      handle @arc4ne {
+        reverse_proxy arcane-web.arcane:80
+      }
       handle /api/ai/* {
         reverse_proxy ai:8000 {
           flush_interval -1
