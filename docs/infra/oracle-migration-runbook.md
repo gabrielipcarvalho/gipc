@@ -71,17 +71,19 @@ for garuda — this time it RUNS for real, no `--check`):
 2. **Secrets** (imperative, never in git — export from garuda `kubectl get secret -o yaml`, scrub
    metadata, apply on oracle):
 
-   | Secret | NS | Notes |
-   |---|---|---|
-   | postgres credentials | data | source of truth for DATABASE_URL |
-   | ai: DATABASE_URL | gipc | derived from data-ns pg secret |
-   | ai: ANTHROPIC_API_KEY | gipc | optional — absent = honest degrade |
-   | ai: TURNSTILE_SECRET | gipc | |
-   | ai: AUDIT_SALT | gipc | |
-   | web: DEPLOY_HOOK_KEY | gipc | deploy-feed HMAC (matches GH secret) |
-   | pg-backup-auth | gipc | copy of the data-ns `postgres` password (key `password`) — backup job |
-   | r2-backup | gipc | R2 S3 creds, token gipc-backups-rw (local copy: `~/.config/claude-secrets/r2-backup.env`) |
-   | grafana admin / others | observability | **VERIFY at execution**: `kubectl get secrets -A` diff |
+   Actual inventory (verified live 2026-08-08 — migrate all 10):
+
+   | Secret | NS |
+   |---|---|
+   | postgres | data |
+   | demo-db | demo |
+   | ai-secrets · anthropic · turnstile | gipc |
+   | demo-db-url · deploy-hook | gipc |
+   | pg-backup-auth · r2-backup | gipc |
+   | grafana-admin | observability |
+
+   Method: pipe cluster→cluster (never to disk): `kubectl get secret -n <ns> <name> -o yaml`
+   → scrub uid/resourceVersion/creationTimestamp → `ssh oracle 'sudo k3s kubectl apply -f -'`.
 
 3. Workloads: `kubectl apply -k infra/k8s/<dir>` for caddy, core, ai, web, data, demo, observability
    (kustomizations pin exact SHAs — arm64 layers pull automatically from the multi-arch manifests).

@@ -47,7 +47,7 @@ export const REQUEST_PATH: ArchDiagramData = {
   viewH: 620,
   lanes: [
     { label: "internet", x: 8, y: 8, w: 924, h: 88 },
-    { label: "garuda — host (systemd / k3s server)", x: 8, y: 104, w: 924, h: 88 },
+    { label: "gipc-node — host (OCI A1 Sydney · systemd / k3s server)", x: 8, y: 104, w: 924, h: 88 },
     { label: "k3s · ns gipc", x: 8, y: 200, w: 924, h: 192 },
     { label: "ns observability", x: 8, y: 400, w: 400, h: 120 },
     { label: "ns data", x: 416, y: 400, w: 220, h: 120 },
@@ -55,7 +55,7 @@ export const REQUEST_PATH: ArchDiagramData = {
   ],
   nodes: [
     { id: "visitor", label: "visitor", sub: "you, now", x: 40, y: 30, w: 120, h: NH, facts: ["This page render is itself a walk of this diagram."] },
-    { id: "cf", label: "Cloudflare edge", sub: "DNS · TLS · WAF", x: 360, y: 30, w: 170, h: NH, facts: ["gipc.dev + www resolve at Cloudflare; TLS terminates at the edge.", "Origin is reachable ONLY via the tunnel — no inbound ports exposed on garuda (the tunnel dials out)."] },
+    { id: "cf", label: "Cloudflare edge", sub: "DNS · TLS · WAF", x: 360, y: 30, w: 170, h: NH, facts: ["gipc.dev + www resolve at Cloudflare; TLS terminates at the edge.", "Origin is reachable ONLY via the tunnel — no inbound ports exposed on the origin host (the tunnel dials out)."] },
     { id: "cloudflared", label: "cloudflared", sub: "host systemd — the tunnel", x: 360, y: 126, w: 170, h: NH, facts: ["A host systemd process, not a cluster workload (infra/cloudflared/config.yml).", "Outbound-only tunnel to Cloudflare; tunnel id redacted from this page by policy."] },
     { id: "k8sapi", label: "k8s API", sub: "k3s server", x: 720, y: 126, w: NW, h: NH, facts: ["Single-node k3s; the API server runs on the same host."] },
     { id: "caddy", label: "Caddy", sub: "ingress · CSP · headers", x: 360, y: 222, w: 170, h: NH, facts: ["Route table (caddy.yaml): /api/ai/* → ai:8000 · /api/* → core:8080 · everything else → web:80.", "Sets the CSP + security headers site-wide; -Server header stripped."] },
