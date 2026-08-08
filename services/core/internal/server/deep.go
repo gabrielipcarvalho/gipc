@@ -82,8 +82,8 @@ var deepFixedQueries = []struct {
 		{"used", `(1 - sum(node_filesystem_avail_bytes{mountpoint="/"}) / sum(node_filesystem_size_bytes{mountpoint="/"})) * 100`},
 	}},
 	{"nodeNet", "node network (physical NICs)", "KiB/s", []struct{ label, query string }{
-		{"rx", `sum(rate(node_network_receive_bytes_total{device!~"lo|veth.+|cni.+|flannel.+|tailscale.+"}[2m])) / 1024`},
-		{"tx", `sum(rate(node_network_transmit_bytes_total{device!~"lo|veth.+|cni.+|flannel.+|tailscale.+"}[2m])) / 1024`},
+		{"rx", `sum(rate(node_network_receive_bytes_total{device!~"lo|veth.+|cni.+|flannel.+|tailscale.+|cilium.+|lxc.+"}[2m])) / 1024`},
+		{"tx", `sum(rate(node_network_transmit_bytes_total{device!~"lo|veth.+|cni.+|flannel.+|tailscale.+|cilium.+|lxc.+"}[2m])) / 1024`},
 	}},
 }
 
