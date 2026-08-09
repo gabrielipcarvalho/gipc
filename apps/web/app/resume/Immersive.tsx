@@ -402,16 +402,22 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
 
     const cards = Array.from(root.querySelectorAll<HTMLElement>("[data-station]"));
     const stations = cards.length;
-    if (!stations) return;
     let revealed = false;
+    // ONE reveal, over the exact set the CSS hides (.cst-card) — every bail/fallback/first-frame
+    // path calls this, so no card can be left invisible by selector drift between paths.
+    const revealAll = () => {
+      revealed = true;
+      root.querySelectorAll<HTMLElement>(".cst-card").forEach((c) => (c.style.visibility = "visible"));
+    };
+    if (!stations) {
+      revealAll(); // no stations to pose → nothing will ever run frame(); never leave cards hidden
+      return;
+    }
     // CLS-veil safety net: frame() is the primary revealer, but if rAF is throttled to zero
     // (recorded Sprint M lesson: automation) the résumé must never stay hidden. 400ms covers
     // the veil window; a normal first frame beats it easily.
     const revealFallback = window.setTimeout(() => {
-      if (!revealed) {
-        revealed = true;
-        root.querySelectorAll<HTMLElement>(".cst-card").forEach((c) => (c.style.visibility = "visible"));
-      }
+      if (!revealed) revealAll();
     }, 400);
 
     // hand-authored camera stations: per-card cumulative vh offsets + per-station descent lerp.
@@ -456,20 +462,10 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       rebuildRain: () => buildRain(),
       dejaVu: () => {
         // A10 — "a change in the Matrix": one column visibly repeats itself for a beat.
-        // Pick from the columns the density dither actually DRAWS (same accumulator), else the
-        // beat can land on a skipped column and silently no-op.
+        // drawRain force-draws the marked column, so a uniform pick is always visible.
         const cols = layers[0]?.cols ?? 0;
         if (!cols) return;
-        const drawn: number[] = [];
-        let sel = 1 - density / 2;
-        for (let c = 0; c < cols; c++) {
-          sel += density;
-          if (sel < 1) continue;
-          sel -= 1;
-          drawn.push(c);
-        }
-        if (!drawn.length) return;
-        dejaCol = drawn[(Math.random() * drawn.length) | 0];
+        dejaCol = (Math.random() * cols) | 0;
         dejaUntil = performance.now() + 900;
       },
     };
@@ -609,14 +605,15 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
         let sel = 1 - density / 2;
         for (let c = 0; c < l.cols; c++) {
           sel += density;
-          if (sel < 1) continue;
-          sel -= 1;
+          const dejaHere = dejaActive && top && c === dejaCol;
+          if (sel < 1 && !dejaHere) continue; // the déjà-vu column always draws (A10 must be visible)
+          if (sel >= 1) sel -= 1;
           const x = c * l.fs;
           const y = l.drops[c] * l.fs;
+          const deja = dejaActive && top && c === dejaCol;
           // A2 — the code makes way: columns crossing the focused card fall dimmed
           const parted = focusRect && x >= focusRect.l && x <= focusRect.r && y >= focusRect.t && y <= focusRect.b;
           if (parted) ctx.globalAlpha = 0.3;
-          const deja = dejaActive && top && c === dejaCol;
           const isRune = !deja && Math.random() < runeRate;
           if (isRune) {
             ctx.drawImage(l.rune, x, y - l.fs, l.fs, l.fs); // 3× rune → scaled down
@@ -643,6 +640,12 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     let frames = 0;
     let lastTs = 0;
     const frame = (ts: number) => {
+      // read layout BEFORE any style writes this frame: last frame's flush is already done, so
+      // this getBoundingClientRect forces no reflow and stays out of the perf-budget window
+      if (rectTick <= 0) {
+        refreshFocusRect();
+        rectTick = 4;
+      } else rectTick--;
       const t0 = performance.now();
       const dt = lastTs ? Math.min(ts - lastTs, 100) : 16.7;
       lastTs = ts;
@@ -653,7 +656,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       cam += (window.scrollY - cam) * normAlpha(frameLerp, dt);
       if (Math.abs(window.scrollY - cam) < 0.5) cam = window.scrollY;
       // A1 — rain velocity chases the camera's speed (≈2 at a hard flick, decays to 0 at rest)
-      const instVel = Math.min(Math.abs(cam - prevCam) / (vh * 0.02), 2);
+      const instVel = Math.min(Math.abs(cam - prevCam) / (dt / 16.667) / (vh * 0.02), 2); // per-60Hz-frame units
       rainVel += (instVel - rainVel) * normAlpha(0.12, dt);
       if (helix) {
         camIdx += (camIndexOf(cam) - camIdx) * normAlpha(HELIX.POSE_LERP, dt);
@@ -690,17 +693,9 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
         }
       }
       fullPass = false;
-      if (!revealed) {
-        // first correctly-posed frame is on screen next paint — safe to lift the CLS veil
-        revealed = true;
-        cards.forEach((c) => (c.style.visibility = "visible"));
-      }
+      if (!revealed) revealAll(); // first correctly-posed frame is painted next — lift the CLS veil
       const idx = nearestStation(offsets, cam / vh);
       if (helix ? Math.abs(idx - camIdx) < 0.5 : Math.abs(offsets[idx] * vh - cam) < vh * 0.5) setFocused(idx);
-      if (rectTick <= 0) {
-        refreshFocusRect(); // A2 needs the focused card's rect; refreshed every ~12 frames
-        rectTick = 12;
-      } else rectTick--;
       drawRain();
       acc += performance.now() - t0;
       frames += 1;
@@ -716,24 +711,53 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     /* ---- O3/A7 — detail bloom: the focused card expands into the reading surface ---- */
     let bloomAcc = 0;
     let slamT = 0;
+    let slamming: HTMLElement | null = null; // the card mid-CRT-slam (Escape must still be ours)
+    let prevOverflow = "";
+    let prevPadR = "";
+    const unlockScroll = () => {
+      document.documentElement.style.overflow = prevOverflow;
+      document.documentElement.style.paddingRight = prevPadR;
+    };
+    const settleSlam = (el: HTMLElement) => {
+      window.clearTimeout(slamT);
+      el.classList.remove("is-bloomed", "is-slamming");
+      if (slamming === el) slamming = null;
+    };
     const closeBloom = () => {
       if (!bloomed) return;
       const el = bloomed;
       bloomed = null;
+      slamming = el;
       el.classList.add("is-slamming"); // A7 — CRT slam
-      slamT = window.setTimeout(() => el.classList.remove("is-bloomed", "is-slamming"), 320);
-      document.documentElement.style.overflow = "";
+      // timer AND animationend both settle (whichever fires first) — no path leaves the card stuck
+      slamT = window.setTimeout(() => settleSlam(el), 400);
+      el.addEventListener("animationend", () => settleSlam(el), { once: true });
+      cards.forEach((c) => (c.inert = false)); // release the modal containment
+      unlockScroll();
+      el.focus(); // hand focus back to the (still-focused) station card
     };
     const openBloom = (el: HTMLElement) => {
       if (bloomed || !helix) return;
-      // a re-open within the 320ms slam window must not let the stale timeout strip the live bloom
+      // a re-open within the slam window must not let the stale timeout strip the live bloom
       window.clearTimeout(slamT);
+      slamming = null;
       cards.forEach((c) => c.classList.remove("is-bloomed", "is-slamming"));
       bloomed = el;
       bloomAcc = 0;
       el.style.transform = ""; // hand geometry to the CSS class; frame() skips this card meanwhile
       el.classList.add("is-bloomed");
-      document.documentElement.style.overflow = "hidden"; // scroll lock, like the reference
+      // modal semantics (CommandPalette precedent): background cards inert, focus moves in,
+      // scroll locks with the prior values SAVED and the scrollbar gutter compensated
+      cards.forEach((c) => {
+        if (c !== el) c.inert = true;
+      });
+      const docEl = document.documentElement;
+      prevOverflow = docEl.style.overflow;
+      prevPadR = docEl.style.paddingRight;
+      const gutter = window.innerWidth - docEl.clientWidth;
+      if (gutter > 0) docEl.style.paddingRight = `${gutter}px`;
+      docEl.style.overflow = "hidden";
+      el.focus();
     };
     const onCardClick = (e: MouseEvent) => {
       if (bloomed) return;
@@ -755,7 +779,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     };
     const onKeyBloom = (e: KeyboardEvent) => {
       if (constructKeyBlocked(e)) return; // the palette owns the keyboard while open
-      if (e.key === "Escape" && bloomed) {
+      if (e.key === "Escape" && (bloomed || slamming)) {
         // consume it in the CAPTURE phase — ConstructShell's Escape exits the whole Construct,
         // and a modal's Escape must never double as "leave the page"
         e.preventDefault();
@@ -817,7 +841,8 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       window.clearTimeout(slamT);
       window.clearTimeout(revealFallback);
       closeBloom();
-      document.documentElement.style.overflow = "";
+      unlockScroll();
+      cards.forEach((c) => (c.inert = false));
       root.removeAttribute("data-cst-helix");
       settleAll();
       if (focusedIdx >= 0) cards[focusedIdx]?.classList.remove("is-focused");

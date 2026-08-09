@@ -732,7 +732,10 @@ a{ color:inherit; text-decoration:none; }
   from{ -webkit-mask-size:0 0; mask-size:0 0; }
 }
 
-/* A7 — CRT slam close: collapse to a bright line, then gone (class removed after 320ms) */
+/* A7 — CRT slam close: collapse to a bright line, then gone. Deliberately NOT from-only: this is
+   an EXIT transition whose true rest state is "classes removed" — settled by BOTH a JS timer and
+   animationend, so no path strands the card; the immersive layer never mounts under reduced
+   motion, so animation:none can only ever mean "the card stays visible until the settle". */
 .construct[data-mode="immersive"] .cst-card.is-bloomed.is-slamming{
   animation:cst-slam .3s var(--ease) both;
 }
