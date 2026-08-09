@@ -53,7 +53,7 @@ type OutLine = { id: number; kind: "cmd" | "out"; text: React.ReactNode };
 
 // every command + alias the switch below understands — drives tab-completion + did-you-mean
 export const KNOWN_COMMANDS = [
-  "help", "whoami", "ls", "about", "scry", "system", "work", "grimoire", "writeups", "blog", "timeline",
+  "help", "whoami", "ls", "about", "scry", "trace", "system", "work", "grimoire", "writeups", "blog", "timeline",
   "experience", "resume", "lab", "operator", "oracle", "infer", "evals", "ward", "summon", "connect",
   "contact", "social", "meet", "call", "authenticity", "verify", "theme", "history", "restore", "clear", "exit",
 ]; // .hidden / cat kept OUT — the CTF trailhead stays off tab-complete + did-you-mean
@@ -74,11 +74,60 @@ function editDistance(a: string, b: string): number {
   return dp[a.length];
 }
 
+/* N2 — the live scry: three parallel reads of the real platform (same public APIs /system uses),
+   appended to the console as they land. Every line is fetched, none is scripted; on total failure
+   it says so honestly. */
+async function scryLive(append: (t: React.ReactNode) => void) {
+  const get = async (u: string) => {
+    const r = await fetch(u, { cache: "no-store", signal: AbortSignal.timeout(4000) });
+    if (!r.ok) throw new Error(String(r.status));
+    return r.json();
+  };
+  const [st, tr, dp] = await Promise.allSettled([
+    get("/api/status"),
+    get("/api/trace"),
+    get("/api/deploys"),
+  ]);
+  let hit = false;
+  if (st.status === "fulfilled") {
+    const m = statusToMetrics(st.value as Status).slice(0, 3);
+    if (m.some((x) => x.v !== "—")) {
+      append(`telemetry: ${m.map((x) => `${x.k} ${x.v}`).join(" · ")}`);
+      hit = true;
+    }
+  }
+  if (tr.status === "fulfilled") {
+    const t = tr.value as { hops?: { name: string }[]; edge?: { colo?: string } };
+    if (t.hops?.length) {
+      const edge = t.edge?.colo ? ` · edge ${t.edge.colo}` : "";
+      append(`your request, just now: ${t.hops.map((h) => h.name).join(" → ")}${edge} — the real path`);
+      hit = true;
+    }
+  }
+  if (dp.status === "fulfilled") {
+    const evs = dp.value as { subject?: string; ts?: string }[];
+    const last = Array.isArray(evs)
+      ? [...evs].filter((e) => e.subject).sort((a, b) => ((a.ts ?? "") < (b.ts ?? "") ? 1 : -1))[0]
+      : null;
+    if (last?.subject) {
+      append(`last deploy: ${last.subject}`);
+      hit = true;
+    }
+  }
+  append(
+    hit ? (
+      <>proof, not claims — the full operator surface → <b>/system</b></>
+    ) : (
+      "the scrying pool is dark — /system has the full picture."
+    ),
+  );
+}
+
 // command handlers → return output lines (strings/JSX); `nav` navigates via the router
 function runCommand(
   raw: string,
   ctx: { history: string[] },
-): { out: React.ReactNode[]; clear?: boolean; nav?: string; theme?: string; restore?: boolean; ctf?: boolean } {
+): { out: React.ReactNode[]; clear?: boolean; nav?: string; theme?: string; restore?: boolean; ctf?: boolean; live?: boolean } {
   const cmd = raw.trim().toLowerCase();
   if (!cmd) return { out: [] };
   const first = cmd.split(/\s+/)[0];
@@ -87,7 +136,7 @@ function runCommand(
       return { out: [
         "navigate:  system · work · timeline · resume · connect",
         "inspect:   whoami · about · ls · theme · history",
-        "arcane:    scry (observe) · summon (deploy) · ward (security) · oracle [slug] · infer (local AI) · evals · authenticity (verify)",
+        "arcane:    scry / trace (observe LIVE) · summon (deploy) · ward (security) · oracle [slug] · infer (local AI) · evals · authenticity (verify)",
         "utility:   help · clear · Tab completes · ↑/↓ history",
       ] };
     case "history":
@@ -119,8 +168,11 @@ function runCommand(
     case "restore":
       return { out: ["telemetry pane restored."], restore: true };
     case "about":
-    case "scry":
       return { out: ["I build real systems. This console runs on a box I operate — live telemetry, real deploys, a tool-using agent. Proof, not claims."] };
+    case "trace":
+    case "scry":
+      // N2: scry scries — the sync line lands instantly, the live readings append as they arrive
+      return { out: ["◈ scrying the platform …"], live: true };
     case "system":
       return { out: [<>the operator surface → <b>/system</b>: topology, live metrics, deploy feed.</>], nav: "/system" };
     case "work":
@@ -354,7 +406,7 @@ export function Console() {
     const raw = input;
     const trimmed = raw.trim();
     const nextHistory = trimmed ? [...history, trimmed] : history;
-    const { out, clear, nav, theme, restore, ctf } = runCommand(raw, { history: nextHistory });
+    const { out, clear, nav, theme, restore, ctf, live } = runCommand(raw, { history: nextHistory });
     setHistory(nextHistory);
     setHIdx(-1);
     setInput("");
@@ -362,6 +414,7 @@ export function Console() {
     const next: OutLine[] = [{ id: idRef.current++, kind: "cmd", text: raw }];
     for (const o of out) next.push({ id: idRef.current++, kind: "out", text: o });
     setLog((l) => [...l, ...next]);
+    if (live) void scryLive((t) => setLog((l) => [...l, { id: idRef.current++, kind: "out", text: t }]));
     if (theme) applyTheme(theme);
     if (restore) setPanelClosed(false);
     if (ctf) { try { localStorage.setItem("gipc-ctf", "found"); } catch { /* private mode */ } }
