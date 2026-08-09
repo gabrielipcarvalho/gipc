@@ -393,11 +393,26 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     const canvas = canvasRef.current;
     const spacer = spacerRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!root || !canvas || !spacer || !ctx) return;
+    if (!root || !canvas || !spacer || !ctx) {
+      // canvas unavailable (privacy browser etc.) → no frame loop will ever run; reveal the
+      // CSS-hidden cards immediately so the résumé is never blank.
+      root?.querySelectorAll<HTMLElement>(".cst-card").forEach((c) => (c.style.visibility = "visible"));
+      return;
+    }
 
     const cards = Array.from(root.querySelectorAll<HTMLElement>("[data-station]"));
     const stations = cards.length;
     if (!stations) return;
+    let revealed = false;
+    // CLS-veil safety net: frame() is the primary revealer, but if rAF is throttled to zero
+    // (recorded Sprint M lesson: automation) the résumé must never stay hidden. 400ms covers
+    // the veil window; a normal first frame beats it easily.
+    const revealFallback = window.setTimeout(() => {
+      if (!revealed) {
+        revealed = true;
+        root.querySelectorAll<HTMLElement>(".cst-card").forEach((c) => (c.style.visibility = "visible"));
+      }
+    }, 400);
 
     // hand-authored camera stations: per-card cumulative vh offsets + per-station descent lerp.
     // Absent/empty config → offsets [0,1,2,…] + the global lerp → the code-derived uniform grid (today).
@@ -420,7 +435,6 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     const helix = !coarse && tier >= 2 && stations >= 4;
     if (helix) root.setAttribute("data-cst-helix", "");
     let camIdx = 0; // continuous station index (helix camera), chased at POSE_LERP
-    let revealed = false;
     // reactive-rain state (A1 velocity · A2 part-around-focus · A3 rune surge · A10 déjà vu)
     let rainVel = 0;
     let surgeUntil = 0;
@@ -441,8 +455,21 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     apiRef.current = {
       rebuildRain: () => buildRain(),
       dejaVu: () => {
-        // A10 — "a change in the Matrix": one column visibly repeats itself for a beat
-        dejaCol = Math.floor(Math.random() * (layers[0]?.cols ?? 1));
+        // A10 — "a change in the Matrix": one column visibly repeats itself for a beat.
+        // Pick from the columns the density dither actually DRAWS (same accumulator), else the
+        // beat can land on a skipped column and silently no-op.
+        const cols = layers[0]?.cols ?? 0;
+        if (!cols) return;
+        const drawn: number[] = [];
+        let sel = 1 - density / 2;
+        for (let c = 0; c < cols; c++) {
+          sel += density;
+          if (sel < 1) continue;
+          sel -= 1;
+          drawn.push(c);
+        }
+        if (!drawn.length) return;
+        dejaCol = drawn[(Math.random() * drawn.length) | 0];
         dejaUntil = performance.now() + 900;
       },
     };
@@ -460,6 +487,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       }
       return stations - 1;
     };
+    camIdx = camIndexOf(cam); // seed at the REAL position — no station-0 swoosh on deep entry
 
     let lastW = 0;
     let lastH = 0;
@@ -687,16 +715,20 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
 
     /* ---- O3/A7 — detail bloom: the focused card expands into the reading surface ---- */
     let bloomAcc = 0;
+    let slamT = 0;
     const closeBloom = () => {
       if (!bloomed) return;
       const el = bloomed;
       bloomed = null;
       el.classList.add("is-slamming"); // A7 — CRT slam
-      window.setTimeout(() => el.classList.remove("is-bloomed", "is-slamming"), 320);
+      slamT = window.setTimeout(() => el.classList.remove("is-bloomed", "is-slamming"), 320);
       document.documentElement.style.overflow = "";
     };
     const openBloom = (el: HTMLElement) => {
       if (bloomed || !helix) return;
+      // a re-open within the 320ms slam window must not let the stale timeout strip the live bloom
+      window.clearTimeout(slamT);
+      cards.forEach((c) => c.classList.remove("is-bloomed", "is-slamming"));
       bloomed = el;
       bloomAcc = 0;
       el.style.transform = ""; // hand geometry to the CSS class; frame() skips this card meanwhile
@@ -712,19 +744,33 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     };
     const onWheelBloom = (e: WheelEvent) => {
       if (!bloomed) return;
+      const dir: 1 | -1 = e.deltaY > 0 ? 1 : -1;
+      // reading the bloom's own overflow is NOT a close gesture
+      if (bloomed.contains(e.target as Node) && scrollable(bloomed, dir)) {
+        bloomAcc = 0;
+        return;
+      }
       bloomAcc += Math.abs(e.deltaY);
-      if (bloomAcc > 60) closeBloom(); // accumulated scroll intent closes (AT's scroll-to-close)
+      if (bloomAcc > 140) closeBloom(); // sustained overscroll closes (AT's scroll-to-close)
     };
     const onKeyBloom = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeBloom();
-      else if (e.key === "Enter" && !bloomed) {
-        const card = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>("[data-station]");
+      if (constructKeyBlocked(e)) return; // the palette owns the keyboard while open
+      if (e.key === "Escape" && bloomed) {
+        // consume it in the CAPTURE phase — ConstructShell's Escape exits the whole Construct,
+        // and a modal's Escape must never double as "leave the page"
+        e.preventDefault();
+        e.stopPropagation();
+        closeBloom();
+      } else if (e.key === "Enter" && !bloomed) {
+        const active = document.activeElement as HTMLElement | null;
+        if (active?.closest("a, button")) return; // links and buttons keep their day jobs
+        const card = active?.closest<HTMLElement>("[data-station]");
         if (card && cards.indexOf(card) === focusedIdx) openBloom(card);
       }
     };
     root.addEventListener("click", onCardClick);
     window.addEventListener("wheel", onWheelBloom, { passive: true });
-    window.addEventListener("keydown", onKeyBloom);
+    window.addEventListener("keydown", onKeyBloom, true); // capture: beat the shell's Escape
 
     /* ---- keyboard: ArrowUp/Down = ±25vh, overflowing card reads first ---- */
     const scrollable = (card: HTMLElement | null | undefined, dir: 1 | -1): card is HTMLElement => {
@@ -767,7 +813,9 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       root.removeEventListener("focusin", onFocusIn);
       root.removeEventListener("click", onCardClick);
       window.removeEventListener("wheel", onWheelBloom);
-      window.removeEventListener("keydown", onKeyBloom);
+      window.removeEventListener("keydown", onKeyBloom, true);
+      window.clearTimeout(slamT);
+      window.clearTimeout(revealFallback);
       closeBloom();
       document.documentElement.style.overflow = "";
       root.removeAttribute("data-cst-helix");
