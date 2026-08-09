@@ -107,3 +107,24 @@ label fade over camera-distance 5→6 · video crossfade 500ms +300ms delay ·
 detail open 1500ms cubic-bezier(.29,.05,.06,.92), camera 700ms easeOutCubic, close 800ms,
 scroll-to-close 10px/20px · bg velocity kick clamp(1500·Δp, −3, 3) · strips ×15, shear 0.42 ·
 invSmooth(x) = 2x − x²(3−2x)
+
+## 6. Matrix animation flavours (owner-requested, 2026-08-10 — Sprint O garnish menu)
+
+Principle stolen from the reference: motion is REACTIVE (scroll/focus/angle), never idle
+decoration. All immersive-layer (never mounts under RM), tier-gated, inside the ≤2ms rain budget.
+
+| # | Effect | What | Tier | Size |
+|---|---|---|---|---|
+| A1 | Rain feels the scroll (=O4) | velocity kicks speed + column lean; settle ripple on stop | T1+ | S |
+| A2 | The code makes way | columns crossing the focused card thin/dim — focus = clarity | T1+ | S-M |
+| A3 | Rune surge | station change → runeRate ×4 for ~500ms | T1+ | XS |
+| A4 | Operator lock-on | bracket corners snap onto focused card | all | S |
+| A5 | Glyph-shred (=O2) | unfocused/off-axis text shreds to live glyphs, resolves on focus | T2+ | M |
+| A6 | Digitize bloom (=O3 skin) | detail-open wipe edged with a ring of falling glyphs | T2+ | M |
+| A7 | CRT slam | detail close → bright line → dot | all | S |
+| A8 | Bullet-time trails | fast scroll leaves 2-3 decaying card afterimages | T2+ | S |
+| A9 | Digital dissolve | exiting card crumbles bottom-up into glyph burst | T3 | M |
+| A10 | Déjà vu | rare idle: one column repeats itself; fires deliberately on tint toggle | T2+ | XS |
+
+Recommended core: A1+A2+A3+A4 (all reactive, all small). With helix: A5+A6+A7. Garnish: A8+A9.
+Secret: A10.
