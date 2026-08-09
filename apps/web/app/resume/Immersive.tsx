@@ -150,10 +150,11 @@ function makeRune(size: number, color: string): HTMLCanvasElement {
 }
 
 const readTint = (): Tint => {
-  // Sprint N: VIOLET is the default (the site's arcane identity); a stored choice still wins,
-  // so visitors who explicitly picked green keep green.
+  // Sprint N: VIOLET is the default. The key is VERSIONED (tint2) because the old key was
+  // auto-persisted on every mount — treating it as a choice would pin all returning visitors
+  // to green. tint2 is written ONLY by the HUD toggle (a real user gesture).
   try {
-    return localStorage.getItem("gipc-cst-tint") === "green" ? "green" : "violet";
+    return localStorage.getItem("gipc-cst-tint2") === "green" ? "green" : "violet";
   } catch {
     return "violet";
   }
@@ -302,18 +303,15 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     [],
   );
 
-  // --- tint: sync ref + data attr + persist; rebuild rain on CHANGE (skip mount) ---
+  // --- tint: sync ref + data attr; rebuild rain on CHANGE (skip mount). Violet is the CSS
+  // baseline, so the attribute marks the GREEN variant. No persist here — auto-persisting on
+  // mount is what poisoned the old key; the toggle handler owns storage now. ---
   useEffect(() => {
     tintRef.current = tint;
     const root = rootRef.current;
     if (root) {
-      if (tint === "violet") root.setAttribute("data-cst-tint", "violet");
+      if (tint === "green") root.setAttribute("data-cst-tint", "green");
       else root.removeAttribute("data-cst-tint");
-    }
-    try {
-      localStorage.setItem("gipc-cst-tint", tint);
-    } catch {
-      /* private mode */
     }
     if (didMountTint.current) apiRef.current?.rebuildRain();
     else didMountTint.current = true;
@@ -622,7 +620,17 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
           type="button"
           className="cst-hud-btn"
           aria-pressed={tint === "violet"}
-          onClick={() => setTint((t) => (t === "violet" ? "green" : "violet"))}
+          onClick={() =>
+            setTint((t) => {
+              const n = t === "violet" ? "green" : "violet";
+              try {
+                localStorage.setItem("gipc-cst-tint2", n); // user gesture — the only writer
+              } catch {
+                /* private mode */
+              }
+              return n;
+            })
+          }
         >
           {tint === "violet" ? "violet" : "green"} rain
         </button>

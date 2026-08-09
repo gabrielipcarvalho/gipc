@@ -315,6 +315,7 @@ export function Console() {
   const [history, setHistory] = useState<string[]>([]);
   const [hIdx, setHIdx] = useState(-1);
   const idRef = useRef(0);
+  const liveGenRef = useRef(0); // scry generation — invalidates stale async appends (clear / re-scry)
   const inputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const wordmarkRef = useRef<HTMLHeadingElement>(null);
@@ -410,11 +411,18 @@ export function Console() {
     setHistory(nextHistory);
     setHIdx(-1);
     setInput("");
-    if (clear) { setLog([]); return; }
+    if (clear) { liveGenRef.current++; setLog([]); return; } // clear invalidates in-flight scry appends
     const next: OutLine[] = [{ id: idRef.current++, kind: "cmd", text: raw }];
     for (const o of out) next.push({ id: idRef.current++, kind: "out", text: o });
     setLog((l) => [...l, ...next]);
-    if (live) void scryLive((t) => setLog((l) => [...l, { id: idRef.current++, kind: "out", text: t }]));
+    if (live) {
+      // generation guard: a later scry or a clear orphans this run's pending appends
+      const gen = ++liveGenRef.current;
+      void scryLive((t) => {
+        if (liveGenRef.current !== gen) return;
+        setLog((l) => [...l, { id: idRef.current++, kind: "out", text: t }]);
+      });
+    }
     if (theme) applyTheme(theme);
     if (restore) setPanelClosed(false);
     if (ctf) { try { localStorage.setItem("gipc-ctf", "found"); } catch { /* private mode */ } }

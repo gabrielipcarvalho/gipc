@@ -77,12 +77,12 @@ export default async function SystemPage() {
           <span className="prompt">arcane@prod:~$</span> systemctl status --all
         </p>
         <p className="page-lead">
-          Live telemetry from the machine that is serving you this page, right now. Left column:
-          request rate and latency, the deploy feed straight from CI, and the network path your own
-          request just took. Right column: 30-minute history, a redacted tail of the platform&rsquo;s
-          logs, and live pod state from the Kubernetes API. Nothing is mocked or cached for show —
-          these are the operator&rsquo;s own dashboards, made public; the deep-scry panels at the
-          bottom even print the exact queries they run.
+          Live telemetry from the machine that is serving you this page, right now: request rate
+          and latency, the deploy feed straight from CI, the network path your own request just
+          took, 30-minute history, a redacted tail of the platform&rsquo;s logs, and live pod state
+          from the Kubernetes API. Nothing is mocked or cached for show — these are the
+          operator&rsquo;s own dashboards, made public; the deep-scry panels at the bottom even
+          print the exact queries they run.
         </p>
         <SystemDash
           initial={status}

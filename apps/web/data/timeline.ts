@@ -62,11 +62,18 @@ function build(): TimelineNode[] {
       tags, // already capped at 6 by the round-robin loop
     };
   });
+  // Presentation-only omission (Sprint N, owner's call): the LLB stays in resume.json and the
+  // signed PDF — it is simply not shown on the /timeline page. Exact-match + count assertion so
+  // a résumé rewording can't silently resurrect (or over-hide) entries: drift fails the build.
+  const OMIT_DEGREES = new Set(["Bachelor of Laws (LLB)"]);
+  const omitted = resume.education.filter((e) => OMIT_DEGREES.has(e.degree));
+  if (omitted.length !== OMIT_DEGREES.size) {
+    throw new Error(
+      `timeline omission drifted: expected ${OMIT_DEGREES.size} matching education entr(y/ies), found ${omitted.length} — resume.json degree strings changed`,
+    );
+  }
   const education: TimelineNode[] = resume.education
-    // Presentation-only omission (Sprint N, owner's call): the LLB stays in resume.json and the
-    // signed PDF — it is simply not shown on the /timeline page. Removing a fact from one view
-    // adds nothing, so the zero-fabrication guard is untouched.
-    .filter((e) => !/bachelor of laws|llb/i.test(e.degree))
+    .filter((e) => !OMIT_DEGREES.has(e.degree))
     .map((e) => ({
     kind: "education",
     title: e.degree,
