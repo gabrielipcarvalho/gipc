@@ -20,6 +20,26 @@ const FS = [
   { fs: 9, speed: 0.33 },
 ];
 
+/* Sprint O — the helix (docs/design/construct-parity-audit.md). Constants derive from the
+   Active Theory /work teardown (50°/item, drop 0.32×pane, camera-chase 0.2, entrance/exit ±1u
+   over 15% progress), re-based to viewport units. Helix runs on fine pointers at tier ≥2 only;
+   coarse/T0/T1/RM keep the flat descent — the fallback IS the previous shipped behaviour. */
+const HELIX = {
+  STEP_DEG: 50, // angular step per station
+  RADIUS_VW: 0.55, // radius as fraction of viewport width…
+  RADIUS_MAX: 860, // …capped in px
+  DROP_VH: 0.3, // vertical drop per station (AT: 0.84u vs 2.6u pane ≈ 0.32)
+  PERSPECTIVE: 1200, // px — plays AT's FOV-35 role
+  CULL: 2.6, // |station distance| beyond which a card is parked offscreen
+  LIFT: 44, // px toward the viewer for the focused card (O5)
+  POSE_LERP: 0.2, // camera-pose chase (AT's camera lerp)
+  DRIFT_FRAC: 0.15, // entrance/exit drift window (progress fraction)
+  DRIFT_VH: 0.32, // drift amplitude
+};
+const smooth01 = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+/* Framerate-normalized lerp alpha (AT: α' = 1−(1−α)^(dt·60Hz)) — constants stay "per 60Hz frame". */
+const normAlpha = (a: number, dtMs: number): number => 1 - Math.pow(1 - a, dtMs / 16.667);
+
 /* Device-tier budgets (AT-style). A cheap-signal detector picks T0 (lowest) → T3 (highest); the tier
    sets the PROACTIVE starting budget. The reactive per-frame loop (uniform 2ms / 0.3 floor) stays as a
    universal guardrail on top. T3 == the shipped constants exactly (density 1, 3 layers, dpr 2, rune
@@ -174,7 +194,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
   const [audioOn, setAudioOn] = useState<boolean>(readAudio);
 
   const tintRef = useRef<Tint>(tint);
-  const apiRef = useRef<{ rebuildRain: () => void } | null>(null);
+  const apiRef = useRef<{ rebuildRain: () => void; dejaVu: () => void } | null>(null);
   const tickRef = useRef<(() => void) | null>(null); // null when audio off → decode ticks no-op
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
@@ -313,8 +333,10 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       if (tint === "green") root.setAttribute("data-cst-tint", "green");
       else root.removeAttribute("data-cst-tint");
     }
-    if (didMountTint.current) apiRef.current?.rebuildRain();
-    else didMountTint.current = true;
+    if (didMountTint.current) {
+      apiRef.current?.rebuildRain();
+      apiRef.current?.dejaVu(); // A10 — the Matrix changed; let one column remember
+    } else didMountTint.current = true;
   }, [tint, rootRef]);
 
   // --- CLS guard: position + HIDE the stations pre-paint, before the browser paints the immersive
@@ -333,11 +355,10 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     const offsets = stationOffsets(stationKeysOf(stationCards));
     stationCards.forEach((c, i) => (c.style.transform = `translate3d(0, ${(offsets[i] * vh - cam).toFixed(2)}px, 0)`));
     // Reveal target = EXACTLY the set the CSS hides (`.cst-card`), so hide/reveal can't drift out of sync.
-    // The cards are held invisible by CSS `[data-mode=immersive] .cst-card{visibility:hidden}` from the
-    // first immersive paint, so NO wrong-position frame is ever visible; we reveal only AFTER the positioned
-    // frame has painted → the static→immersive relayout contributes ~0 to CLS.
+    // Sprint O: the reveal moved INTO the main loop's first frame — the helix decides card poses only
+    // once the tier is known (main effect), so revealing here could flash one elevator-posed frame.
+    // The cards stay CSS-hidden until frame() has written its first (possibly helix) transforms.
     const cards = Array.from(root.querySelectorAll<HTMLElement>(".cst-card"));
-    const raf = requestAnimationFrame(() => cards.forEach((c) => (c.style.visibility = "visible")));
     // Immersive cards are scroll containers (max-height + overflow-y:auto) — keyboard users need a
     // focusable region to scroll them (axe scrollable-region-focusable), and a focusable region
     // needs a NAME (role=region + aria-label, derived from the card's own kicker/heading — never
@@ -357,7 +378,6 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       }
     });
     return () => {
-      cancelAnimationFrame(raf);
       cards.forEach((c) => {
         c.style.visibility = "";
         c.removeAttribute("tabindex");
@@ -395,6 +415,51 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     const lerp = coarse ? LERP_COARSE : LERP_FINE;
     let cam = window.scrollY;
     let fullPass = true;
+
+    // Sprint O: the helix — fine pointers at tier ≥2 only; everyone else keeps the flat descent.
+    const helix = !coarse && tier >= 2 && stations >= 4;
+    if (helix) root.setAttribute("data-cst-helix", "");
+    let camIdx = 0; // continuous station index (helix camera), chased at POSE_LERP
+    let revealed = false;
+    // reactive-rain state (A1 velocity · A2 part-around-focus · A3 rune surge · A10 déjà vu)
+    let rainVel = 0;
+    let surgeUntil = 0;
+    let dejaCol = -1;
+    let dejaUntil = 0;
+    let focusRect: { l: number; r: number; t: number; b: number } | null = null;
+    let bloomed: HTMLElement | null = null;
+    let rectTick = 0;
+    const refreshFocusRect = () => {
+      const el = focusedIdx >= 0 ? cards[focusedIdx] : null;
+      if (!el) {
+        focusRect = null;
+        return;
+      }
+      const b = el.getBoundingClientRect();
+      focusRect = { l: b.left, r: b.right, t: b.top, b: b.bottom };
+    };
+    apiRef.current = {
+      rebuildRain: () => buildRain(),
+      dejaVu: () => {
+        // A10 — "a change in the Matrix": one column visibly repeats itself for a beat
+        dejaCol = Math.floor(Math.random() * (layers[0]?.cols ?? 1));
+        dejaUntil = performance.now() + 900;
+      },
+    };
+
+    /* continuous camera index from the lerped cam against the (non-uniform) station offsets —
+       gaps stretch the scroll length of a segment, so hand-authored pacing survives on the helix */
+    const camIndexOf = (camPx: number): number => {
+      const pos = camPx / vh;
+      if (pos <= offsets[0]) return 0;
+      for (let i = 0; i < stations - 1; i++) {
+        if (pos <= offsets[i + 1]) {
+          const seg = offsets[i + 1] - offsets[i];
+          return i + (seg > 0 ? (pos - offsets[i]) / seg : 0);
+        }
+      }
+      return stations - 1;
+    };
 
     let lastW = 0;
     let lastH = 0;
@@ -467,6 +532,8 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       const card = cards[idx];
       if (!card) return;
       card.classList.add("is-focused");
+      surgeUntil = performance.now() + 500; // A3 — the rain acknowledges navigation
+      rectTick = 0; // A2 — re-read the focused rect promptly
       let i = 0;
       card
         .querySelectorAll<HTMLElement>(
@@ -496,13 +563,17 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
         };
       });
     };
-    apiRef.current = { rebuildRain: buildRain };
 
     const drawRain = () => {
+      const now = performance.now();
+      // A3 — rune surge: navigation briefly quadruples the sigil rate
+      const runeRate = budget.runeRate * (now < surgeUntil ? 4 : 1);
+      const dejaActive = now < dejaUntil;
       ctx.fillStyle = "rgba(2,8,2,0.09)";
       ctx.fillRect(0, 0, window.innerWidth, vh);
       for (const l of layers) {
         ctx.font = `${l.fs}px ui-monospace, monospace`;
+        const top = l === layers[0];
         // Uniform column thinning (Bresenham accumulator): spread the `density` fraction of columns
         // ACROSS THE FULL WIDTH — never truncate to the left band (density<1 must not empty the right).
         // Seeded at 1-density/2 to centre the dither so column 0 can draw (no far-left blank strip).
@@ -512,40 +583,96 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
           sel += density;
           if (sel < 1) continue;
           sel -= 1;
+          const x = c * l.fs;
           const y = l.drops[c] * l.fs;
-          const isRune = Math.random() < budget.runeRate;
+          // A2 — the code makes way: columns crossing the focused card fall dimmed
+          const parted = focusRect && x >= focusRect.l && x <= focusRect.r && y >= focusRect.t && y <= focusRect.b;
+          if (parted) ctx.globalAlpha = 0.3;
+          const deja = dejaActive && top && c === dejaCol;
+          const isRune = !deja && Math.random() < runeRate;
           if (isRune) {
-            ctx.drawImage(l.rune, c * l.fs, y - l.fs, l.fs, l.fs); // 3× rune → scaled down
+            ctx.drawImage(l.rune, x, y - l.fs, l.fs, l.fs); // 3× rune → scaled down
           } else {
-            const g = GLYPHS[(Math.random() * GLYPHS.length) | 0];
-            ctx.fillStyle = Math.random() < 0.12 ? l.head : l.color;
-            ctx.fillText(g, c * l.fs, y);
+            // A10 — déjà vu: the marked column repeats a deterministic sequence (row-keyed, so the
+            // same glyphs visibly recur as it falls) and burns bright for the duration
+            const g = deja
+              ? GLYPHS[(c * 7 + Math.abs(Math.floor(l.drops[c])) * 3) % GLYPHS.length]
+              : GLYPHS[(Math.random() * GLYPHS.length) | 0];
+            ctx.fillStyle = deja || Math.random() < 0.12 ? l.head : l.color;
+            ctx.fillText(g, x, y);
           }
-          l.drops[c] += l.speed;
+          if (parted) ctx.globalAlpha = 1;
+          // A1 — velocity: scroll speed feeds the fall rate (chased, so it settles after a flick)
+          l.drops[c] += l.speed * (1 + rainVel);
           if (y > vh && Math.random() > 0.975) l.drops[c] = 0;
         }
       }
     };
 
-    /* ---- main loop ---- */
+    /* ---- main loop (Sprint O: helix camera + framerate-normalized damping) ---- */
     let raf = 0;
     let acc = 0;
     let frames = 0;
-    const frame = () => {
+    let lastTs = 0;
+    const frame = (ts: number) => {
       const t0 = performance.now();
+      const dt = lastTs ? Math.min(ts - lastTs, 100) : 16.7;
+      lastTs = ts;
       // touch keeps the snappy LERP_COARSE constant; fine pointers get the target station's descent lerp.
       const targetIdx = nearestStation(offsets, window.scrollY / vh);
       const frameLerp = coarse ? lerp : stationLerp(keys[targetIdx], lerp);
-      cam += (window.scrollY - cam) * frameLerp;
+      const prevCam = cam;
+      cam += (window.scrollY - cam) * normAlpha(frameLerp, dt);
       if (Math.abs(window.scrollY - cam) < 0.5) cam = window.scrollY;
-      for (let i = 0; i < stations; i++) {
-        const off = offsets[i] * vh - cam;
-        if (!fullPass && Math.abs(off) > vh * 1.5) continue;
-        cards[i].style.transform = `translate3d(0, ${off.toFixed(2)}px, 0)`;
+      // A1 — rain velocity chases the camera's speed (≈2 at a hard flick, decays to 0 at rest)
+      const instVel = Math.min(Math.abs(cam - prevCam) / (vh * 0.02), 2);
+      rainVel += (instVel - rainVel) * normAlpha(0.12, dt);
+      if (helix) {
+        camIdx += (camIndexOf(cam) - camIdx) * normAlpha(HELIX.POSE_LERP, dt);
+        const R = Math.min(window.innerWidth * HELIX.RADIUS_VW, HELIX.RADIUS_MAX);
+        const drop = vh * HELIX.DROP_VH;
+        const p = stations > 1 ? camIdx / (stations - 1) : 0;
+        // entrance/exit drift (AT: camera ±1u over the first/last 15% of progress)
+        const drift =
+          (1 - smooth01(p / HELIX.DRIFT_FRAC)) * vh * HELIX.DRIFT_VH -
+          smooth01((p - (1 - HELIX.DRIFT_FRAC)) / HELIX.DRIFT_FRAC) * vh * HELIX.DRIFT_VH;
+        for (let i = 0; i < stations; i++) {
+          const card = cards[i];
+          if (card === bloomed) continue; // the bloom owns its own geometry
+          const r = i - camIdx;
+          if (Math.abs(r) > HELIX.CULL) {
+            if (card.dataset.cull !== "1") {
+              card.style.transform = "translate3d(0, 160vh, 0)";
+              card.dataset.cull = "1";
+            }
+            continue;
+          }
+          delete card.dataset.cull;
+          const a = (r * HELIX.STEP_DEG * Math.PI) / 180;
+          const x = Math.sin(a) * R;
+          const z = (Math.cos(a) - 1) * R + (1 - Math.min(Math.abs(r), 1)) * HELIX.LIFT; // O5 lift
+          const y = r * drop + drift;
+          card.style.transform = `perspective(${HELIX.PERSPECTIVE}px) translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${(-r * HELIX.STEP_DEG).toFixed(2)}deg)`;
+        }
+      } else {
+        for (let i = 0; i < stations; i++) {
+          const off = offsets[i] * vh - cam;
+          if (!fullPass && Math.abs(off) > vh * 1.5) continue;
+          cards[i].style.transform = `translate3d(0, ${off.toFixed(2)}px, 0)`;
+        }
       }
       fullPass = false;
+      if (!revealed) {
+        // first correctly-posed frame is on screen next paint — safe to lift the CLS veil
+        revealed = true;
+        cards.forEach((c) => (c.style.visibility = "visible"));
+      }
       const idx = nearestStation(offsets, cam / vh);
-      if (Math.abs(offsets[idx] * vh - cam) < vh * 0.5) setFocused(idx);
+      if (helix ? Math.abs(idx - camIdx) < 0.5 : Math.abs(offsets[idx] * vh - cam) < vh * 0.5) setFocused(idx);
+      if (rectTick <= 0) {
+        refreshFocusRect(); // A2 needs the focused card's rect; refreshed every ~12 frames
+        rectTick = 12;
+      } else rectTick--;
       drawRain();
       acc += performance.now() - t0;
       frames += 1;
@@ -557,6 +684,47 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
+
+    /* ---- O3/A7 — detail bloom: the focused card expands into the reading surface ---- */
+    let bloomAcc = 0;
+    const closeBloom = () => {
+      if (!bloomed) return;
+      const el = bloomed;
+      bloomed = null;
+      el.classList.add("is-slamming"); // A7 — CRT slam
+      window.setTimeout(() => el.classList.remove("is-bloomed", "is-slamming"), 320);
+      document.documentElement.style.overflow = "";
+    };
+    const openBloom = (el: HTMLElement) => {
+      if (bloomed || !helix) return;
+      bloomed = el;
+      bloomAcc = 0;
+      el.style.transform = ""; // hand geometry to the CSS class; frame() skips this card meanwhile
+      el.classList.add("is-bloomed");
+      document.documentElement.style.overflow = "hidden"; // scroll lock, like the reference
+    };
+    const onCardClick = (e: MouseEvent) => {
+      if (bloomed) return;
+      const t = e.target as HTMLElement;
+      if (t.closest("a, button")) return; // links and buttons keep their day jobs
+      const card = t.closest<HTMLElement>("[data-station]");
+      if (card && cards.indexOf(card) === focusedIdx) openBloom(card);
+    };
+    const onWheelBloom = (e: WheelEvent) => {
+      if (!bloomed) return;
+      bloomAcc += Math.abs(e.deltaY);
+      if (bloomAcc > 60) closeBloom(); // accumulated scroll intent closes (AT's scroll-to-close)
+    };
+    const onKeyBloom = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeBloom();
+      else if (e.key === "Enter" && !bloomed) {
+        const card = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>("[data-station]");
+        if (card && cards.indexOf(card) === focusedIdx) openBloom(card);
+      }
+    };
+    root.addEventListener("click", onCardClick);
+    window.addEventListener("wheel", onWheelBloom, { passive: true });
+    window.addEventListener("keydown", onKeyBloom);
 
     /* ---- keyboard: ArrowUp/Down = ±25vh, overflowing card reads first ---- */
     const scrollable = (card: HTMLElement | null | undefined, dir: 1 | -1): card is HTMLElement => {
@@ -597,11 +765,19 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       window.removeEventListener("resize", onResize);
       window.removeEventListener("keydown", onKey);
       root.removeEventListener("focusin", onFocusIn);
+      root.removeEventListener("click", onCardClick);
+      window.removeEventListener("wheel", onWheelBloom);
+      window.removeEventListener("keydown", onKeyBloom);
+      closeBloom();
+      document.documentElement.style.overflow = "";
+      root.removeAttribute("data-cst-helix");
       settleAll();
       if (focusedIdx >= 0) cards[focusedIdx]?.classList.remove("is-focused");
       cards.forEach((c) => {
         c.style.transform = "";
         c.style.visibility = ""; // clear the CLS-guard in case unmount raced the first frame()
+        delete c.dataset.cull;
+        c.classList.remove("is-bloomed", "is-slamming");
       });
       root.removeAttribute("data-cst-tier");
       apiRef.current = null;
