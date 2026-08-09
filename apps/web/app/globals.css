@@ -682,6 +682,69 @@ a{ color:inherit; text-decoration:none; }
   --mx-text:#d4ffd9;                  /* Matrix body text — construct */
 }
 
+/* ── Sprint O: the helix + reactive garnish (immersive-only ⇒ never mounts under RM) ── */
+.construct[data-cst-helix] .cst-card{
+  will-change:transform;
+  backface-visibility:hidden; /* cards turned past edge-on vanish naturally — free culling */
+}
+
+/* A4 — operator lock-on: corner brackets snap onto the focused card. Element backgrounds
+   don't scroll with overflow content, so the corners stay pinned to the frame. */
+.construct[data-mode="immersive"] .cst-card.is-focused{
+  background-image:
+    linear-gradient(var(--mx-green) 0 0), linear-gradient(var(--mx-green) 0 0),
+    linear-gradient(var(--mx-green) 0 0), linear-gradient(var(--mx-green) 0 0),
+    linear-gradient(var(--mx-green) 0 0), linear-gradient(var(--mx-green) 0 0),
+    linear-gradient(var(--mx-green) 0 0), linear-gradient(var(--mx-green) 0 0);
+  background-repeat:no-repeat;
+  background-position:0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
+  background-size:14px 2px, 2px 14px, 14px 2px, 2px 14px, 14px 2px, 2px 14px, 14px 2px, 2px 14px; /* resting */
+  animation:cst-lockon .28s var(--ease) both;
+}
+@keyframes cst-lockon{ /* from-only: rest state lives on the class (RM-safe under animation:none) */
+  from{ background-size:34px 2px, 2px 34px, 34px 2px, 2px 34px, 34px 2px, 2px 34px, 34px 2px, 2px 34px; }
+}
+
+/* A5 — shred-lite: unfocused helix cards read as unstable signal (strip mask + slight desat);
+   the decode cascade takes over the moment they gain focus. */
+.construct[data-cst-helix] .cst-card:not(.is-focused):not(.is-bloomed){
+  -webkit-mask-image:repeating-linear-gradient(90deg, #000 0 22px, rgba(0,0,0,.5) 22px 26px);
+  mask-image:repeating-linear-gradient(90deg, #000 0 22px, rgba(0,0,0,.5) 22px 26px);
+  filter:saturate(.85) brightness(.92);
+}
+
+/* O3/A6 — detail bloom: the focused card digitizes open into the reading surface.
+   Geometry comes from the class (frame() skips a bloomed card; its inline transform is cleared). */
+.construct[data-mode="immersive"] .cst-card.is-bloomed{
+  transform:none; /* beat the 120vh offscreen base — the bloom owns its geometry */
+  top:4vh; z-index:3; opacity:1;
+  width:min(900px, 94vw); margin-left:calc(min(900px, 94vw) / -2);
+  max-height:92vh;
+  border-color:var(--mx-green-dim);
+  -webkit-mask-image:radial-gradient(circle at 50% 38%, #000 62%, transparent 66%);
+  mask-image:radial-gradient(circle at 50% 38%, #000 62%, transparent 66%);
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  -webkit-mask-position:center 38%; mask-position:center 38%;
+  -webkit-mask-size:340vmax 340vmax; mask-size:340vmax 340vmax; /* RESTING size — RM rest-at-final */
+  animation:cst-bloom 1.5s cubic-bezier(.29,.05,.06,.92) both; /* the reference's exact ease */
+}
+@keyframes cst-bloom{ /* from-only: the class holds the final state, so animation:none is safe */
+  from{ -webkit-mask-size:0 0; mask-size:0 0; }
+}
+
+/* A7 — CRT slam close: collapse to a bright line, then gone. Deliberately NOT from-only: this is
+   an EXIT transition whose true rest state is "classes removed" — settled by BOTH a JS timer and
+   animationend, so no path strands the card; the immersive layer never mounts under reduced
+   motion, so animation:none can only ever mean "the card stays visible until the settle". */
+.construct[data-mode="immersive"] .cst-card.is-bloomed.is-slamming{
+  animation:cst-slam .3s var(--ease) both;
+}
+@keyframes cst-slam{
+  0%{ transform:none; opacity:1; }
+  60%{ transform:scaleY(.012) scaleX(1.04); opacity:1; box-shadow:0 0 46px var(--mx-green); }
+  100%{ transform:scaleY(.012) scaleX(0); opacity:0; }
+}
+
 /* ---- print: always the clean static document (immersive writes inline styles,
         hence !important), black on white ---- */
 @media print{
@@ -691,6 +754,8 @@ a{ color:inherit; text-decoration:none; }
   .cst-card{
     position:static !important; transform:none !important; opacity:1 !important;
     visibility:visible !important; /* override the immersive CLS-guard hide so print is never blank */
+    -webkit-mask-image:none !important; mask-image:none !important; /* Sprint O shred/bloom masks */
+    filter:none !important; background-image:none !important; /* shred desat + lock-on brackets */
     box-shadow:none !important;
     margin:0 0 1rem !important; max-height:none !important; overflow:visible !important;
     background:#fff !important; border-color:#bbb !important; color:#000 !important; /* print — construct */
