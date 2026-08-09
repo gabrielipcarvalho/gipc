@@ -6,6 +6,8 @@ import { Sigil } from "./sigil";
 import { MetricPanel, type Metric } from "./components/MetricPanel";
 import { statusToMetrics } from "../data/statusMetrics";
 import type { Status } from "../data/status";
+import type { DeployEvent } from "../data/deploys";
+import type { RequestTrace } from "../data/observability";
 import { castRipple, fitText, tiltHandlers } from "./components/motion";
 import { applyTheme, currentTheme, THEME_IDS } from "../data/themes";
 import { projects } from "../data/projects";
@@ -89,30 +91,37 @@ async function scryLive(append: (t: React.ReactNode) => void) {
     get("/api/deploys"),
   ]);
   let hit = false;
-  if (st.status === "fulfilled") {
-    const m = statusToMetrics(st.value as Status).slice(0, 3);
-    if (m.some((x) => x.v !== "—")) {
-      append(`telemetry: ${m.map((x) => `${x.k} ${x.v}`).join(" · ")}`);
-      hit = true;
+  try {
+    if (st.status === "fulfilled") {
+      const m = statusToMetrics(st.value as Status).slice(0, 3);
+      if (m.some((x) => x.v !== "—")) {
+        append(`telemetry: ${m.map((x) => `${x.k} ${x.v}`).join(" · ")}`);
+        hit = true;
+      }
     }
-  }
-  if (tr.status === "fulfilled") {
-    const t = tr.value as { hops?: { name: string }[]; edge?: { colo?: string } };
-    if (t.hops?.length) {
-      const edge = t.edge?.colo ? ` · edge ${t.edge.colo}` : "";
-      append(`your request, just now: ${t.hops.map((h) => h.name).join(" → ")}${edge} — the real path`);
-      hit = true;
+    if (tr.status === "fulfilled") {
+      const t = tr.value as RequestTrace;
+      if (t.hops?.length) {
+        const edge = t.edge?.colo ? ` · edge ${t.edge.colo}` : "";
+        append(`your request, just now: ${t.hops.map((h) => h.name).join(" → ")}${edge} — the real path`);
+        hit = true;
+      }
     }
-  }
-  if (dp.status === "fulfilled") {
-    const evs = dp.value as { subject?: string; ts?: string }[];
-    const last = Array.isArray(evs)
-      ? [...evs].filter((e) => e.subject).sort((a, b) => ((a.ts ?? "") < (b.ts ?? "") ? 1 : -1))[0]
-      : null;
-    if (last?.subject) {
-      append(`last deploy: ${last.subject}`);
-      hit = true;
+    if (dp.status === "fulfilled") {
+      const evs = dp.value as DeployEvent[];
+      // only SUCCESS events count — a failed/in-flight CI event is not a deploy ("proof, not claims")
+      const last = Array.isArray(evs)
+        ? [...evs].filter((e) => e.status === "success" && e.subject).sort((a, b) => (a.ts < b.ts ? 1 : -1))[0]
+        : undefined;
+      if (last?.subject) {
+        append(`last deploy: ${last.subject}`);
+        hit = true;
+      }
     }
+  } catch {
+    // a 200 with a non-conforming body (edge error page, dev proxy) must not eat the honest fallback
+    append("the scrying pool is dark — /system has the full picture.");
+    return;
   }
   append(
     hit ? (

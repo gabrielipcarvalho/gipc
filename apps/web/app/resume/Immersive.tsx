@@ -619,7 +619,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
         <button
           type="button"
           className="cst-hud-btn"
-          aria-pressed={tint === "violet"}
+          aria-pressed={tint === "green"} /* green is the opt-in variant — pressed tracks it, like audio */
           onClick={() =>
             setTint((t) => {
               const n = t === "violet" ? "green" : "violet";
