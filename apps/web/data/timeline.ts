@@ -62,7 +62,12 @@ function build(): TimelineNode[] {
       tags, // already capped at 6 by the round-robin loop
     };
   });
-  const education: TimelineNode[] = resume.education.map((e) => ({
+  const education: TimelineNode[] = resume.education
+    // Presentation-only omission (Sprint N, owner's call): the LLB stays in resume.json and the
+    // signed PDF — it is simply not shown on the /timeline page. Removing a fact from one view
+    // adds nothing, so the zero-fabrication guard is untouched.
+    .filter((e) => !/bachelor of laws|llb/i.test(e.degree))
+    .map((e) => ({
     kind: "education",
     title: e.degree,
     org: e.org,

@@ -14,9 +14,10 @@ const DECODE_MS = 400;
 const LERP_FINE = 0.1; // AT's desktop constant
 const LERP_COARSE = 0.5; // AT's touch constant
 const FS = [
-  { fs: 18, speed: 1.1 },
-  { fs: 13, speed: 0.75 },
-  { fs: 9, speed: 0.5 },
+  // Sprint N: global ×0.65 slowdown — the rain read as frantic at full AT speeds
+  { fs: 18, speed: 0.7 },
+  { fs: 13, speed: 0.5 },
+  { fs: 9, speed: 0.33 },
 ];
 
 /* Device-tier budgets (AT-style). A cheap-signal detector picks T0 (lowest) → T3 (highest); the tier
@@ -149,10 +150,12 @@ function makeRune(size: number, color: string): HTMLCanvasElement {
 }
 
 const readTint = (): Tint => {
+  // Sprint N: VIOLET is the default (the site's arcane identity); a stored choice still wins,
+  // so visitors who explicitly picked green keep green.
   try {
-    return localStorage.getItem("gipc-cst-tint") === "violet" ? "violet" : "green";
+    return localStorage.getItem("gipc-cst-tint") === "green" ? "green" : "violet";
   } catch {
-    return "green";
+    return "violet";
   }
 };
 const readAudio = (): boolean => {
