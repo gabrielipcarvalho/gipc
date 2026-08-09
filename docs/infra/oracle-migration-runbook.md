@@ -141,7 +141,10 @@ connectors** — cutover = add one, remove one:
   stop oracle's. Garuda's cluster stays intact and current-ish for **≥7 days** post-cutover before
   any demotion beyond stopping its connector.
 - Oracle-rug-pull day (tier shrunk/reclaimed/banned): this same runbook, Phases A–F, against an OVH
-  VPS-2 Sydney (amd64 — images are multi-arch, no CI change needed). Budget ~1 hr + DNS untouched.
+  VPS-2 Sydney (amd64). NOTE 2026-08-10: CI now builds **arm64-only** (garuda no longer runs new
+  releases — owner's call; QEMU multi-arch was 25-min-slow and SIGILL-flaky). The OVH hatch
+  therefore starts with a one-line CI change: `platforms: linux/amd64,linux/arm64` back into the
+  three workflows. Budget ~1 hr + DNS untouched.
 
 ## 11. Execution log — 2026-08-08 (MIGRATED; deviations that ARE the redeploy script)
 

@@ -21,7 +21,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest   # amd64 — matches garuda
+    runs-on: ubuntu-24.04-arm   # native arm64 — the Oracle A1 is the only arch we serve
     permissions:
       contents: write     # to commit the GitOps tag bump
       packages: write      # to push to GHCR
@@ -36,7 +36,6 @@ jobs:
           uv run ruff check .
           uv run pytest -q
 
-      - uses: docker/setup-qemu-action@v3   # arm64 emulation — Oracle A1 migration
       - uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
@@ -52,7 +51,7 @@ jobs:
         with:
           context: .
           file: services/ai/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           push: true
           build-args: |
             GIT_SHA=${{ github.sha }}
