@@ -3,15 +3,16 @@
    as an explicit palette command. */
 export type Route = { href: string; label: string };
 
+/* Sprint N: recruiter-first order — career surfaces lead, the engineering depths follow. */
 export const ROUTES: readonly Route[] = [
+  { href: "/work", label: "work" },
+  { href: "/resume", label: "resume" },
+  { href: "/timeline", label: "timeline" },
   { href: "/system", label: "system" },
   { href: "/oracle", label: "oracle" },
   { href: "/lab", label: "lab" },
-  { href: "/status", label: "status" },
   { href: "/infra", label: "infra" },
-  { href: "/work", label: "work" },
+  { href: "/status", label: "status" },
   { href: "/writeups", label: "writeups" },
-  { href: "/timeline", label: "timeline" },
-  { href: "/resume", label: "resume" },
   { href: "/connect", label: "connect" },
 ];

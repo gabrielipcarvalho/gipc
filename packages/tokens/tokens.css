@@ -47,6 +47,8 @@
   --sp-6:1.5rem; --sp-8:2rem; --sp-12:3rem; --sp-16:4rem; --sp-24:6rem;
   --pad-section:clamp(2.5rem,4vw,3.5rem);
   --maxw:1100px;
+  --measure:75ch; /* standard text measure — Sprint N: one token replaces the scattered 46–68ch caps */
+  --measure-narrow:52ch; /* compact columns (hero bio) — deliberately tighter than the body measure */
   --r-pill:999px; --r-card:16px; --r-input:10px; --r-sm:8px;
 
   /* ---- elevation & effects ---- */

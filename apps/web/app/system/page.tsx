@@ -77,11 +77,12 @@ export default async function SystemPage() {
           <span className="prompt">arcane@prod:~$</span> systemctl status --all
         </p>
         <p className="page-lead">
-          The operator surface — all live from the self-hosted platform: request rate, latency and
-          resource usage from Prometheus, the deploy feed wired to the real CI pipeline, 30-minute
-          history sparklines, a redacted tail of the platform&rsquo;s own logs, and the actual network
-          path your request took to reach this page. The topology section shows live pod truth from the
-          Kubernetes API, and the deep-scry panels below run their displayed queries verbatim.
+          Live telemetry from the machine that is serving you this page, right now: request rate
+          and latency, the deploy feed straight from CI, the network path your own request just
+          took, 30-minute history, a redacted tail of the platform&rsquo;s logs, and live pod state
+          from the Kubernetes API. Nothing is mocked or cached for show — these are the
+          operator&rsquo;s own dashboards, made public; the deep-scry panels at the bottom even
+          print the exact queries they run.
         </p>
         <SystemDash
           initial={status}

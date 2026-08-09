@@ -19,8 +19,9 @@ export default function WorkPage() {
           <span className="prompt">arcane@prod:~$</span> ls ./grimoire
         </p>
         <p className="page-lead">
-          Projects as inspectable artifacts — sourced from the same résumé data that
-          drives the Construct. Filter by technology, or follow the links out.
+          Selected projects, each opened up for inspection — architecture diagrams, honest scope,
+          links out to code and publications — sourced from the same résumé data that drives the
+          Construct, so nothing here can drift from the record. Filter by technology.
         </p>
         <WorkGrid projects={projects} />
       </TerminalWindow>

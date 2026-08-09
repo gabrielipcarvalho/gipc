@@ -244,6 +244,7 @@ export function SystemDash({
         {statusMsg}
       </p>
 
+      <div className="sys-col">
       {/* REAL metrics — SSR-seeded, SSE-updated */}
       <section className="sys-block" aria-label="Platform metrics">
         <h2 className="sys-h">metrics</h2>
@@ -251,29 +252,6 @@ export function SystemDash({
           source: {status.source === "prometheus" ? "prometheus · live" : "unavailable — re-scrying"}
         </p>
         <MetricPanel metrics={statusToMetrics(status)} countUp />
-      </section>
-
-      {/* REAL history — 30m aggregate range series rendered as native sparklines */}
-      <section className="sys-block" aria-label="Metrics history">
-        <h2 className="sys-h">history · 30m</h2>
-        <p className="sys-source">
-          source: {history.source === "prometheus" ? "prometheus range · live" : "unavailable"}
-        </p>
-        <ul className="sparks">
-          {HISTORY_PANELS.map((p) => {
-            const pts = history.series[p.key] ?? [];
-            const latest = pts.length ? pts[pts.length - 1].v : null;
-            return (
-              <li className="spark-row" key={p.key}>
-                <span className="spark-k">{p.label}</span>
-                <Sparkline points={pts} />
-                <span className="spark-v">
-                  {latest != null ? `${latest.toFixed(p.digits)}${p.unit ? ` ${p.unit}` : ""}` : "—"}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
       </section>
 
       {/* REAL deploy feed — SSR-seeded from /api/deploys, live via SSE `deploy` events */}
@@ -312,30 +290,6 @@ export function SystemDash({
         )}
       </section>
 
-      {/* REAL logs — redacted tail of the platform's own pods (ns=gipc), fixed server-side query */}
-      <section className="sys-block" aria-label="Platform logs">
-        <h2 className="sys-h">logs</h2>
-        <p className="sys-source">
-          source: {logs?.source === "loki" ? "loki · ns=gipc · redacted" : logs ? "unavailable" : "scrying…"}
-        </p>
-        {logs && logs.lines.length ? (
-          <ol className="logstream">
-            {logs.lines.map((l, i) => (
-              <li key={`${l.ts}-${i}`} data-level={l.level.toLowerCase() || undefined}>
-                <span className="log-pod">{l.pod}</span>
-                {["ERROR", "WARN"].includes(l.level.toUpperCase()) && (
-                  <span className="log-level">[{l.level.toLowerCase()}]</span>
-                )}
-                <span className="log-msg">{l.msg}</span>
-                <span className="log-when">{now ? relTime(l.ts, now) : ""}</span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="sys-empty">{logs ? "no recent log lines" : "reading the platform’s logs…"}</p>
-        )}
-      </section>
-
       {/* REAL request trace — the actual path THIS request took (client-fetched on mount) */}
       <section className="sys-block" aria-label="Request trace">
         <h2 className="sys-h">trace your request</h2>
@@ -364,6 +318,55 @@ export function SystemDash({
           <p className="sys-empty">trace unavailable — core unreachable</p>
         ) : (
           <p className="sys-empty">scrying your route…</p>
+        )}
+      </section>
+      </div>
+
+      <div className="sys-col">
+      {/* REAL history — 30m aggregate range series rendered as native sparklines */}
+      <section className="sys-block" aria-label="Metrics history">
+        <h2 className="sys-h">history · 30m</h2>
+        <p className="sys-source">
+          source: {history.source === "prometheus" ? "prometheus range · live" : "unavailable"}
+        </p>
+        <ul className="sparks">
+          {HISTORY_PANELS.map((p) => {
+            const pts = history.series[p.key] ?? [];
+            const latest = pts.length ? pts[pts.length - 1].v : null;
+            return (
+              <li className="spark-row" key={p.key}>
+                <span className="spark-k">{p.label}</span>
+                <Sparkline points={pts} />
+                <span className="spark-v">
+                  {latest != null ? `${latest.toFixed(p.digits)}${p.unit ? ` ${p.unit}` : ""}` : "—"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {/* REAL logs — redacted tail of the platform's own pods (ns=gipc), fixed server-side query */}
+      <section className="sys-block" aria-label="Platform logs">
+        <h2 className="sys-h">logs</h2>
+        <p className="sys-source">
+          source: {logs?.source === "loki" ? "loki · ns=gipc · redacted" : logs ? "unavailable" : "scrying…"}
+        </p>
+        {logs && logs.lines.length ? (
+          <ol className="logstream">
+            {logs.lines.map((l, i) => (
+              <li key={`${l.ts}-${i}`} data-level={l.level.toLowerCase() || undefined}>
+                <span className="log-pod">{l.pod}</span>
+                {["ERROR", "WARN"].includes(l.level.toUpperCase()) && (
+                  <span className="log-level">[{l.level.toLowerCase()}]</span>
+                )}
+                <span className="log-msg">{l.msg}</span>
+                <span className="log-when">{now ? relTime(l.ts, now) : ""}</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="sys-empty">{logs ? "no recent log lines" : "reading the platform’s logs…"}</p>
         )}
       </section>
 
@@ -421,6 +424,8 @@ export function SystemDash({
           <div className="skel" />
         </div>
       )}
+
+      </div>
 
       <DeepPanels initialDeep={initialDeep} initialVolume={initialVolume} />
     </div>
