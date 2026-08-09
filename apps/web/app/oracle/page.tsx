@@ -22,8 +22,9 @@ export default function OraclePage() {
         </p>
         {/* Crawlable / no-JS explainer — the real facts, so this page is never an empty shell. */}
         <p className="page-lead">
-          The oracle answers as the operator of this site. It grounds every claim about Gabriel in a
-          curated public corpus (this résumé, the projects, the platform docs) and can call read-only
+          An AI assistant that answers as this site&apos;s operator — ask it anything about
+          Gabriel&apos;s experience, the projects, or how this platform works. It grounds every claim in a
+          curated public corpus (the résumé, the projects, the platform docs) and can call read-only
           tools against gipc.dev&apos;s own live APIs — the same metrics you see on{" "}
           <a href="/system">/system</a>. It cites its sources — including this site&apos;s own source code — refuses to
           fabricate, and shows its working in a live trace panel. Another tab runs a small

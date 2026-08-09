@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Console } from "./console";
 import { FootSign } from "./components/FootSign";
 import { pageMeta } from "./og";
@@ -28,6 +29,30 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd).replace(/</g, "\\u003c") }}
       />
       <Console />
+      {/* Sprint N — the plain-English layer: who this is, why the site is unusual, where to go.
+          Server-rendered (works without JS), below the console so the theatre still opens the show. */}
+      <section className="orient" aria-label="What this site is">
+        <p className="orient-lead">
+          This is the portfolio of <strong>Gabriel Carvalho</strong> — software · DevOps · AI
+          engineer, Gold Coast AU. It isn&apos;t a brochure: everything here runs on a Kubernetes
+          platform he builds and operates himself, and every metric, deploy and demo is live.
+          The site is the proof of work.
+        </p>
+        <ul className="orient-lanes">
+          <li>
+            <b>hiring?</b> <Link href="/work">selected work</Link> ·{" "}
+            <Link href="/resume">the résumé</Link> · <Link href="/timeline">career timeline</Link>
+          </li>
+          <li>
+            <b>technical?</b> <Link href="/system">live telemetry</Link> ·{" "}
+            <Link href="/lab">break things safely</Link> · <Link href="/infra">how it&apos;s built</Link>
+          </li>
+          <li>
+            <b>curious?</b> <Link href="/oracle">ask the AI operator</Link> ·{" "}
+            <Link href="/writeups">writeups</Link>
+          </li>
+        </ul>
+      </section>
       <FootSign />
     </main>
   );
