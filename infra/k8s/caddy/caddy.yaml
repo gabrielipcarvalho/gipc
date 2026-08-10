@@ -51,14 +51,16 @@ data:
       }
       # The résumé PDF is embedded by /connect in a same-origin <iframe>. The global block above
       # stamps frame-ancestors 'none' + XFO DENY on EVERY response — including the PDF itself,
-      # which made the browser refuse OUR OWN embed ("gipc.dev refused to connect"). This later
-      # header handler re-sets the two fields for that one asset: same-origin framing only, and a
-      # bare default-src 'none' CSP (a PDF document loads no subresources). Everything else keeps
-      # the deny-all.
+      # which made the browser refuse OUR OWN embed ("gipc.dev refused to connect"). Re-set the
+      # two fields for that one asset: same-origin framing only, and a bare default-src 'none'
+      # CSP (a PDF document loads no subresources). Everything else keeps the deny-all.
+      # `defer` is load-bearing: the Caddyfile adapter sorts same-name directives with path
+      # matchers FIRST, so without it the global block runs after this one and wins back.
       @resumepdf path /Gabriel_Carvalho_Resume.pdf
       header @resumepdf {
         Content-Security-Policy "default-src 'none'; frame-ancestors 'self'"
         X-Frame-Options "SAMEORIGIN"
+        defer
       }
     }
     :2019 {
