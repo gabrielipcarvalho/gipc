@@ -33,10 +33,7 @@ const HELIX = {
   CULL: 2.6, // |station distance| beyond which a card is parked offscreen
   LIFT: 44, // px toward the viewer for the focused card (O5)
   POSE_LERP: 0.2, // camera-pose chase (AT's camera lerp)
-  DRIFT_FRAC: 0.15, // entrance/exit drift window (progress fraction)
-  DRIFT_VH: 0.32, // drift amplitude
 };
-const smooth01 = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 /* Framerate-normalized lerp alpha (AT: α' = 1−(1−α)^(dt·60Hz)) — constants stay "per 60Hz frame". */
 const normAlpha = (a: number, dtMs: number): number => 1 - Math.pow(1 - a, dtMs / 16.667);
 
@@ -493,6 +490,14 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       lastH = window.innerHeight;
       vh = window.innerHeight;
       spacer.style.height = `${(offsets[stations - 1] + 1) * vh}px`;
+      // helix preview affordance: mark cards whose content is taller than their box — CSS
+      // shows the bottom fade + "⏎ open" hint; the bloom is the full reading surface
+      if (helix) {
+        for (const c of cards) {
+          if (c.scrollHeight > c.clientHeight + 4) c.setAttribute("data-overflow", "");
+          else c.removeAttribute("data-overflow");
+        }
+      }
       const dpr = Math.min(window.devicePixelRatio || 1, budget.dprCap);
       canvas.width = Math.floor(window.innerWidth * dpr);
       canvas.height = Math.floor(vh * dpr);
@@ -662,11 +667,9 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
         camIdx += (camIndexOf(cam) - camIdx) * normAlpha(HELIX.POSE_LERP, dt);
         const R = Math.min(window.innerWidth * HELIX.RADIUS_VW, HELIX.RADIUS_MAX);
         const drop = vh * HELIX.DROP_VH;
-        const p = stations > 1 ? camIdx / (stations - 1) : 0;
-        // entrance/exit drift (AT: camera ±1u over the first/last 15% of progress)
-        const drift =
-          (1 - smooth01(p / HELIX.DRIFT_FRAC)) * vh * HELIX.DRIFT_VH -
-          smooth01((p - (1 - HELIX.DRIFT_FRAC)) / HELIX.DRIFT_FRAC) * vh * HELIX.DRIFT_VH;
+        // (the AT entrance/exit drift was removed after the owner's live pass: on discrete
+        // stations it parked end-of-journey cards a third of a viewport too high — their
+        // continuous 1050vh cruise wanted it, our 16 stations don't)
         for (let i = 0; i < stations; i++) {
           const card = cards[i];
           if (card === bloomed) continue; // the bloom owns its own geometry
@@ -682,8 +685,10 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
           const a = (r * HELIX.STEP_DEG * Math.PI) / 180;
           const x = Math.sin(a) * R;
           const z = (Math.cos(a) - 1) * R + (1 - Math.min(Math.abs(r), 1)) * HELIX.LIFT; // O5 lift
-          const y = r * drop + drift;
-          card.style.transform = `perspective(${HELIX.PERSPECTIVE}px) translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${(-r * HELIX.STEP_DEG).toFixed(2)}deg)`;
+          const y = r * drop;
+          // translateY(-50%) after the world offset: the card centers on the viewport midline
+          // regardless of its own height (top:50% in the helix CSS), rotation stays about center
+          card.style.transform = `perspective(${HELIX.PERSPECTIVE}px) translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) translateY(-50%) rotateY(${(-r * HELIX.STEP_DEG).toFixed(2)}deg)`;
         }
       } else {
         for (let i = 0; i < stations; i++) {
@@ -850,6 +855,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
         c.style.transform = "";
         c.style.visibility = ""; // clear the CLS-guard in case unmount raced the first frame()
         delete c.dataset.cull;
+        c.removeAttribute("data-overflow");
         c.classList.remove("is-bloomed", "is-slamming");
       });
       root.removeAttribute("data-cst-tier");

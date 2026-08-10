@@ -686,6 +686,21 @@ a{ color:inherit; text-decoration:none; }
 .construct[data-cst-helix] .cst-card{
   will-change:transform;
   backface-visibility:hidden; /* cards turned past edge-on vanish naturally — free culling */
+  top:50%; /* + translateY(-50%) in the JS transform: every card centers on the midline */
+  overflow:hidden; /* helix cards are PREVIEWS — no inner scrollbar friction; the bloom reads */
+}
+/* content taller than the box → bottom fade + the open hint (focused card only shows the words) */
+.construct[data-cst-helix] .cst-card[data-overflow]::after{
+  content:"";
+  position:absolute; left:0; right:0; bottom:0; height:76px;
+  background:linear-gradient(to bottom, transparent, var(--mx-bg) 88%);
+  pointer-events:none;
+}
+.construct[data-cst-helix] .cst-card.is-focused[data-overflow]::after{
+  content:"⏎ open — full card";
+  display:flex; align-items:flex-end; justify-content:center;
+  padding-bottom:.55rem;
+  color:var(--mx-green-dim); font-size:var(--fs-sm); letter-spacing:.08em;
 }
 
 /* A4 — operator lock-on: corner brackets snap onto the focused card. Element backgrounds
@@ -718,6 +733,7 @@ a{ color:inherit; text-decoration:none; }
 .construct[data-mode="immersive"] .cst-card.is-bloomed{
   transform:none; /* beat the 120vh offscreen base — the bloom owns its geometry */
   top:4vh; z-index:3; opacity:1;
+  overflow-y:auto; /* the bloom IS the reading surface — its scroll returns here */
   width:min(900px, 94vw); margin-left:calc(min(900px, 94vw) / -2);
   max-height:92vh;
   border-color:var(--mx-green-dim);
