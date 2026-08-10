@@ -13,7 +13,7 @@ financial-services CRM estate: two production server migrations, estate-wide sec
 and incident response, and multiple production AI systems (voice, WhatsApp, ticket triage). PhD
 candidate in adaptive, agentic multi-agent AI and first-author IEEE Access publication,
 ACS-assessed for Software Engineer, Developer Programmer and DevOps Engineer. Full Australian
-working rights (HDR student visa to 2029); open to relocate.
+working rights (HDR student visa to 2029); subclass 189 PR visa lodged (invitation received); open to relocate.
 
 ---
 
