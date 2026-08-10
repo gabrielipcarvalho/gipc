@@ -19,8 +19,11 @@ export default function MeetPage() {
         </p>
         <p className="page-lead">
           I&apos;m async-first and based on the Gold Coast (<strong>AEST, UTC+10</strong> — Queensland
-          keeps no daylight saving), open to relocate. Propose a couple of windows below and
-          I&apos;ll reply to confirm — this composes an email request, it doesn&apos;t book instantly.
+          keeps no daylight saving), open to relocate.
+        </p>
+        <p className="page-lead">
+          Propose a couple of windows below and I&apos;ll reply to confirm — this composes an email
+          request, it doesn&apos;t book instantly.
         </p>
         <noscript>
           <p className="page-lead">

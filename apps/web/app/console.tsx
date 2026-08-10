@@ -523,9 +523,12 @@ export function Console() {
         <p className="bio">I build real systems. This site runs on infrastructure I operate — every metric, deploy and agent you see here is live, not a mockup.</p>
         <p className="orient-lead orient-lead-hero">
           This is the portfolio of <strong>Gabriel Carvalho</strong> — software · DevOps · AI
-          engineer, Gold Coast AU. It isn&apos;t a brochure: everything here runs on a Kubernetes
-          platform he builds and operates himself, and every metric, deploy and demo is live. The
-          site is the proof of work.
+          engineer, Gold Coast AU.
+        </p>
+        <p className="orient-lead orient-lead-hero">
+          It isn&apos;t a brochure: everything here runs on a Kubernetes platform he builds and
+          operates himself, and every metric, deploy and demo is live. The site is the proof of
+          work.
         </p>
 
         <div className="chips">

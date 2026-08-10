@@ -79,8 +79,9 @@ export default async function SystemPage() {
         <p className="page-lead">
           Live telemetry from the machine that is serving you this page, right now. Nothing here is
           mocked or cached for show — these are the operator&rsquo;s own dashboards, simply made
-          public. A quick map of what each panel tells you:
+          public.
         </p>
+        <p className="page-lead">A quick map of what each panel tells you:</p>
         <ul className="lead-guide">
           <li><b>metrics</b> — how busy the platform is at this moment: requests per second, latency, error rate, memory</li>
           <li><b>history · 30m</b> — the same numbers as sparklines, so you can read the last half hour at a glance</li>
