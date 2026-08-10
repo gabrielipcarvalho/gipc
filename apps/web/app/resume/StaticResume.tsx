@@ -27,7 +27,7 @@ export function StaticResume() {
         <p className="cst-label">{b.label}</p>
         <p className="cst-meta-line">
           {b.location.city}, {b.location.region}, {b.location.country}
-          {b.location.relocation ? ` · relocation: ${b.location.relocation}` : ""}
+          {b.location.relocation ? ` · ${b.location.relocation}` : ""}
         </p>
         {b.workRights && <p className="cst-meta-line">{b.workRights}</p>}
         <p className="cst-body">{b.summary}</p>

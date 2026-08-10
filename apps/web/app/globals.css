@@ -696,8 +696,16 @@ a{ color:inherit; text-decoration:none; }
   background:linear-gradient(to bottom, transparent, var(--mx-bg) 88%);
   pointer-events:none;
 }
+/* the bloom's own ::after is the escape hatch — nobody should feel locked in. sticky at the
+   scroll bottom (in-flow last child), replaces the preview fade/hint entirely. */
+.construct[data-mode="immersive"] .cst-card.is-bloomed::after,
 .construct[data-cst-helix] .cst-card.is-bloomed[data-overflow]::after{
-  content:none; /* the bloom IS the full card — no fade, no hint, over the reading surface */
+  content:"esc — close · scroll past the end — slam shut";
+  position:sticky; bottom:0; left:auto; right:auto; height:auto;
+  display:block; text-align:center; padding:1rem 0 .2rem;
+  background:linear-gradient(to bottom, transparent, var(--mx-bg) 72%);
+  color:var(--mx-green-dim); font-size:var(--fs-sm); letter-spacing:.08em;
+  pointer-events:none;
 }
 .construct[data-cst-helix] .cst-card.is-focused[data-overflow]::after{
   content:"⏎ open — full card";
@@ -735,10 +743,10 @@ a{ color:inherit; text-decoration:none; }
    Geometry comes from the class (frame() skips a bloomed card; its inline transform is cleared). */
 .construct[data-mode="immersive"] .cst-card.is-bloomed{
   transform:none; /* beat the 120vh offscreen base — the bloom owns its geometry */
-  top:4vh; z-index:3; opacity:1;
+  top:calc(var(--nav-h) + 2.5vh); z-index:3; opacity:1; /* clear the fixed nav — tall cards were opening flush under it */
   overflow-y:auto; /* the bloom IS the reading surface — its scroll returns here */
   width:min(900px, 94vw); margin-left:calc(min(900px, 94vw) / -2);
-  max-height:92vh;
+  max-height:calc(95vh - var(--nav-h));
   border-color:var(--mx-green-dim);
   -webkit-mask-image:radial-gradient(circle at 50% 38%, #000 62%, transparent 66%);
   mask-image:radial-gradient(circle at 50% 38%, #000 62%, transparent 66%);

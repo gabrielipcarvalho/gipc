@@ -889,6 +889,9 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
         >
           {tint === "violet" ? "violet" : "green"} rain
         </button>
+        <a className="cst-hud-btn" href="/Gabriel_Carvalho_Resume.pdf" download>
+          download pdf
+        </a>
       </div>
     </>
   );
