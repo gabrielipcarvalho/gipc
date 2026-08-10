@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
    CSP-safe). The compose control is an <a href={mailtoUrl}> — NOT a <form action="mailto:…"> (the CSP
    form-action 'self' would block that) — computed from the field state. It's a REQUEST; Gabriel confirms. */
 
-const EMAIL = "arcan.e@gipc.dev";
+const EMAIL = "gabriel@gipc.dev";
 const NOTE_MAX = 800;
 const PURPOSES = ["intro chat", "role / opportunity", "collaboration", "other"] as const;
 const DURATIONS = ["15 min", "30 min", "45 min"] as const;

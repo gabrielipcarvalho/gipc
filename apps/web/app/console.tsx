@@ -247,7 +247,7 @@ function runCommand(
       return { out: ["summon: GitOps — push → GitHub Actions → GHCR → ArgoCD → k3s. deploy feed lands on /system."] };
     case "connect":
     case "contact":
-      return { out: [<>arcan.e@gipc.dev · <a href="https://github.com/gabrielipcarvalho">github</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin</a> → <b>/connect</b></>], nav: "/connect" };
+      return { out: [<>gabriel@gipc.dev · <a href="https://github.com/gabrielipcarvalho">github</a> · <a href="https://www.linkedin.com/in/gabriel-ipcarvalho">linkedin</a> → <b>/connect</b></>], nav: "/connect" };
     case "meet":
     case "call":
       return { out: [<>book a call → <b>/meet</b>: request a time (async-first, AEST). I&apos;ll confirm.</>], nav: "/meet" };
