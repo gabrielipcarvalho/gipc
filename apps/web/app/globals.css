@@ -275,6 +275,14 @@ a{ color:inherit; text-decoration:none; }
   font-size:var(--fs-display); font-weight:700; letter-spacing:-.02em; line-height:1;
   color:#fff; margin:1.1rem 0 .5rem; text-shadow:var(--text-glow);
 }
+/* the identity rider on the wordmark: who "arcane" is, before any reading. inline-block +
+   the preceding space = its own wrap unit, so on narrow screens it drops to a second line
+   instead of making fitText shrink the big word to fit the pair on one. */
+.wordmark-aka{
+  display:inline-block;
+  font-size:clamp(1rem, 2.6vw, 1.35rem); font-weight:600; letter-spacing:.02em;
+  color:var(--text-muted); text-shadow:none;
+}
 .tagline{ font-size:clamp(1rem,2.4vw,1.35rem); font-weight:600; color:var(--violet); letter-spacing:.01em; }
 .tagline .c{ color:var(--cyan); }
 .bio{ margin-top:.9rem; max-width:none; color:var(--text-muted); font-size:var(--fs-body); line-height:1.55; }
