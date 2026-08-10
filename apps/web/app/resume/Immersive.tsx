@@ -803,8 +803,10 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       } else if (e.key === "Enter" && !bloomed) {
         const active = document.activeElement as HTMLElement | null;
         if (active?.closest("a, button")) return; // links and buttons keep their day jobs
-        const card = active?.closest<HTMLElement>("[data-station]");
-        if (card && cards.indexOf(card) === focusedIdx) openBloom(card);
+        // STATION focus, not DOM focus: mouse users never focus the card element, so requiring
+        // activeElement-inside-card made Enter a dead key everywhere except after a tab-in.
+        const card = focusedIdx >= 0 ? cards[focusedIdx] : null;
+        if (card) openBloom(card);
       }
     };
     root.addEventListener("click", onCardClick);
