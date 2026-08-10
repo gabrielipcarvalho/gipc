@@ -21,18 +21,21 @@ export default function LabPage() {
           <span className="prompt">arcane@prod:~$</span> ./lab --run
         </p>
         <p className="page-lead">
-          Real operations you can trigger — not screenshots. The <strong>chaos</strong> button actually
-          deletes a pod in a disposable <code>demo</code> namespace and you watch Kubernetes heal it; the{" "}
-          <strong>load test</strong> really hammers an isolated demo service (never this site) with hard
-          caps, streaming a live latency histogram; the <strong>DB explorer</strong> runs allowlisted
-          queries on a disposable demo postgres (synthetic data, never the platform&apos;s real database)
-          and shows the planner&apos;s real <code>EXPLAIN (ANALYZE)</code> output. Everything runs my own
-          code against an isolated, NetworkPolicy-fenced namespace. The <strong>sandbox shell</strong> is a
-          safe-by-construction terminal — a fixed command grammar over an in-memory filesystem with{" "}
-          <em>zero</em> arbitrary execution (a real exec surface would be too dangerous on a single-node
-          host, so it&apos;s deliberately not that). The same live metrics are on <a href="/system">/system</a>;
-          the newest exhibit — a <a href="/oracle?tab=local">self-hosted local model</a> — lives on the
-          oracle page.
+          Real operations you can trigger — not screenshots, and not simulations. Every demo below
+          runs my own code, live, against this platform&apos;s own infrastructure, and each card
+          explains in one line what it proves and why it is safe to hand to a stranger. The safety
+          model behind all of them:
+        </p>
+        <ul className="lead-guide">
+          <li><b>isolated</b> — destructive demos live in a disposable, NetworkPolicy-fenced <code>demo</code> namespace; nothing in there can touch this site</li>
+          <li><b>capped</b> — chaos and load carry hard limits on rate, duration and concurrency, enforced server-side</li>
+          <li><b>no real data</b> — the DB explorer speaks to a synthetic demo postgres, never the platform&apos;s actual database</li>
+          <li><b>no execution surface</b> — the sandbox shell is a fixed command grammar over an in-memory filesystem; a real exec surface would be reckless on a single-node host, so by construction there isn&apos;t one</li>
+        </ul>
+        <p className="page-lead">
+          The same live metrics these demos move are on <a href="/system">/system</a>, and the newest
+          exhibit — a <a href="/oracle?tab=local">self-hosted local model</a> — lives on the oracle
+          page.
         </p>
         <noscript>
           <p className="page-lead">

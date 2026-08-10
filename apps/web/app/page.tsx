@@ -38,6 +38,18 @@ export default function Home() {
           platform he builds and operates himself, and every metric, deploy and demo is live.
           The site is the proof of work.
         </p>
+        <ul className="orient-guide" aria-label="What each page holds">
+          <li><b>work</b><span>selected projects, opened up for inspection — architecture diagrams, honest scope, links to code</span></li>
+          <li><b>resume</b><span>the Construct — an interactive Matrix-style résumé, with the signed PDF a click away</span></li>
+          <li><b>timeline</b><span>every role and every degree, newest first</span></li>
+          <li><b>system</b><span>live telemetry of the very platform serving you this page</span></li>
+          <li><b>oracle</b><span>an AI that answers as the site&apos;s operator — grounded, cited, honestly budgeted</span></li>
+          <li><b>lab</b><span>safe, live infrastructure demos you can trigger yourself</span></li>
+          <li><b>infra</b><span>how it&apos;s all built — read straight from the repo, so it can&apos;t drift</span></li>
+          <li><b>status</b><span>real uptime and incident history, self-probed</span></li>
+          <li><b>writeups</b><span>short engineering notes on how the pieces actually work</span></li>
+          <li><b>connect</b><span>open a channel — email, profiles, meeting requests</span></li>
+        </ul>
         <ul className="orient-lanes">
           <li>
             <b>hiring?</b> <Link href="/work">selected work</Link> ·{" "}
