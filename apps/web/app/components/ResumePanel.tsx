@@ -98,11 +98,14 @@ export function ResumePanel() {
 
       {open && (
         <div id="resume-preview" className="resume-preview">
-          <object data={`${PDF}#view=FitH`} type="application/pdf" className="resume-frame" aria-label="Résumé PDF preview">
-            <p className="resume-hint">
-              inline preview unavailable — <a href={PDF} download>download the PDF</a> instead.
-            </p>
-          </object>
+          {/* iframe, not <object>: the CSP keeps object-src 'none' (hardening), and same-origin
+              frames are allowed via frame-src 'self' — <object> was silently blocked by our own
+              policy, which is exactly what the fallback text kept reporting. */}
+          <iframe
+            src={`${PDF}#view=FitH`}
+            title="Résumé PDF preview"
+            className="resume-frame"
+          />
           <p className="resume-hint">
             preview not loading (common on mobile)? <a href={PDF} download>download it →</a>
           </p>
