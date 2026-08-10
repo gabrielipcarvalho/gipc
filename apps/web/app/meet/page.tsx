@@ -27,7 +27,7 @@ export default function MeetPage() {
         </p>
         <noscript>
           <p className="page-lead">
-            Email <a href="mailto:arcan.e@gipc.dev">arcan.e@gipc.dev</a> with a couple of preferred times
+            Email <a href="mailto:gabriel@gipc.dev">gabriel@gipc.dev</a> with a couple of preferred times
             (AEST) and what you&apos;d like to talk about.
           </p>
         </noscript>

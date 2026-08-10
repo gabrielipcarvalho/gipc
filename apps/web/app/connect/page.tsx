@@ -28,7 +28,7 @@ export default function ConnectPage() {
         <ul className="connect-rows">
           <li>
             <span className="connect-k">email</span>
-            <a href="mailto:arcan.e@gipc.dev">arcan.e@gipc.dev</a>
+            <a href="mailto:gabriel@gipc.dev">gabriel@gipc.dev</a>
           </li>
           {profiles.map((p) => (
             <li key={p.network}>
