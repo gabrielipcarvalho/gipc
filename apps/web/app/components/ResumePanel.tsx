@@ -101,8 +101,11 @@ export function ResumePanel() {
           {/* iframe, not <object>: the CSP keeps object-src 'none' (hardening), and same-origin
               frames are allowed via frame-src 'self' — <object> was silently blocked by our own
               policy, which is exactly what the fallback text kept reporting. */}
+          {/* ?fh=1 keys the framed request to its own CDN cache entry: the bare URL sat cached
+              with the old deny-all framing headers (~4h TTL), and our token can't purge. The
+              download links keep the bare URL — framing headers don't matter for downloads. */}
           <iframe
-            src={`${PDF}#view=FitH`}
+            src={`${PDF}?fh=1#view=FitH`}
             title="Résumé PDF preview"
             className="resume-frame"
           />
