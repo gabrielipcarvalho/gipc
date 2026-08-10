@@ -68,7 +68,9 @@ a{ color:inherit; text-decoration:none; }
 .type-line{ clip-path:inset(0 0 0 0); animation:typeWipe 700ms var(--ease-out); }
 @keyframes typeWipe{ from{ clip-path:inset(0 100% 0 0); } }
 /* even line-breaks on multi-line headings/leads (native, no JS) */
-.bio, .page-lead, .card-name, .section-title, .tl-title, .nf-title{ text-wrap:balance; }
+/* balance is for headings only — on body prose (.bio/.page-lead) it equalizes wrapped
+   lines, which reads as "not filling the box" once those run full-width */
+.card-name, .section-title, .tl-title, .nf-title{ text-wrap:balance; }
 
 /* ---- easter eggs & flavor (Phase 6) ---- */
 .egg-toast{
@@ -121,7 +123,7 @@ a{ color:inherit; text-decoration:none; }
    fill it, restoring the equal-height rows the grid gave panels before they were wrapped. */
 .lab-cell{ min-width:0; display:flex; flex-direction:column; }
 .lab-cell > :first-child{ flex:1; min-height:0; } /* the PANEL flexes (explainer now sits below it) */
-.lab-explain{ margin:.55rem 0 0; color:var(--text-muted); font-size:var(--fs-sm); line-height:1.5; max-width:var(--measure); }
+.lab-explain{ margin:.55rem 0 0; color:var(--text-muted); font-size:var(--fs-sm); line-height:1.5; }
 .lab-explain b{ color:var(--text-faint); font-weight:600; text-transform:uppercase; font-size:.85em; letter-spacing:.06em; }
 .lab-explain-sep{ color:var(--violet); }
 
@@ -583,7 +585,7 @@ a{ color:inherit; text-decoration:none; }
 .iac-file{ min-width:0; }
 .iac-title{ color:var(--text); font-size:var(--fs-body); font-weight:600; margin-bottom:.2rem; }
 .iac-path{ color:var(--cyan); font-size:var(--fs-xs); letter-spacing:.02em; margin-bottom:.5rem; }
-.iac-blurb{ color:var(--text-muted); font-size:var(--fs-sm); margin-bottom:.7rem; max-width:var(--measure); }
+.iac-blurb{ color:var(--text-muted); font-size:var(--fs-sm); margin-bottom:.7rem; }
 .iac-pre{ overflow-x:auto; background:var(--surface-2); border:1px solid var(--hairline); border-radius:var(--r-sm); padding:.9rem 1rem; font-size:var(--fs-xs); line-height:1.55; }
 .iac-pre code{ color:var(--text-muted); white-space:pre; }
 .tok-comment{ color:var(--text-faint); font-style:italic; }
@@ -663,6 +665,7 @@ a{ color:inherit; text-decoration:none; }
 .construct[data-mode="immersive"] .cst-card.is-focused{
   opacity:1; border-color:var(--mx-green-dim);
   box-shadow:0 0 40px var(--mx-green-faint), inset 0 0 24px rgba(0,255,65,.05); /* construct glow */
+  z-index:2; /* touch elevator packs stations at 0.7vh — the focused card rides above the peeking next */
 }
 /* jack-in rain-wipe: a green top-down clip reveal that reaches FULL coverage by ~20%
    (~140ms, before the 200ms mode flip) and holds across it, then fades. Rests hidden
@@ -956,7 +959,7 @@ a{ color:inherit; text-decoration:none; }
 .jd-badge.gap{ color:var(--text-faint); }
 
 .jd-pitch-head{ display:flex; align-items:center; gap:.9rem; }
-.jd-pitch p{ margin:0; color:var(--text); line-height:1.55; max-width:var(--measure); }
+.jd-pitch p{ margin:0; color:var(--text); line-height:1.55; }
 .jd-copy{ background:none; border:1px solid var(--border-cyan); border-radius:5px; padding:.25rem .6rem;
   color:var(--cyan); font:inherit; font-size:var(--fs-xs); cursor:pointer; }
 .jd-copy:hover{ color:var(--cyan-bright); border-color:var(--cyan-bright); }
@@ -1251,17 +1254,18 @@ a{ color:inherit; text-decoration:none; }
 .evals-notes a:hover{ color:var(--violet-bright); }
 
 /* /system topology pod chips (Sprint H P1 — real pod truth) */
-.topo-node{ flex-wrap:wrap; }
-.topo-pods{ display:flex; flex-wrap:wrap; gap:.35rem .8rem; margin-left:auto; }
+.topo-node{ flex-wrap:wrap; max-width:100%; }
+.topo-pods{ display:flex; flex-wrap:wrap; gap:.35rem .8rem; margin-left:auto; min-width:0; }
 .topo-pod{
-  display:inline-flex; align-items:center; gap:.4rem;
-  font-size:var(--fs-xs); color:var(--text-muted);
+  display:inline-flex; flex-wrap:wrap; align-items:center; gap:.4rem;
+  font-size:var(--fs-xs); color:var(--text-muted); min-width:0;
 }
+.topo-count{ color:var(--text); font-weight:600; }
 .topo-pod a{ color:var(--cyan); text-decoration:none; }
 .topo-pod a:hover{ color:var(--violet-bright); }
 .topo-pod i, .topo-pod em{ font-style:normal; }
 .topo-restarts{ color:var(--warn); font-weight:600; }
-.topo-res{ color:var(--text-faint); }
+.topo-res{ color:var(--text-faint); min-width:0; overflow-wrap:anywhere; } /* long req/lim strings wrap inside the pill, never past it */
 
 /* /system deep-scry panels (Sprint H P2 — the queries are the exhibit) */
 .deep-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1rem; margin-top:.9rem; }

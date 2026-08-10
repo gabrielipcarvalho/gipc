@@ -1,7 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Topology } from "../../data/topology";
+import type { Topology, TopologyPod } from "../../data/topology";
+
+/* Replica pods of one deployment render as identical image+resource lines (chaos-target ×3) —
+   collapse them into one line with a ×N count; restarts sum across the group. Any field that
+   differs (a mid-rollout image split) keeps its own line, so real skew stays visible. */
+function dedupePods(pods: TopologyPod[]): { pod: TopologyPod; count: number; restarts: number }[] {
+  const groups = new Map<string, { pod: TopologyPod; count: number; restarts: number }>();
+  for (const p of pods) {
+    const k = `${p.imageShort}|${p.requests ?? ""}|${p.limits ?? ""}|${p.commitUrl ?? ""}`;
+    const g = groups.get(k);
+    if (g) {
+      g.count += 1;
+      g.restarts += p.restarts;
+    } else groups.set(k, { pod: p, count: 1, restarts: p.restarts });
+  }
+  return [...groups.values()];
+}
 import type { Status } from "../../data/status";
 import { statusToMetrics } from "../../data/statusMetrics";
 import { type DeployEvent, type DeployStage, DEPLOY_STAGES } from "../../data/deploys";
@@ -387,11 +403,11 @@ export function SystemDash({
                   <span className="topo-name">{s.name}</span>
                   <span className="topo-state">{s.status}</span>
                   <span className="topo-pods">
-                    {s.pods.map((p) => (
+                    {dedupePods(s.pods).map(({ pod: p, count, restarts }) => (
                       <span className="topo-pod" key={p.name}>
-                        {p.restarts > 0 && (
+                        {restarts > 0 && (
                           <b className="topo-restarts">
-                            <span className="sr-only">restarts </span>↻{p.restarts}
+                            <span className="sr-only">restarts </span>↻{restarts}
                           </b>
                         )}
                         {p.commitUrl ? (
@@ -401,6 +417,11 @@ export function SystemDash({
                           </a>
                         ) : (
                           <i>{p.imageShort}</i>
+                        )}
+                        {count > 1 && (
+                          <b className="topo-count">
+                            <span className="sr-only">replicas </span>×{count}
+                          </b>
                         )}
                         {(p.requests || p.limits) && (
                           <em className="topo-res">
