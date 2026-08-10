@@ -49,6 +49,17 @@ data:
         Strict-Transport-Security "max-age=31536000"
         Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
       }
+      # The résumé PDF is embedded by /connect in a same-origin <iframe>. The global block above
+      # stamps frame-ancestors 'none' + XFO DENY on EVERY response — including the PDF itself,
+      # which made the browser refuse OUR OWN embed ("gipc.dev refused to connect"). This later
+      # header handler re-sets the two fields for that one asset: same-origin framing only, and a
+      # bare default-src 'none' CSP (a PDF document loads no subresources). Everything else keeps
+      # the deny-all.
+      @resumepdf path /Gabriel_Carvalho_Resume.pdf
+      header @resumepdf {
+        Content-Security-Policy "default-src 'none'; frame-ancestors 'self'"
+        X-Frame-Options "SAMEORIGIN"
+      }
     }
     :2019 {
       metrics /metrics                           # internal only — NOT in the Service/tunnel
