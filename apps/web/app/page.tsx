@@ -32,12 +32,6 @@ export default function Home() {
       {/* Sprint N — the plain-English layer: who this is, why the site is unusual, where to go.
           Server-rendered (works without JS), below the console so the theatre still opens the show. */}
       <section className="orient" aria-label="What this site is">
-        <p className="orient-lead">
-          This is the portfolio of <strong>Gabriel Carvalho</strong> — software · DevOps · AI
-          engineer, Gold Coast AU. It isn&apos;t a brochure: everything here runs on a Kubernetes
-          platform he builds and operates himself, and every metric, deploy and demo is live.
-          The site is the proof of work.
-        </p>
         <ul className="orient-guide" aria-label="What each page holds">
           <li><b>work</b><span>selected projects, opened up for inspection — architecture diagrams, honest scope, links to code</span></li>
           <li><b>resume</b><span>the Construct — an interactive Matrix-style résumé, with the signed PDF a click away</span></li>
