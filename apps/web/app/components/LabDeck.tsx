@@ -85,11 +85,12 @@ export function LabDeck() {
     <div className="lab">
       {DEMOS.map(({ id, Panel, proves, safe, wide }) => (
         <div key={id} className={wide ? "lab-wide lab-cell" : "lab-cell"}>
+          <Panel />
+          {/* the verdict reads AFTER the demo — you meet the thing before its proof */}
           <p className="lab-explain">
             <b>proves:</b> {proves} <span className="lab-explain-sep">·</span> <b>safe because:</b>{" "}
             {safe}
           </p>
-          <Panel />
         </div>
       ))}
     </div>

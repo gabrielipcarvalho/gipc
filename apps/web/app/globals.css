@@ -114,8 +114,8 @@ a{ color:inherit; text-decoration:none; }
 /* Sprint N — Lab per-demo explainers. The cell is a flex column and the panel flexes to
    fill it, restoring the equal-height rows the grid gave panels before they were wrapped. */
 .lab-cell{ min-width:0; display:flex; flex-direction:column; }
-.lab-cell > :last-child{ flex:1; min-height:0; }
-.lab-explain{ margin:0 0 .5rem; color:var(--text-muted); font-size:var(--fs-sm); line-height:1.5; max-width:var(--measure); }
+.lab-cell > :first-child{ flex:1; min-height:0; } /* the PANEL flexes (explainer now sits below it) */
+.lab-explain{ margin:.55rem 0 0; color:var(--text-muted); font-size:var(--fs-sm); line-height:1.5; max-width:var(--measure); }
 .lab-explain b{ color:var(--text-faint); font-weight:600; text-transform:uppercase; font-size:.85em; letter-spacing:.06em; }
 .lab-explain-sep{ color:var(--violet); }
 
