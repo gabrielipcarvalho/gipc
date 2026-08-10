@@ -696,6 +696,9 @@ a{ color:inherit; text-decoration:none; }
   background:linear-gradient(to bottom, transparent, var(--mx-bg) 88%);
   pointer-events:none;
 }
+.construct[data-cst-helix] .cst-card.is-bloomed[data-overflow]::after{
+  content:none; /* the bloom IS the full card — no fade, no hint, over the reading surface */
+}
 .construct[data-cst-helix] .cst-card.is-focused[data-overflow]::after{
   content:"⏎ open — full card";
   display:flex; align-items:flex-end; justify-content:center;
