@@ -77,13 +77,19 @@ export default async function SystemPage() {
           <span className="prompt">arcane@prod:~$</span> systemctl status --all
         </p>
         <p className="page-lead">
-          Live telemetry from the machine that is serving you this page, right now: request rate
-          and latency, the deploy feed straight from CI, the network path your own request just
-          took, 30-minute history, a redacted tail of the platform&rsquo;s logs, and live pod state
-          from the Kubernetes API. Nothing is mocked or cached for show — these are the
-          operator&rsquo;s own dashboards, made public; the deep-scry panels at the bottom even
-          print the exact queries they run.
+          Live telemetry from the machine that is serving you this page, right now. Nothing here is
+          mocked or cached for show — these are the operator&rsquo;s own dashboards, simply made
+          public. A quick map of what each panel tells you:
         </p>
+        <ul className="lead-guide">
+          <li><b>metrics</b> — how busy the platform is at this moment: requests per second, latency, error rate, memory</li>
+          <li><b>history · 30m</b> — the same numbers as sparklines, so you can read the last half hour at a glance</li>
+          <li><b>deploy feed</b> — real events from the CI pipeline; a push to main lights it up, stage by stage</li>
+          <li><b>logs</b> — a live, redacted tail of the platform&rsquo;s own logs</li>
+          <li><b>trace your request</b> — the actual network path <em>your</em> request just took: edge → tunnel → proxy → backend</li>
+          <li><b>topology</b> — every pod and its state, straight from the Kubernetes API</li>
+          <li><b>deep scry</b> — heavier diagnostics that print the exact queries they run, so you can verify them yourself</li>
+        </ul>
         <SystemDash
           initial={status}
           initialDeploys={deploys}

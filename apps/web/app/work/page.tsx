@@ -19,9 +19,12 @@ export default function WorkPage() {
           <span className="prompt">arcane@prod:~$</span> ls ./grimoire
         </p>
         <p className="page-lead">
-          Selected projects, each opened up for inspection — architecture diagrams, honest scope,
-          links out to code and publications — sourced from the same résumé data that drives the
-          Construct, so nothing here can drift from the record. Filter by technology.
+          A hand-picked set of projects, each opened up for inspection rather than simply listed.
+          Inside every card you&apos;ll find an architecture diagram drawn from the real system, honest
+          notes on scope and trade-offs, and links out to the code, the live deployments and the
+          publications behind the work. Everything is sourced from the same résumé data that drives
+          the Construct, so nothing on this page can quietly drift from the record. You can filter
+          which projects use which technology by toggling the tech-stack buttons below.
         </p>
         <WorkGrid projects={projects} />
       </TerminalWindow>

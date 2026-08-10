@@ -20,8 +20,11 @@ export default function TimelinePage() {
           <span className="prompt">arcane@prod:~$</span> history --career
         </p>
         <p className="page-lead">
-          Roles and study, newest first — the same résumé data the Construct renders, laid
-          out as a descent through time.
+          The whole journey in order — every role and every degree, newest first, laid out as one
+          long descent through time. Each entry carries its dates, its place, and the work that
+          mattered there, and it is all rendered from the same résumé data the Construct uses, so
+          the story on this page always matches the signed record. Scroll down to travel backwards;
+          the links at the end lead out to the live profiles.
         </p>
         <Timeline nodes={timeline} />
         <p className="tl-links">

@@ -103,8 +103,13 @@ a{ color:inherit; text-decoration:none; }
 .stage{ min-height:calc(100dvh - var(--nav-h)); display:flex; flex-direction:column; align-items:stretch; justify-content:center; gap:1.4rem; }
 .page{ padding-top:clamp(1.6rem,4vw,2.6rem); padding-bottom:clamp(2.4rem,6vw,4rem); min-height:calc(100dvh - var(--nav-h)); }
 /* Sprint N — LP orientation strip: the plain-English layer under the console */
-.orient{ margin-top:2.2rem; border-top:1px solid var(--hairline); padding-top:1.6rem; }
-.orient-lead{ max-width:var(--measure); color:var(--text-muted); font-size:var(--fs-body); line-height:1.6; }
+.orient{ margin-top:1.4rem; border-top:1px solid var(--hairline); padding-top:1.4rem; }
+.orient-lead{ max-width:none; text-align:justify; text-justify:inter-word; color:var(--text-muted); font-size:var(--fs-body); line-height:1.6; }
+/* the per-page guide: route + one-liner, a quiet two-column map of the site */
+.orient-guide{ list-style:none; margin:1.1rem 0 0; padding:0; display:flex; flex-direction:column; gap:.32rem; }
+.orient-guide li{ display:grid; grid-template-columns:6.5rem 1fr; column-gap:.9rem; color:var(--text-muted); font-size:var(--fs-sm); line-height:1.5; }
+.orient-guide b{ color:var(--violet); font-weight:600; }
+@media (max-width:560px){ .orient-guide li{ grid-template-columns:1fr; } }
 .orient-lead strong{ color:var(--text); }
 .orient-lanes{ list-style:none; margin:1.1rem 0 0; padding:0; display:flex; flex-direction:column; gap:.45rem; }
 .orient-lanes li{ color:var(--text-muted); font-size:var(--fs-sm); }
@@ -119,7 +124,12 @@ a{ color:inherit; text-decoration:none; }
 .lab-explain b{ color:var(--text-faint); font-weight:600; text-transform:uppercase; font-size:.85em; letter-spacing:.06em; }
 .lab-explain-sep{ color:var(--violet); }
 
-.page-lead{ margin-top:1rem; max-width:var(--measure); color:var(--text-muted); font-size:var(--fs-body); line-height:1.55; }
+.page-lead{ margin-top:1rem; max-width:none; text-align:justify; text-justify:inter-word; color:var(--text-muted); font-size:var(--fs-body); line-height:1.6; }
+.page-lead + .page-lead{ margin-top:.65rem; } /* paragraph rhythm for multi-paragraph leads */
+/* Sprint P — the compact guide list under an intro paragraph (what each panel/aspect means) */
+.lead-guide{ list-style:none; margin:.9rem 0 0; padding:0; display:flex; flex-direction:column; gap:.4rem; }
+.lead-guide li{ color:var(--text-muted); font-size:var(--fs-sm); line-height:1.55; }
+.lead-guide b{ color:var(--text); font-weight:600; }
 
 /* ---- top nav (one fixed-height row; links scroll, never wrap) ---- */
 .nav{
