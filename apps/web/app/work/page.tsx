@@ -20,11 +20,16 @@ export default function WorkPage() {
         </p>
         <p className="page-lead">
           A hand-picked set of projects, each opened up for inspection rather than simply listed.
+        </p>
+        <p className="page-lead">
           Inside every card you&apos;ll find an architecture diagram drawn from the real system, honest
           notes on scope and trade-offs, and links out to the code, the live deployments and the
           publications behind the work. Everything is sourced from the same résumé data that drives
-          the Construct, so nothing on this page can quietly drift from the record. You can filter
-          which projects use which technology by toggling the tech-stack buttons below.
+          the Construct, so nothing on this page can quietly drift from the record.
+        </p>
+        <p className="page-lead">
+          You can filter which projects use which technology by toggling the tech-stack buttons
+          below.
         </p>
         <WorkGrid projects={projects} />
       </TerminalWindow>

@@ -94,8 +94,11 @@ export default function InfraPage() {
         </p>
         <p className="page-lead">
           How this page reaches you — the actual infrastructure, read straight from the repo at build
-          time (no hand-copied snippets, so it can never drift). A single-node k3s box behind a
-          Cloudflare Tunnel, GitOps-deployed: push to main, CI builds the image, ArgoCD syncs the cluster.
+          time (no hand-copied snippets, so it can never drift).
+        </p>
+        <p className="page-lead">
+          A single-node k3s box behind a Cloudflare Tunnel, GitOps-deployed: push to main, CI builds
+          the image, ArgoCD syncs the cluster.
         </p>
         <section className="arch-block" aria-labelledby="arch-h2">
           <h2 id="arch-h2" className="iac-title arch-h2">

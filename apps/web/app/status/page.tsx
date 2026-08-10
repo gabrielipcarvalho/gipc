@@ -35,8 +35,11 @@ export default async function StatusPage() {
         </p>
         <p className="page-lead">
           Real uptime and incident history for the self-hosted platform — core probes itself and its
-          dependencies every 30 seconds. Degraded and down states are shown honestly; the history is
-          in-memory and resets when core redeploys, so a fresh window reads &ldquo;collecting&rdquo;.
+          dependencies every 30 seconds.
+        </p>
+        <p className="page-lead">
+          Degraded and down states are shown honestly; the history is in-memory and resets when core
+          redeploys, so a fresh window reads &ldquo;collecting&rdquo;.
         </p>
         <StatusBoard initial={uptime} />
       </TerminalWindow>

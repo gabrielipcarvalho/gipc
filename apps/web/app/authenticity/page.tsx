@@ -28,14 +28,19 @@ export default function AuthenticityPage() {
         <p className="page-lead">
           Every build of this site bakes a SHA-256 manifest of its stable assets — the résumé PDF,
           its Ed25519 signature, the signing key, the icons. Your browser can re-fetch those exact
-          bytes and hash them itself, right here. A green result means{" "}
+          bytes and hash them itself, right here.
+        </p>
+        <p className="page-lead">
+          A green result means{" "}
           <strong>
             the bytes your browser just fetched match the manifest this build shipped
           </strong>{" "}
           — it cannot rule out a fully compromised origin, which could rewrite this page too. What
           this page really provides is <em>tamper-evidence</em>: mismatches (drift, CDN corruption,
-          partial tampering) become visible instead of silent. For an independent cross-check, the
-          same manifest is committed in the open:{" "}
+          partial tampering) become visible instead of silent.
+        </p>
+        <p className="page-lead">
+          For an independent cross-check, the same manifest is committed in the open:{" "}
           <a href={GH_MANIFEST}>authenticity.generated.ts on GitHub</a>.
         </p>
 

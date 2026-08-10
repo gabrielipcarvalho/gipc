@@ -21,10 +21,15 @@ export default function TimelinePage() {
         </p>
         <p className="page-lead">
           The whole journey in order — every role and every degree, newest first, laid out as one
-          long descent through time. Each entry carries its dates, its place, and the work that
-          mattered there, and it is all rendered from the same résumé data the Construct uses, so
-          the story on this page always matches the signed record. Scroll down to travel backwards;
-          the links at the end lead out to the live profiles.
+          long descent through time.
+        </p>
+        <p className="page-lead">
+          Each entry carries its dates, its place, and the work that mattered there, and it is all
+          rendered from the same résumé data the Construct uses, so the story on this page always
+          matches the signed record.
+        </p>
+        <p className="page-lead">
+          Scroll down to travel backwards; the links at the end lead out to the live profiles.
         </p>
         <Timeline nodes={timeline} />
         <p className="tl-links">

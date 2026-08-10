@@ -23,9 +23,9 @@ export default function LabPage() {
         <p className="page-lead">
           Real operations you can trigger — not screenshots, and not simulations. Every demo below
           runs my own code, live, against this platform&apos;s own infrastructure, and each card
-          explains in one line what it proves and why it is safe to hand to a stranger. The safety
-          model behind all of them:
+          explains in one line what it proves and why it is safe to hand to a stranger.
         </p>
+        <p className="page-lead">The safety model behind all of them:</p>
         <ul className="lead-guide">
           <li><b>isolated</b> — destructive demos live in a disposable, NetworkPolicy-fenced <code>demo</code> namespace; nothing in there can touch this site</li>
           <li><b>capped</b> — chaos and load carry hard limits on rate, duration and concurrency, enforced server-side</li>
