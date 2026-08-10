@@ -518,12 +518,14 @@ export function Console() {
         </div>
         <p className="line whoami"><span className="prompt">arcane@prod:~$</span> whoami</p>
 
-        <h1 className="wordmark" ref={wordmarkRef}>arcane</h1>
+        <h1 className="wordmark" ref={wordmarkRef}>
+          arcane <span className="wordmark-aka">~/aka gabriel</span>
+        </h1>
         <p className="tagline">the operator — backend · cloud · <span className="c">AI arts</span></p>
         <p className="bio">I build real systems. This site runs on infrastructure I operate — every metric, deploy and agent you see here is live, not a mockup.</p>
         <p className="orient-lead orient-lead-hero">
-          This is the portfolio of <strong>Gabriel Carvalho</strong> — software · DevOps · AI
-          engineer, Gold Coast AU.
+          This is the portfolio of <strong>Gabriel Padua Carvalho</strong> — software · DevOps ·
+          AI engineer, Gold Coast AU.
         </p>
         <p className="orient-lead orient-lead-hero">
           It isn&apos;t a brochure: everything here runs on a Kubernetes platform he builds and
