@@ -731,8 +731,11 @@ a{ color:inherit; text-decoration:none; }
   color:var(--mx-green-dim); font-size:var(--fs-sm); letter-spacing:.08em;
   pointer-events:none;
 }
-.construct[data-cst-helix] .cst-card.is-focused[data-overflow]::after{
-  content:"⏎ open — full card";
+/* :not(.is-bloomed) is load-bearing: without it this rule ties the bloom's esc-hint at
+   specificity 5 and, being later in source, kept winning on the one card that is both
+   focused and overflowing — the open card then never showed "esc — close". */
+.construct[data-cst-helix] .cst-card.is-focused:not(.is-bloomed)[data-overflow]::after{
+  content:"click to open — full card";
   display:flex; align-items:flex-end; justify-content:center;
   padding-bottom:.55rem;
   color:var(--mx-green-dim); font-size:var(--fs-sm); letter-spacing:.08em;
