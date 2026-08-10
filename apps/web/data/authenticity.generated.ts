@@ -9,12 +9,12 @@ export type AuthAsset = { path: string; sha256: string; bytes: number };
 export const AUTH_ASSETS: readonly AuthAsset[] = [
   {
     "path": "/Gabriel_Carvalho_Resume.pdf",
-    "sha256": "e92cff31592c3d1519a5529fa7ca45d67b8e684293e142f78f9116db78cdee61",
-    "bytes": 203298
+    "sha256": "bad78698836bf109b9424d4a3155e6eb3148339d4b0304c479732cfcb7f37575",
+    "bytes": 95479
   },
   {
     "path": "/Gabriel_Carvalho_Resume.pdf.sig",
-    "sha256": "ec27bfb394a500431bf3c550b6d3ea1d2110c04683ce6312b1dbde6bf6228e8c",
+    "sha256": "10cc1c61a1dcc96122806468bb662483692a5d23ff709c9398c1b6852cece97e",
     "bytes": 64
   },
   {

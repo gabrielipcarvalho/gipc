@@ -23,7 +23,7 @@ export default function ConnectPage() {
           <span className="prompt">arcane@prod:~$</span> cat ./contact
         </p>
         <p className="page-lead">
-          Open a channel. Signals answered from Gold Coast, AU — relocation open (Melbourne).
+          Open a channel. Signals answered from Gold Coast, AU — open to relocate.
         </p>
         <ul className="connect-rows">
           <li>
