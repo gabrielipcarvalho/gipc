@@ -706,6 +706,14 @@ a{ color:inherit; text-decoration:none; }
   --mx-text:#d4ffd9;                  /* Matrix body text — construct */
 }
 
+/* Touch elevator: cards render FULL height — an 82vh cap + inner overflow made the tall card a
+   nested scroll trap on iOS (finger scrolls the card, not the page, then the page jerks when it
+   exhausts). The station engine spaces stations from measured heights, so any height is safe.
+   Fine pointers (incl. the desktop elevator) keep the cap + inner scroll. */
+@media (pointer: coarse){
+  .construct[data-mode="immersive"] .cst-card{ max-height:none; overflow-y:visible; }
+}
+
 /* ── Sprint O: the helix + reactive garnish (immersive-only ⇒ never mounts under RM) ── */
 .construct[data-cst-helix] .cst-card{
   will-change:transform;
