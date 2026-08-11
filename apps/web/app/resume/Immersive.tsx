@@ -11,6 +11,12 @@ import { nearestStation, stationKeysOf, stationLerp, stationOffsets } from "../.
 
 const GLYPHS = "アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789ACEFXZ<>_/\\|=+*";
 const DECODE_MS = 400;
+// Text-decode charset: HALF-WIDTH only. The rain's katakana fall out of IBM Plex Mono into a
+// full-width CJK fallback — in flowing TEXT that reflows the wrap, breathing a decoding card's
+// height by whole lines (the tall card grew ~80px mid-decode and ate the mobile station gap).
+// Half-width in a mono font ⇒ the scramble is width-identical to the final text: zero reflow,
+// every device. The canvas rain keeps the katakana — pixels don't reflow.
+const DECODE_GLYPHS = "0123456789ACEFXZ<>_/\\|=+*#$%&";
 const LERP_FINE = 0.1; // AT's desktop constant
 const LERP_COARSE = 0.5; // AT's touch constant
 // Touch elevator station pitch, in viewports. 1.0 put a full empty viewport of rain between
@@ -18,14 +24,13 @@ const LERP_COARSE = 0.5; // AT's touch constant
 // z-lifts above the peek). Fine pointers keep the 1.0 desktop pacing.
 const ELEVATOR_SPAN_COARSE = 0.7;
 
-/* px position per station. On touch, the compressed pitch is a floor, stretched per-pair so a
-   card TALLER than the pitch (the 82vh WealthGoal card) still clears the next station plus
-   breathing room — card tops move rigidly together, so any height>pitch is a PERMANENT overlap
-   otherwise. The MEASURED offsetHeight is the ground truth, never a vh-derived cap: on iOS the
-   CSS 82vh resolves against the LARGE viewport while innerHeight is the small one when the
-   toolbars are up, and clamping to 0.82·innerHeight undershot the real height by ~100px —
-   which is exactly the overlap that survived the first fix. Fine pointers keep the pure
-   span grid (touch never blooms, so heights here are always the preview's). */
+/* px position per station. On touch the base step is UNIFORM (hand-authored chapter gaps are
+   desktop pacing — compressed on a phone they read as broken empty screens), stretched per-pair
+   so a card taller than the pitch still clears the next station plus breathing room — card tops
+   move rigidly together, so any height>step is a PERMANENT overlap otherwise. The MEASURED
+   offsetHeight is the ground truth, never a vh-derived cap (iOS resolves CSS vh against the
+   large viewport while innerHeight is the small one). Touch cards render FULL height (no inner
+   scroll), so offsetHeight is the whole card. Fine pointers keep the pure hand-authored grid. */
 function stationPxPositions(
   cards: HTMLElement[], offsets: number[], span: number, vh: number, coarse: boolean,
 ): number[] {
@@ -34,8 +39,9 @@ function stationPxPositions(
   let acc = 0;
   for (let i = 0; i < cards.length; i++) {
     if (i > 0) {
-      const step = (offsets[i] - offsets[i - 1]) * span;
-      acc += coarse ? Math.max(step, cards[i - 1].offsetHeight + gap) : step;
+      acc += coarse
+        ? Math.max(span, cards[i - 1].offsetHeight + gap)
+        : (offsets[i] - offsets[i - 1]) * span;
     }
     out.push(acc);
   }
@@ -395,7 +401,11 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     // missing label would be an unnamed region. Static mode never scrolls cards, so all of this
     // exists only while immersive is mounted.
     cards.forEach((c) => {
-      c.setAttribute("tabindex", "0");
+      // tabindex ONLY where the card is a real scroll container (desktop's 82vh cap) — touch
+      // cards render full-height/unscrollable, and a focusable card on iOS turns every tap
+      // into a focusin → scrollTo teleport. axe's scrollable-region-focusable only applies
+      // to elements that actually scroll.
+      if (c.scrollHeight > c.clientHeight + 4) c.setAttribute("tabindex", "0");
       const kicker = c.querySelector(".cst-kicker")?.textContent?.replace(/^\/\/\s*/, "") ?? "";
       const title = c.querySelector(".cst-title, .cst-name")?.textContent ?? "";
       const label = [kicker, title].filter(Boolean).join(" — ");
@@ -467,7 +477,6 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     let span = coarse ? vh * ELEVATOR_SPAN_COARSE : vh;
     const lerp = coarse ? LERP_COARSE : LERP_FINE;
     let cam = window.scrollY;
-    let fullPass = true;
 
     // Sprint O: the helix — fine pointers at tier ≥2 only; everyone else keeps the flat descent.
     const helix = !coarse && tier >= 2 && stations >= 4;
@@ -520,13 +529,32 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     let lastW = 0;
     let lastH = 0;
     const layout = () => {
-      if (window.innerWidth === lastW && window.innerHeight === lastH) return;
-      lastW = window.innerWidth;
-      lastH = window.innerHeight;
-      vh = window.innerHeight;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      if (w === lastW && h === lastH) return;
+      const widthChanged = w !== lastW;
+      lastW = w;
+      lastH = h;
+      // iOS FREEZE: the toolbars collapse/expand exactly when the user reverses scroll
+      // direction, firing height-only resizes. Recomputing station geometry from the new
+      // innerHeight teleported the whole world under the finger. On touch, height-only
+      // changes RATCHET vh up to the large viewport once and never shrink it; only a width
+      // change (orientation) rebuilds from scratch.
+      if (coarse && !widthChanged) {
+        if (h <= vh) return; // toolbar came back — geometry stays frozen
+        vh = h; // first collapse: adopt the large viewport, then stable forever
+      } else {
+        vh = h;
+      }
       span = coarse ? vh * ELEVATOR_SPAN_COARSE : vh;
       pxPos = stationPxPositions(cards, offsets, span, vh, coarse);
       spacer.style.height = `${pxPos[stations - 1] + span}px`;
+      // pin the anchor in frozen px on touch: CSS top:8vh re-resolves per viewport-unit
+      // semantics, which shifts every card when browser chrome shows/hides — px never move
+      if (coarse) {
+        const topPx = `${Math.round(vh * 0.08)}px`;
+        cards.forEach((c) => (c.style.top = topPx));
+      }
       // helix preview affordance: mark cards whose content is taller than their box — CSS
       // shows the bottom fade + "⏎ open" hint; the bloom is the full reading surface
       if (helix) {
@@ -541,7 +569,6 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.imageSmoothingQuality = "high"; // re-apply: canvas.width/height above reset the ctx to defaults
       buildRain();
-      fullPass = true;
     };
     let resizeT = 0;
     const onResize = () => {
@@ -581,7 +608,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
           let s = final.slice(0, settled);
           for (let i = settled; i < final.length; i++) {
             const ch = final[i];
-            s += ch === " " ? " " : GLYPHS[(Math.random() * GLYPHS.length) | 0];
+            s += ch === " " ? " " : DECODE_GLYPHS[(Math.random() * DECODE_GLYPHS.length) | 0];
           }
           d.el.textContent = s;
         }
@@ -692,7 +719,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       const dt = lastTs ? Math.min(ts - lastTs, 100) : 16.7;
       lastTs = ts;
       // touch keeps the snappy LERP_COARSE constant; fine pointers get the target station's descent lerp.
-      const targetIdx = nearestStation(offsets, window.scrollY / vh);
+      const targetIdx = nearestStation(pxPos, window.scrollY);
       const frameLerp = coarse ? lerp : stationLerp(keys[targetIdx], lerp);
       const prevCam = cam;
       cam += (window.scrollY - cam) * normAlpha(frameLerp, dt);
@@ -728,16 +755,27 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
           card.style.transform = `perspective(${HELIX.PERSPECTIVE}px) translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) translateY(-50%) rotateY(${(-r * HELIX.STEP_DEG).toFixed(2)}deg)`;
         }
       } else {
+        // EVERY station, EVERY frame — no offscreen cull. A skipped position:fixed card keeps
+        // its stale transform, i.e. it is GLUED TO THE VIEWPORT wherever it froze; one fast
+        // momentum frame crossing the old ±1.5vh window left ghost cards parked mid-screen
+        // (the mobile "overlap" that survived three geometry fixes). 16 writes/frame is free.
         for (let i = 0; i < stations; i++) {
-          const off = pxPos[i] - cam;
-          if (!fullPass && Math.abs(off) > vh * 1.5) continue;
-          cards[i].style.transform = `translate3d(0, ${off.toFixed(2)}px, 0)`;
+          cards[i].style.transform = `translate3d(0, ${(pxPos[i] - cam).toFixed(2)}px, 0)`;
         }
       }
-      fullPass = false;
       if (!revealed) revealAll(); // first correctly-posed frame is painted next — lift the CLS veil
-      const idx = nearestStation(pxPos, cam);
-      if (helix ? Math.abs(idx - camIdx) < 0.5 : Math.abs(pxPos[idx] - cam) < span * 0.5) setFocused(idx);
+      if (coarse) {
+        // full-height cards: "focused" = the card under the reading line (40% down the screen).
+        // Nearest-station math dimmed a tall card mid-read the moment its stretched midpoint
+        // passed; this stays lit until the NEXT card's top crosses the line. Always exactly one.
+        const line = cam + vh * 0.4;
+        let idx = 0;
+        while (idx + 1 < stations && pxPos[idx + 1] <= line) idx++;
+        setFocused(idx);
+      } else {
+        const idx = nearestStation(pxPos, cam);
+        if (helix ? Math.abs(idx - camIdx) < 0.5 : Math.abs(pxPos[idx] - cam) < span * 0.5) setFocused(idx);
+      }
       drawRain();
       acc += performance.now() - t0;
       frames += 1;
@@ -865,17 +903,37 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       const card = (e.target as HTMLElement).closest<HTMLElement>("[data-station]");
       if (!card) return;
       const idx = cards.indexOf(card);
-      if (idx >= 0) window.scrollTo({ top: pxPos[idx] });
+      if (!coarse && idx >= 0) window.scrollTo({ top: pxPos[idx] });
     };
 
     window.addEventListener("resize", onResize);
     window.addEventListener("keydown", onKey);
     root.addEventListener("focusin", onFocusIn);
     layout();
+    // Card heights are ALIVE: the decode scramble swaps in katakana that fall out of the mono
+    // font into a full-width CJK fallback, so a decoding card wraps to more lines (±60px on the
+    // tall card) — punching through the station gap. Track real heights and re-derive station
+    // positions whenever one actually changes. Fine pointers ignore heights entirely, so there
+    // this settles to a no-op after the first tick.
+    const ro = new ResizeObserver(() => {
+      const next = stationPxPositions(cards, offsets, span, vh, coarse);
+      let changed = false;
+      for (let i = 0; i < stations; i++) {
+        if (Math.abs(next[i] - pxPos[i]) > 1) {
+          changed = true;
+          break;
+        }
+      }
+      if (!changed) return;
+      pxPos = next;
+      spacer.style.height = `${pxPos[stations - 1] + span}px`;
+    });
+    cards.forEach((c) => ro.observe(c));
 
     return () => {
       cancelAnimationFrame(raf);
       window.clearTimeout(resizeT);
+      ro.disconnect();
       window.removeEventListener("resize", onResize);
       window.removeEventListener("keydown", onKey);
       root.removeEventListener("focusin", onFocusIn);
@@ -892,6 +950,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       if (focusedIdx >= 0) cards[focusedIdx]?.classList.remove("is-focused");
       cards.forEach((c) => {
         c.style.transform = "";
+        c.style.top = ""; // coarse pinned it in px — hand back to the CSS 8vh
         c.style.visibility = ""; // clear the CLS-guard in case unmount raced the first frame()
         delete c.dataset.cull;
         c.removeAttribute("data-overflow");
