@@ -17,6 +17,25 @@ const LERP_COARSE = 0.5; // AT's touch constant
 // cards on phones; 0.7 keeps the next card peeking in from the bottom edge (the focused card
 // z-lifts above the peek). Fine pointers keep the 1.0 desktop pacing.
 const ELEVATOR_SPAN_COARSE = 0.7;
+
+/* px position per station. The compressed touch pitch is a floor, stretched per-pair so a card
+   TALLER than the pitch (the 82vh WealthGoal card) still clears the next station plus breathing
+   room — card tops move rigidly together, so any height>pitch is a PERMANENT overlap otherwise.
+   Desktop's 1.0-viewport pitch already clears every ≤82vh card, so this is the identity there. */
+function stationPxPositions(cards: HTMLElement[], offsets: number[], span: number, vh: number): number[] {
+  const gap = Math.round(vh * 0.05);
+  const out: number[] = [];
+  let acc = 0;
+  for (let i = 0; i < cards.length; i++) {
+    if (i > 0) {
+      const step = (offsets[i] - offsets[i - 1]) * span;
+      const clear = Math.min(cards[i - 1].offsetHeight, vh * 0.82) + gap;
+      acc += Math.max(step, clear);
+    }
+    out.push(acc);
+  }
+  return out;
+}
 const FS = [
   // Sprint N: global ×0.65 slowdown — the rain read as frantic at full AT speeds
   { fs: 18, speed: 0.7 },
@@ -354,9 +373,10 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     // SAME hand-authored offsets as the first frame() (deterministic from the DOM) → no pre-paint drift.
     const stationCards = Array.from(root.querySelectorAll<HTMLElement>("[data-station]"));
     const offsets = stationOffsets(stationKeysOf(stationCards));
-    // same station pitch as the main loop's flat branch — pre-paint pose must not drift from frame()
+    // same station math as the main loop's flat branch — pre-paint pose must not drift from frame()
     const span = window.matchMedia("(pointer: coarse)").matches ? vh * ELEVATOR_SPAN_COARSE : vh;
-    stationCards.forEach((c, i) => (c.style.transform = `translate3d(0, ${(offsets[i] * span - cam).toFixed(2)}px, 0)`));
+    const pxPos = stationPxPositions(stationCards, offsets, span, vh);
+    stationCards.forEach((c, i) => (c.style.transform = `translate3d(0, ${(pxPos[i] - cam).toFixed(2)}px, 0)`));
     // Reveal target = EXACTLY the set the CSS hides (`.cst-card`), so hide/reveal can't drift out of sync.
     // Sprint O: the reveal moved INTO the main loop's first frame — the helix decides card poses only
     // once the tier is known (main effect), so revealing here could flash one elevator-posed frame.
@@ -476,15 +496,15 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       },
     };
 
-    /* continuous camera index from the lerped cam against the (non-uniform) station offsets —
+    let pxPos = stationPxPositions(cards, offsets, span, vh);
+    /* continuous camera index from the lerped cam against the (non-uniform) station positions —
        gaps stretch the scroll length of a segment, so hand-authored pacing survives on the helix */
     const camIndexOf = (camPx: number): number => {
-      const pos = camPx / span;
-      if (pos <= offsets[0]) return 0;
+      if (camPx <= pxPos[0]) return 0;
       for (let i = 0; i < stations - 1; i++) {
-        if (pos <= offsets[i + 1]) {
-          const seg = offsets[i + 1] - offsets[i];
-          return i + (seg > 0 ? (pos - offsets[i]) / seg : 0);
+        if (camPx <= pxPos[i + 1]) {
+          const seg = pxPos[i + 1] - pxPos[i];
+          return i + (seg > 0 ? (camPx - pxPos[i]) / seg : 0);
         }
       }
       return stations - 1;
@@ -499,7 +519,8 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       lastH = window.innerHeight;
       vh = window.innerHeight;
       span = coarse ? vh * ELEVATOR_SPAN_COARSE : vh;
-      spacer.style.height = `${(offsets[stations - 1] + 1) * span}px`;
+      pxPos = stationPxPositions(cards, offsets, span, vh);
+      spacer.style.height = `${pxPos[stations - 1] + span}px`;
       // helix preview affordance: mark cards whose content is taller than their box — CSS
       // shows the bottom fade + "⏎ open" hint; the bloom is the full reading surface
       if (helix) {
@@ -702,15 +723,15 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
         }
       } else {
         for (let i = 0; i < stations; i++) {
-          const off = offsets[i] * span - cam;
+          const off = pxPos[i] - cam;
           if (!fullPass && Math.abs(off) > vh * 1.5) continue;
           cards[i].style.transform = `translate3d(0, ${off.toFixed(2)}px, 0)`;
         }
       }
       fullPass = false;
       if (!revealed) revealAll(); // first correctly-posed frame is painted next — lift the CLS veil
-      const idx = nearestStation(offsets, cam / span);
-      if (helix ? Math.abs(idx - camIdx) < 0.5 : Math.abs(offsets[idx] * span - cam) < span * 0.5) setFocused(idx);
+      const idx = nearestStation(pxPos, cam);
+      if (helix ? Math.abs(idx - camIdx) < 0.5 : Math.abs(pxPos[idx] - cam) < span * 0.5) setFocused(idx);
       drawRain();
       acc += performance.now() - t0;
       frames += 1;
@@ -838,7 +859,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       const card = (e.target as HTMLElement).closest<HTMLElement>("[data-station]");
       if (!card) return;
       const idx = cards.indexOf(card);
-      if (idx >= 0) window.scrollTo({ top: offsets[idx] * span });
+      if (idx >= 0) window.scrollTo({ top: pxPos[idx] });
     };
 
     window.addEventListener("resize", onResize);
