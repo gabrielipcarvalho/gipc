@@ -18,19 +18,24 @@ const LERP_COARSE = 0.5; // AT's touch constant
 // z-lifts above the peek). Fine pointers keep the 1.0 desktop pacing.
 const ELEVATOR_SPAN_COARSE = 0.7;
 
-/* px position per station. The compressed touch pitch is a floor, stretched per-pair so a card
-   TALLER than the pitch (the 82vh WealthGoal card) still clears the next station plus breathing
-   room — card tops move rigidly together, so any height>pitch is a PERMANENT overlap otherwise.
-   Desktop's 1.0-viewport pitch already clears every ≤82vh card, so this is the identity there. */
-function stationPxPositions(cards: HTMLElement[], offsets: number[], span: number, vh: number): number[] {
+/* px position per station. On touch, the compressed pitch is a floor, stretched per-pair so a
+   card TALLER than the pitch (the 82vh WealthGoal card) still clears the next station plus
+   breathing room — card tops move rigidly together, so any height>pitch is a PERMANENT overlap
+   otherwise. The MEASURED offsetHeight is the ground truth, never a vh-derived cap: on iOS the
+   CSS 82vh resolves against the LARGE viewport while innerHeight is the small one when the
+   toolbars are up, and clamping to 0.82·innerHeight undershot the real height by ~100px —
+   which is exactly the overlap that survived the first fix. Fine pointers keep the pure
+   span grid (touch never blooms, so heights here are always the preview's). */
+function stationPxPositions(
+  cards: HTMLElement[], offsets: number[], span: number, vh: number, coarse: boolean,
+): number[] {
   const gap = Math.round(vh * 0.05);
   const out: number[] = [];
   let acc = 0;
   for (let i = 0; i < cards.length; i++) {
     if (i > 0) {
       const step = (offsets[i] - offsets[i - 1]) * span;
-      const clear = Math.min(cards[i - 1].offsetHeight, vh * 0.82) + gap;
-      acc += Math.max(step, clear);
+      acc += coarse ? Math.max(step, cards[i - 1].offsetHeight + gap) : step;
     }
     out.push(acc);
   }
@@ -374,8 +379,9 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
     const stationCards = Array.from(root.querySelectorAll<HTMLElement>("[data-station]"));
     const offsets = stationOffsets(stationKeysOf(stationCards));
     // same station math as the main loop's flat branch — pre-paint pose must not drift from frame()
-    const span = window.matchMedia("(pointer: coarse)").matches ? vh * ELEVATOR_SPAN_COARSE : vh;
-    const pxPos = stationPxPositions(stationCards, offsets, span, vh);
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    const span = coarse ? vh * ELEVATOR_SPAN_COARSE : vh;
+    const pxPos = stationPxPositions(stationCards, offsets, span, vh, coarse);
     stationCards.forEach((c, i) => (c.style.transform = `translate3d(0, ${(pxPos[i] - cam).toFixed(2)}px, 0)`));
     // Reveal target = EXACTLY the set the CSS hides (`.cst-card`), so hide/reveal can't drift out of sync.
     // Sprint O: the reveal moved INTO the main loop's first frame — the helix decides card poses only
@@ -496,7 +502,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       },
     };
 
-    let pxPos = stationPxPositions(cards, offsets, span, vh);
+    let pxPos = stationPxPositions(cards, offsets, span, vh, coarse);
     /* continuous camera index from the lerped cam against the (non-uniform) station positions —
        gaps stretch the scroll length of a segment, so hand-authored pacing survives on the helix */
     const camIndexOf = (camPx: number): number => {
@@ -519,7 +525,7 @@ export function Immersive({ rootRef }: { rootRef: React.RefObject<HTMLDivElement
       lastH = window.innerHeight;
       vh = window.innerHeight;
       span = coarse ? vh * ELEVATOR_SPAN_COARSE : vh;
-      pxPos = stationPxPositions(cards, offsets, span, vh);
+      pxPos = stationPxPositions(cards, offsets, span, vh, coarse);
       spacer.style.height = `${pxPos[stations - 1] + span}px`;
       // helix preview affordance: mark cards whose content is taller than their box — CSS
       // shows the bottom fade + "⏎ open" hint; the bloom is the full reading surface
