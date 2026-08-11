@@ -34,7 +34,10 @@ const ELEVATOR_SPAN_COARSE = 0.7;
 function stationPxPositions(
   cards: HTMLElement[], offsets: number[], span: number, vh: number, coarse: boolean,
 ): number[] {
-  const gap = Math.round(vh * 0.05);
+  // Breathing room after a card that OVERFLOWS its step (only such pairs stretch). 0.05vh made
+  // the seam after the longest card the tightest gap on the page — short pairs enjoy span−h
+  // (~0.2–0.4vh of rain), so a stretched pair gets a matching 0.22vh to read as one rhythm.
+  const gap = Math.round(vh * 0.22);
   const out: number[] = [];
   let acc = 0;
   for (let i = 0; i < cards.length; i++) {
